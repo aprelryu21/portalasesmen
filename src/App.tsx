@@ -592,10 +592,15 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    setState((prev) => ({
-      ...prev,
-      currentUser: null,
-    }));
+    setState((prev) => {
+      const nextState = {
+        ...prev,
+        currentUser: null,
+      };
+      saveStoredState(nextState);
+      return nextState;
+    });
+    setPendingLoginUser(null);
     setPortalMode('school');
     setActiveTab('dashboard');
   };
@@ -1389,6 +1394,27 @@ export default function App() {
           onAddAccount={handleAddAccount}
           googleSheets={state.googleSheets}
         />
+
+        {/* Modal Konfirmasi Akses Kamera Setiap Kali Login Sekolah */}
+        <CameraLoginConfirmationModal
+          isOpen={Boolean(pendingLoginUser)}
+          user={pendingLoginUser}
+          onConfirm={handleCameraLoginConfirmed}
+          onSkip={handleCameraLoginSkipped}
+          onCancel={() => setPendingLoginUser(null)}
+        />
+
+        {/* Modal Pemberitahuan Auto Logout Khusus Sekolah */}
+        <AutoLogoutModal
+          isOpen={isAutoLoggedOutOpen}
+          onClose={() => setIsAutoLoggedOutOpen(false)}
+          onLoginAgain={() => {
+            setIsAutoLoggedOutOpen(false);
+            setAuthInitialTab('login');
+            setIsAuthModalOpen(true);
+          }}
+          timeoutMinutes={autoLogoutMinutes}
+        />
       </>
     );
   }
@@ -1472,31 +1498,44 @@ export default function App() {
 
           {/* Right Header Controls (LOGO AKUN DI SEBELAH KANAN) */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Desktop Account Badge / Logo Akun */}
-            <div className="hidden lg:flex items-center gap-2 bg-neutral-50 border-2 border-black rounded-xl px-2.5 py-1 shadow-[2px_2px_0px_#000]">
-              {isAdmin ? (
-                <div className="w-7 h-7 rounded-lg bg-yellow-300 border border-black flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-4 h-4 text-black" />
-                </div>
-              ) : state.school?.logoUrl ? (
-                <img
-                  src={state.school.logoUrl}
-                  alt={state.school?.name || 'Logo Akun'}
-                  className="w-7 h-7 rounded-lg object-contain bg-white border border-black shrink-0"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-lg bg-blue-600 text-white border border-black flex items-center justify-center shrink-0">
-                  <Building2 className="w-4 h-4 text-white" />
-                </div>
-              )}
-              <div className="text-left leading-tight pr-1">
-                <div className="text-xs font-black uppercase text-neutral-900 truncate max-w-[140px]">
-                  {isAdmin ? 'Admin Nagata' : state.school?.name || 'Operator'}
-                </div>
-                <div className="text-[10px] font-mono text-neutral-500 font-bold truncate">
-                  @{state.currentUser.username}
+            {/* Desktop Account Badge & Direct Logout Button */}
+            <div className="hidden lg:flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-neutral-50 border-2 border-black rounded-xl px-2.5 py-1 shadow-[2px_2px_0px_#000]">
+                {isAdmin ? (
+                  <div className="w-7 h-7 rounded-lg bg-yellow-300 border border-black flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-4 h-4 text-black" />
+                  </div>
+                ) : state.school?.logoUrl ? (
+                  <img
+                    src={state.school.logoUrl}
+                    alt={state.school?.name || 'Logo Akun'}
+                    className="w-7 h-7 rounded-lg object-contain bg-white border border-black shrink-0"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-lg bg-blue-600 text-white border border-black flex items-center justify-center shrink-0">
+                    <Building2 className="w-4 h-4 text-white" />
+                  </div>
+                )}
+                <div className="text-left leading-tight pr-1">
+                  <div className="text-xs font-black uppercase text-neutral-900 truncate max-w-[140px]">
+                    {isAdmin ? 'Admin Nagata' : state.school?.name || 'Operator'}
+                  </div>
+                  <div className="text-[10px] font-mono text-neutral-500 font-bold truncate">
+                    @{state.currentUser?.username || ''}
+                  </div>
                 </div>
               </div>
+
+              {/* Desktop Direct Logout Button */}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="py-1.5 px-3 bg-rose-50 hover:bg-rose-100 border-2 border-black rounded-xl text-xs font-black text-rose-700 shadow-[2px_2px_0px_#000] flex items-center gap-1.5 transition-transform active:translate-y-0.5 cursor-pointer"
+                title="Keluar dari Akun (Logout)"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                <span>Keluar</span>
+              </button>
             </div>
 
             {/* Mobile Profile Photo / Logo Akun & Dropdown Popover */}
@@ -1578,7 +1617,7 @@ export default function App() {
                         </div>
 
                         <p className="text-[10px] font-mono text-neutral-500 font-bold truncate">
-                          @{state.currentUser.username}
+                          @{state.currentUser?.username || ''}
                           {isAdmin ? ' • Administrator Sistem' : ''}
                         </p>
 
@@ -1807,6 +1846,7 @@ export default function App() {
         user={pendingLoginUser}
         onConfirm={handleCameraLoginConfirmed}
         onSkip={handleCameraLoginSkipped}
+        onCancel={() => setPendingLoginUser(null)}
       />
 
       {/* 7. MODAL PEMBERITAHUAN AUTO LOGOUT KHUSUS SEKOLAH */}

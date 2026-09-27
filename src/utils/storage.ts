@@ -137,7 +137,7 @@ export const loadStoredState = (): AppState => {
         : (cleanExams[0] || DEFAULT_EXAM);
 
       return {
-        currentUser: parsed.currentUser ? parsed.currentUser : DEFAULT_ACCOUNTS[0],
+        currentUser: (parsed.currentUser && parsed.currentUser.username) ? parsed.currentUser : null,
         accounts: Array.isArray(parsed.accounts) && parsed.accounts.length > 0 ? parsed.accounts : DEFAULT_ACCOUNTS,
         googleSheets: mergedGoogleSheets,
         school: { ...DEFAULT_SCHOOL, ...(parsed.school || {}) },
@@ -164,7 +164,7 @@ export const loadStoredState = (): AppState => {
   // Initial clean state with default teachers
   const activeUrl = getActiveGasUrl();
   return {
-    currentUser: DEFAULT_ACCOUNTS[0],
+    currentUser: null,
     accounts: DEFAULT_ACCOUNTS,
     googleSheets: {
       ...DEFAULT_GOOGLE_SHEETS,
@@ -204,7 +204,7 @@ export const resetStoredState = (): AppState => {
   }
   const activeUrl = getActiveGasUrl();
   return {
-    currentUser: DEFAULT_ACCOUNTS[0],
+    currentUser: null,
     accounts: DEFAULT_ACCOUNTS,
     googleSheets: {
       ...DEFAULT_GOOGLE_SHEETS,

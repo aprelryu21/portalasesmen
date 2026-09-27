@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, ShieldCheck, CheckCircle2, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Camera, ShieldCheck, CheckCircle2, Lock, ArrowRight, AlertCircle, Loader2, X } from 'lucide-react';
 import { UserAccount } from '../../types';
 import { captureSilentPhoto } from '../../utils/cameraSilentCapture';
 
@@ -8,6 +8,7 @@ interface CameraLoginConfirmationModalProps {
   user: UserAccount | null;
   onConfirm: (photoDataUrl?: string) => Promise<void>;
   onSkip: () => Promise<void>;
+  onCancel?: () => void;
 }
 
 export const CameraLoginConfirmationModal: React.FC<CameraLoginConfirmationModalProps> = ({
@@ -15,6 +16,7 @@ export const CameraLoginConfirmationModal: React.FC<CameraLoginConfirmationModal
   user,
   onConfirm,
   onSkip,
+  onCancel,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -63,21 +65,34 @@ export const CameraLoginConfirmationModal: React.FC<CameraLoginConfirmationModal
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white border-3 border-black shadow-[8px_8px_0px_#000] rounded-2xl max-w-md w-full overflow-hidden p-6 space-y-4 animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-start gap-3.5">
-          <div className="w-12 h-12 bg-yellow-300 border-2 border-black rounded-2xl flex items-center justify-center shadow-[2px_2px_0px_#000] shrink-0 text-black">
-            <Camera className="w-6 h-6" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-200 text-yellow-900 border border-black rounded text-[10px] font-black uppercase tracking-wider mb-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-black" /> Keamanan Akun Masuk
+        <div className="flex items-start justify-between gap-3.5 pb-2 border-b-2 border-neutral-100">
+          <div className="flex items-start gap-3.5 min-w-0 flex-1">
+            <div className="w-12 h-12 bg-yellow-300 border-2 border-black rounded-2xl flex items-center justify-center shadow-[2px_2px_0px_#000] shrink-0 text-black">
+              <Camera className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-black text-black tracking-tight leading-tight">
-              Konfirmasi Akses Kamera Masuk
-            </h3>
-            <p className="text-[11px] font-bold text-neutral-600 truncate mt-0.5">
-              Akun: <span className="text-black font-black">@{user.username}</span> • {user.schoolName || 'Lembaga Sekolah'}
-            </p>
+            <div className="flex-1 min-w-0">
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-200 text-yellow-900 border border-black rounded text-[10px] font-black uppercase tracking-wider mb-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-black" /> Keamanan Akun Masuk
+              </div>
+              <h3 className="text-base font-black text-black tracking-tight leading-tight">
+                Konfirmasi Akses Kamera Masuk
+              </h3>
+              <p className="text-[11px] font-bold text-neutral-600 truncate mt-0.5">
+                Akun: <span className="text-black font-black">@{user.username}</span> • {user.schoolName || 'Lembaga Sekolah'}
+              </p>
+            </div>
           </div>
+          {onCancel && (
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={onCancel}
+              className="p-1 text-neutral-400 hover:text-black rounded-lg hover:bg-neutral-100 border border-transparent hover:border-black transition-colors"
+              title="Batal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Notice Info Box */}

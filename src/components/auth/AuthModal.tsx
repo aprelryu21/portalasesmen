@@ -51,6 +51,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       if (activeTab === 'login') {
+        let gasFailedMessage = '';
+
         // 1. Try Google Sheets if connected
         if (googleSheets.isConnected && googleSheets.webAppUrl) {
           try {
@@ -63,16 +65,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               onClose();
               return;
             } else {
-              setErrorMessage(gasRes.message || 'Login gagal.');
-              setIsLoading(false);
-              return;
+              gasFailedMessage = gasRes.message || '';
             }
           } catch (gasErr) {
             console.warn('GAS login error, checking local accounts:', gasErr);
           }
         }
 
-        // 2. Check local accounts database (including default Admin Nagata)
+        // 2. Check local accounts database (including default Admin Nagata and stored schools)
         await new Promise((r) => setTimeout(r, 450));
         const found = accounts.find(
           (acc) =>
@@ -87,7 +87,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onLoginSuccess(found);
           onClose();
         } else {
-          setErrorMessage('Username atau password yang Anda masukkan salah. Silakan periksa kembali.');
+          setErrorMessage(gasFailedMessage || 'Username atau password yang Anda masukkan salah. Silakan periksa kembali.');
         }
       } else {
         // REGISTER NEW SCHOOL
