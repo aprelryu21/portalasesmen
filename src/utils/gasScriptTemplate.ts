@@ -107,9 +107,25 @@ function initSheets() {
     sheetSiswa = ss.insertSheet(SHEET_NAMES.DATA_SISWA);
     sheetSiswa.appendRow([
       "ID", "School ID", "Username", "NISN", "NIS", "Nama Lengkap", "Jenis Kelamin",
-      "Kelas", "Tempat Lahir", "Tanggal Lahir", "Ruang Ujian", "Nomor Meja", "Foto URL", "Updated At"
+      "Agama", "Kelas", "Tempat Lahir", "Tanggal Lahir", "Ruang Ujian", "Nomor Meja", "Foto URL", "Updated At"
     ]);
-    sheetSiswa.getRange("A1:N1").setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
+    sheetSiswa.getRange("A1:O1").setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
+  } else {
+    // Smart upgrade: cek jika kolom Agama belum ada di sheet DATA_SISWA yang sudah ada
+    try {
+      var sHeaders = sheetSiswa.getRange(1, 1, 1, Math.max(sheetSiswa.getLastColumn(), 1)).getValues()[0];
+      var hasAgama = false;
+      for (var h = 0; h < sHeaders.length; h++) {
+        if (String(sHeaders[h]).toLowerCase().indexOf("agama") !== -1) {
+          hasAgama = true;
+          break;
+        }
+      }
+      if (!hasAgama && sHeaders.length >= 7) {
+        sheetSiswa.insertColumnAfter(7); // sisipkan setelah Jenis Kelamin (kolom 7 -> kolom 8)
+        sheetSiswa.getRange(1, 8).setValue("Agama").setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
+      }
+    } catch(e) {}
   }
 
   // 3.5 Sheet DATA_GURU (Data Guru, Pengawas, Proktor, & Teknisi)
@@ -969,6 +985,50 @@ function handleLogin(username, password) {
 }
 
 /**
+ * Helper untuk mendeteksi posisi indeks kolom di Sheet DATA_SISWA secara dinamis & cerdas
+ */
+function getStudentColumnIndices(headerRow) {
+  var map = {
+    id: 0,
+    schoolId: 1,
+    username: 2,
+    nisn: 3,
+    nis: 4,
+    name: 5,
+    gender: 6,
+    religion: -1,
+    className: 7,
+    birthPlace: 8,
+    birthDate: 9,
+    examRoom: 10,
+    examSeat: 11,
+    photoUrl: 12,
+    updatedAt: 13
+  };
+  if (!headerRow || headerRow.length === 0) return map;
+
+  for (var i = 0; i < headerRow.length; i++) {
+    var h = String(headerRow[i] || "").trim().toLowerCase();
+    if (h === "id") map.id = i;
+    else if (h === "school id" || h.indexOf("school") !== -1) map.schoolId = i;
+    else if (h === "username") map.username = i;
+    else if (h === "nisn") map.nisn = i;
+    else if (h === "nis") map.nis = i;
+    else if (h === "nama lengkap" || h === "nama") map.name = i;
+    else if (h === "jenis kelamin" || h === "gender" || h === "l/p") map.gender = i;
+    else if (h === "agama" || h.indexOf("agama") !== -1) map.religion = i;
+    else if (h === "kelas" || h === "rombel") map.className = i;
+    else if (h === "tempat lahir") map.birthPlace = i;
+    else if (h === "tanggal lahir") map.birthDate = i;
+    else if (h === "ruang ujian" || h === "ruang") map.examRoom = i;
+    else if (h === "nomor meja" || h === "no meja") map.examSeat = i;
+    else if (h === "foto url" || h === "foto") map.photoUrl = i;
+    else if (h === "updated at" || h.indexOf("update") !== -1) map.updatedAt = i;
+  }
+  return map;
+}
+
+/**
  * Mengambil seluruh data database dari semua tab di Spreadsheet
  */
 function handleGetAllDatabaseData() {
@@ -1020,32 +1080,37 @@ function handleGetAllDatabaseData() {
   var rowsSiswa = sheetSiswa ? sheetSiswa.getDataRange().getValues() : [];
   var studentsMap = {};
   var seenStudentIds = {};
+  var sIndices = rowsSiswa.length > 0 ? getStudentColumnIndices(rowsSiswa[0]) : null;
 
   for (var j = 1; j < rowsSiswa.length; j++) {
     var s = rowsSiswa[j];
-    var sId = String(s[0] || "").trim();
-    var su = String(s[2] || "").toLowerCase();
+    var sId = String(s[sIndices ? sIndices.id : 0] || "").trim();
+    var su = String(s[sIndices ? sIndices.username : 2] || "").toLowerCase();
     if (!su || !sId) continue;
 
     var comboKey = su + "_" + sId;
     if (seenStudentIds[comboKey]) continue;
     seenStudentIds[comboKey] = true;
 
+    var sReligion = sIndices && sIndices.religion !== -1 ? String(s[sIndices.religion] || "Islam").trim() : "Islam";
+    if (!sReligion) sReligion = "Islam";
+
     if (!studentsMap[su]) studentsMap[su] = [];
     studentsMap[su].push({
       id: sId,
-      nisn: String(s[3]),
-      nis: String(s[4]),
-      name: String(s[5]),
-      gender: String(s[6]) === "P" ? "P" : "L",
-      className: String(s[7]),
-      birthPlace: String(s[8]),
-      birthDate: s[9] instanceof Date ? s[9].toISOString().split('T')[0] : String(s[9]),
-      examRoom: String(s[10]),
-      examSeat: String(s[11]),
-      photoUrl: String(s[12]),
-      createdAt: String(s[13]),
-      updatedAt: String(s[13])
+      nisn: String(s[sIndices ? sIndices.nisn : 3]),
+      nis: String(s[sIndices ? sIndices.nis : 4]),
+      name: String(s[sIndices ? sIndices.name : 5]),
+      gender: String(s[sIndices ? sIndices.gender : 6]) === "P" ? "P" : "L",
+      religion: sReligion,
+      className: String(s[sIndices ? sIndices.className : (sIndices && sIndices.religion !== -1 ? 8 : 7)]),
+      birthPlace: String(s[sIndices ? sIndices.birthPlace : (sIndices && sIndices.religion !== -1 ? 9 : 8)]),
+      birthDate: s[sIndices ? sIndices.birthDate : (sIndices && sIndices.religion !== -1 ? 10 : 9)] instanceof Date ? s[sIndices ? sIndices.birthDate : (sIndices && sIndices.religion !== -1 ? 10 : 9)].toISOString().split('T')[0] : String(s[sIndices ? sIndices.birthDate : (sIndices && sIndices.religion !== -1 ? 10 : 9)]),
+      examRoom: String(s[sIndices ? sIndices.examRoom : (sIndices && sIndices.religion !== -1 ? 11 : 10)]),
+      examSeat: String(s[sIndices ? sIndices.examSeat : (sIndices && sIndices.religion !== -1 ? 12 : 11)]),
+      photoUrl: String(s[sIndices ? sIndices.photoUrl : (sIndices && sIndices.religion !== -1 ? 13 : 12)]),
+      createdAt: String(s[sIndices ? sIndices.updatedAt : (sIndices && sIndices.religion !== -1 ? 14 : 13)]),
+      updatedAt: String(s[sIndices ? sIndices.updatedAt : (sIndices && sIndices.religion !== -1 ? 14 : 13)])
     });
   }
 
@@ -1279,6 +1344,7 @@ function handleSaveAllData(payload) {
       s.nis || "",
       s.name || "",
       s.gender || "L",
+      s.religion || "Islam",
       s.className || "",
       s.birthPlace || "",
       s.birthDate || "",
@@ -1610,6 +1676,7 @@ function handleAddStudent(contents) {
     student.nis || "",
     student.name || "",
     student.gender || "L",
+    student.religion || "Islam",
     student.className || "",
     student.birthPlace || "",
     student.birthDate || "",
@@ -1634,6 +1701,7 @@ function handleAddStudent(contents) {
       nis: student.nis || "",
       name: student.name || "",
       gender: student.gender || "L",
+      religion: student.religion || "Islam",
       className: student.className || "",
       birthPlace: student.birthPlace || "",
       birthDate: student.birthDate || "",
@@ -1681,6 +1749,7 @@ function handleUpdateStudent(contents) {
       student.nis || "",
       student.name || "",
       student.gender || "L",
+      student.religion || "Islam",
       student.className || "",
       student.birthPlace || "",
       student.birthDate || "",
@@ -1836,6 +1905,7 @@ function handleBatchStudents(contents) {
       s.nis || "",
       s.name || "",
       s.gender || "L",
+      s.religion || "Islam",
       s.className || "",
       s.birthPlace || "",
       s.birthDate || "",
@@ -2510,24 +2580,30 @@ function loadAllDataForUser(username) {
   var sheetSiswa = ss.getSheetByName(SHEET_NAMES.DATA_SISWA);
   var rowsSiswa = sheetSiswa ? sheetSiswa.getDataRange().getValues() : [];
   var studentsList = [];
+  var sIndices = rowsSiswa.length > 0 ? getStudentColumnIndices(rowsSiswa[0]) : null;
 
   for (var j = 1; j < rowsSiswa.length; j++) {
     var s = rowsSiswa[j];
-    if (String(s[2]).toLowerCase() === cleanUser || (!cleanUser && cleanUser === "")) {
+    var su = String(s[sIndices ? sIndices.username : 2] || "").toLowerCase();
+    if (su === cleanUser || (!cleanUser && cleanUser === "")) {
+      var sReligion = sIndices && sIndices.religion !== -1 ? String(s[sIndices.religion] || "Islam").trim() : "Islam";
+      if (!sReligion) sReligion = "Islam";
+
       studentsList.push({
-        id: String(s[0]),
-        nisn: String(s[3]),
-        nis: String(s[4]),
-        name: String(s[5]),
-        gender: String(s[6]) === "P" ? "P" : "L",
-        className: String(s[7]),
-        birthPlace: String(s[8]),
-        birthDate: s[9] instanceof Date ? s[9].toISOString().split('T')[0] : String(s[9]),
-        examRoom: String(s[10]),
-        examSeat: String(s[11]),
-        photoUrl: String(s[12]),
-        createdAt: String(s[13]),
-        updatedAt: String(s[13])
+        id: String(s[sIndices ? sIndices.id : 0]),
+        nisn: String(s[sIndices ? sIndices.nisn : 3]),
+        nis: String(s[sIndices ? sIndices.nis : 4]),
+        name: String(s[sIndices ? sIndices.name : 5]),
+        gender: String(s[sIndices ? sIndices.gender : 6]) === "P" ? "P" : "L",
+        religion: sReligion,
+        className: String(s[sIndices ? sIndices.className : (sIndices && sIndices.religion !== -1 ? 8 : 7)]),
+        birthPlace: String(s[sIndices ? sIndices.birthPlace : (sIndices && sIndices.religion !== -1 ? 9 : 8)]),
+        birthDate: s[sIndices ? sIndices.birthDate : 9] instanceof Date ? s[sIndices ? sIndices.birthDate : 9].toISOString().split('T')[0] : String(s[sIndices ? sIndices.birthDate : 9]),
+        examRoom: String(s[sIndices ? sIndices.examRoom : 10]),
+        examSeat: String(s[sIndices ? sIndices.examSeat : 11]),
+        photoUrl: String(s[sIndices ? sIndices.photoUrl : 12]),
+        createdAt: String(s[sIndices ? sIndices.updatedAt : 13]),
+        updatedAt: String(s[sIndices ? sIndices.updatedAt : 13])
       });
     }
   }

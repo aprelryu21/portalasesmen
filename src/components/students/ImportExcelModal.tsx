@@ -76,6 +76,7 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({
       nis: r.data.nis || '',
       name: r.data.name || 'Siswa',
       gender: r.data.gender || 'L',
+      religion: r.data.religion || 'Islam',
       className: r.data.className || 'Kelas 6',
       birthPlace: r.data.birthPlace || '',
       birthDate: r.data.birthDate || '',
@@ -224,6 +225,7 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({
                       <th className="p-2">NISN</th>
                       <th className="p-2">Nama Lengkap</th>
                       <th className="p-2">L/P</th>
+                      <th className="p-2">Agama</th>
                       <th className="p-2">Kelas</th>
                       <th className="p-2">Keterangan / Validasi</th>
                     </tr>
@@ -251,6 +253,11 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({
                         <td className="p-2 font-mono font-bold">{row.data.nisn || '-'}</td>
                         <td className="p-2 font-bold">{row.data.name || '-'}</td>
                         <td className="p-2 font-mono">{row.data.gender}</td>
+                        <td className="p-2">
+                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold border border-neutral-300 bg-neutral-100 text-neutral-800">
+                            {row.data.religion || 'Islam'}
+                          </span>
+                        </td>
                         <td className="p-2">{row.data.className}</td>
                         <td className="p-2 text-[11px]">
                           {row.errors.length > 0 && (

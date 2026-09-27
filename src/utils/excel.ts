@@ -135,14 +135,32 @@ export const parseAndValidateExcel = async (
     const warnings: string[] = [];
 
     const findValue = (possibleHeaders: string[]): string => {
-      for (const [key, val] of Object.entries(row)) {
-        const cleanKey = key.trim().toLowerCase();
-        for (const target of possibleHeaders) {
-          if (cleanKey === target.toLowerCase() || cleanKey.includes(target.toLowerCase())) {
+      // 1. Exact match first (case-insensitive & trimmed)
+      for (const target of possibleHeaders) {
+        const targetClean = target.trim().toLowerCase();
+        for (const [key, val] of Object.entries(row)) {
+          const cleanKey = key.trim().toLowerCase();
+          if (cleanKey === targetClean) {
             if (val instanceof Date) {
               return val.toISOString().split('T')[0];
             }
-            return String(val).trim();
+            const sVal = String(val ?? '').trim();
+            if (sVal !== '') return sVal;
+          }
+        }
+      }
+
+      // 2. Partial match fallback (e.g. "Agama (Wajib)", "Jenis Kelamin (L/P)")
+      for (const target of possibleHeaders) {
+        const targetClean = target.trim().toLowerCase();
+        for (const [key, val] of Object.entries(row)) {
+          const cleanKey = key.trim().toLowerCase();
+          if (cleanKey.includes(targetClean)) {
+            if (val instanceof Date) {
+              return val.toISOString().split('T')[0];
+            }
+            const sVal = String(val ?? '').trim();
+            if (sVal !== '') return sVal;
           }
         }
       }
@@ -150,8 +168,19 @@ export const parseAndValidateExcel = async (
     };
 
     const name = findValue(['Nama Lengkap', 'Nama Siswa', 'Nama Peserta', 'Nama']);
-    const rawGender = findValue(['Jenis Kelamin', 'Gender', 'JK', 'Sex', 'L/P']);
-    const rawReligion = findValue(['Agama', 'Kepercayaan', 'Religion']);
+    const rawGender = findValue(['Jenis Kelamin', 'Jenis Kelamin (L/P)', 'Gender', 'JK', 'Sex', 'L/P']);
+    const rawReligion = findValue([
+      'Agama',
+      'Agama Siswa',
+      'Agama / Kepercayaan',
+      'Agama/Kepercayaan',
+      'Agama & Kepercayaan',
+      'Agama/Keyakinan',
+      'Kepercayaan',
+      'Religion',
+      'Religi',
+      'Keyakinan'
+    ]);
     const nisn = findValue(['NISN', 'Nomor Induk Siswa Nasional']);
     const nis = findValue(['NIS', 'Nomor Induk', 'NIPD']);
     const className = findValue(['Kelas', 'Rombel', 'Class']) || 'Kelas 6';
@@ -181,14 +210,22 @@ export const parseAndValidateExcel = async (
     // 3. Religion Normalization
     let religion = 'Islam';
     if (rawReligion) {
-      const rLower = rawReligion.toLowerCase();
-      if (rLower.includes('kristen') || rLower.includes('protestan')) religion = 'Kristen';
-      else if (rLower.includes('katolik')) religion = 'Katolik';
-      else if (rLower.includes('hindu')) religion = 'Hindu';
-      else if (rLower.includes('buddha') || rLower.includes('budha')) religion = 'Buddha';
-      else if (rLower.includes('konghucu') || rLower.includes('khonghucu')) religion = 'Konghucu';
-      else if (rLower.includes('islam')) religion = 'Islam';
-      else religion = rawReligion;
+      const rLower = rawReligion.trim().toLowerCase();
+      if (rLower.includes('katolik')) {
+        religion = 'Katolik';
+      } else if (rLower.includes('kristen') || rLower.includes('protestan')) {
+        religion = 'Kristen';
+      } else if (rLower.includes('hindu')) {
+        religion = 'Hindu';
+      } else if (rLower.includes('buddha') || rLower.includes('budha')) {
+        religion = 'Buddha';
+      } else if (rLower.includes('konghucu') || rLower.includes('khonghucu')) {
+        religion = 'Konghucu';
+      } else if (rLower.includes('islam')) {
+        religion = 'Islam';
+      } else if (rawReligion.trim()) {
+        religion = rawReligion.trim();
+      }
     }
 
     // 4. NISN Validation
@@ -375,11 +412,25 @@ export const parseAndValidateTeacherExcel = async (
     const warnings: string[] = [];
 
     const findValue = (possibleHeaders: string[]): string => {
-      for (const [key, val] of Object.entries(row)) {
-        const cleanKey = key.trim().toLowerCase();
-        for (const target of possibleHeaders) {
-          if (cleanKey === target.toLowerCase() || cleanKey.includes(target.toLowerCase())) {
-            return String(val).trim();
+      // 1. Exact match first
+      for (const target of possibleHeaders) {
+        const targetClean = target.trim().toLowerCase();
+        for (const [key, val] of Object.entries(row)) {
+          const cleanKey = key.trim().toLowerCase();
+          if (cleanKey === targetClean) {
+            const sVal = String(val ?? '').trim();
+            if (sVal !== '') return sVal;
+          }
+        }
+      }
+      // 2. Partial match fallback
+      for (const target of possibleHeaders) {
+        const targetClean = target.trim().toLowerCase();
+        for (const [key, val] of Object.entries(row)) {
+          const cleanKey = key.trim().toLowerCase();
+          if (cleanKey.includes(targetClean)) {
+            const sVal = String(val ?? '').trim();
+            if (sVal !== '') return sVal;
           }
         }
       }
@@ -388,8 +439,8 @@ export const parseAndValidateTeacherExcel = async (
 
     const name = findValue(['Nama Lengkap', 'Nama Guru', 'Nama', 'Gelar']);
     const nip = findValue(['NIP', 'NUPTK', 'Nomor Induk Pegawai']);
-    const rawGender = findValue(['Jenis Kelamin', 'Gender', 'JK', 'Sex', 'L/P']);
-    const rawReligion = findValue(['Agama', 'Religion']);
+    const rawGender = findValue(['Jenis Kelamin', 'Jenis Kelamin (L/P)', 'Gender', 'JK', 'Sex', 'L/P']);
+    const rawReligion = findValue(['Agama', 'Agama Guru', 'Kepercayaan', 'Religion', 'Religi']);
     const subject = findValue(['Mata Pelajaran', 'Mapel', 'Jabatan', 'Tugas']) || 'Guru Mata Pelajaran';
     const statusTugas = findValue(['Status Tugas', 'Status', 'Peran', 'Penugasan']);
     const roomDuty = findValue(['Ruang Ujian', 'Ruang', 'Ruang Tugas', 'Jaga Ruang']) || 'Ruang 01';
@@ -411,14 +462,22 @@ export const parseAndValidateTeacherExcel = async (
 
     let religion = 'Islam';
     if (rawReligion) {
-      const rLower = rawReligion.toLowerCase();
-      if (rLower.includes('kristen') || rLower.includes('protestan')) religion = 'Kristen';
-      else if (rLower.includes('katolik')) religion = 'Katolik';
-      else if (rLower.includes('hindu')) religion = 'Hindu';
-      else if (rLower.includes('buddha') || rLower.includes('budha')) religion = 'Buddha';
-      else if (rLower.includes('konghucu')) religion = 'Konghucu';
-      else if (rLower.includes('islam')) religion = 'Islam';
-      else religion = rawReligion;
+      const rLower = rawReligion.trim().toLowerCase();
+      if (rLower.includes('katolik')) {
+        religion = 'Katolik';
+      } else if (rLower.includes('kristen') || rLower.includes('protestan')) {
+        religion = 'Kristen';
+      } else if (rLower.includes('hindu')) {
+        religion = 'Hindu';
+      } else if (rLower.includes('buddha') || rLower.includes('budha')) {
+        religion = 'Buddha';
+      } else if (rLower.includes('konghucu') || rLower.includes('khonghucu')) {
+        religion = 'Konghucu';
+      } else if (rLower.includes('islam')) {
+        religion = 'Islam';
+      } else if (rawReligion.trim()) {
+        religion = rawReligion.trim();
+      }
     }
 
     if (nip && nip !== '-') {
