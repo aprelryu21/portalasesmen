@@ -25,19 +25,9 @@ jobs:
         run: npm run build
 
       - name: Deploy to Firebase Hosting
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PORTALASESMEN_D8917 != '' }}
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PORTALASESMEN_D8917 }}'
           channelId: live
           projectId: portalasesmen-d8917
-
-      - name: Petunjuk jika Secret belum diset
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PORTALASESMEN_D8917 == '' }}
-        run: |
-          echo "::error::Secret FIREBASE_SERVICE_ACCOUNT_PORTALASESMEN_D8917 belum diset di GitHub Secrets!"
-          echo "Kunjungi: https://github.com/aprelryu21/portalasesmen/settings/secrets/actions"
-          echo "Tambahkan secret baru dengan nama FIREBASE_SERVICE_ACCOUNT_PORTALASESMEN_D8917 dan isi dengan JSON key Service Account Firebase Anda."
-          exit 1
-
