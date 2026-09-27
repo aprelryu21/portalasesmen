@@ -1,0 +1,8 @@
+{
+  "name": "Remix PORTAL ASESMEN ",
+  "description": "Aplikasi cetak kartu ujian sekolah otomatis dengan gaya neobrutalisme, import Excel, upload foto massal ZIP, avatar gender, dan layout print A4 presisi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
