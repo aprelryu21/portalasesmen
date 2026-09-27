@@ -81,6 +81,7 @@ export interface GasAllDataResponse {
     schoolsMap?: Record<string, { school: School; exam: Exam }>;
     studentsMap?: Record<string, Student[]>;
     teachersMap?: Record<string, Teacher[]>;
+    examsMap?: Record<string, Exam[]>;
     designsMap?: Record<string, { cardDesign: CardDesignSettings; printSettings: PrintSettings }>;
     loginLogs?: LoginLogEntry[];
   };
@@ -283,7 +284,9 @@ export const gasSaveAllData = async (
     username: string;
     school: School;
     exam: Exam;
+    exams?: Exam[];
     students: Student[];
+    teachers?: Teacher[];
     cardDesign: CardDesignSettings;
     printSettings: PrintSettings;
   }
@@ -562,6 +565,88 @@ export const gasBulkDeleteTeachers = async (
 ): Promise<{ status: 'success' | 'error'; message: string; deletedCount?: number }> => {
   return postToGas(webAppUrl, {
     action: 'BULK_DELETE_TEACHERS',
+    ...payload,
+  });
+};
+
+/**
+ * Tambah atau sinkronkan data asesmen/ujian secara batch ke Sheet DATA_ASESMEN
+ */
+export const gasBatchExams = async (
+  webAppUrl: string,
+  payload: {
+    username: string;
+    schoolId?: string;
+    exams: Exam[];
+  }
+): Promise<{ status: 'success' | 'error'; message: string; totalExamsSaved?: number }> => {
+  return postToGas(webAppUrl, {
+    action: 'BATCH_EXAMS',
+    ...payload,
+  });
+};
+
+/**
+ * Tambah 1 data asesmen baru ke Sheet DATA_ASESMEN
+ */
+export const gasAddExam = async (
+  webAppUrl: string,
+  payload: {
+    username: string;
+    schoolId?: string;
+    exam: Exam;
+  }
+): Promise<{ status: 'success' | 'error'; message: string; exam?: Exam }> => {
+  return postToGas(webAppUrl, {
+    action: 'ADD_EXAM',
+    ...payload,
+  });
+};
+
+/**
+ * Update 1 data asesmen di Sheet DATA_ASESMEN
+ */
+export const gasUpdateExam = async (
+  webAppUrl: string,
+  payload: {
+    username: string;
+    exam: Exam;
+  }
+): Promise<{ status: 'success' | 'error'; message: string; exam?: Exam }> => {
+  return postToGas(webAppUrl, {
+    action: 'UPDATE_EXAM',
+    ...payload,
+  });
+};
+
+/**
+ * Hapus 1 data asesmen dari Sheet DATA_ASESMEN
+ */
+export const gasDeleteExam = async (
+  webAppUrl: string,
+  payload: {
+    username: string;
+    examId: string;
+  }
+): Promise<{ status: 'success' | 'error'; message: string }> => {
+  return postToGas(webAppUrl, {
+    action: 'DELETE_EXAM',
+    ...payload,
+  });
+};
+
+/**
+ * Set asesmen aktif untuk sekolah di Sheet DATA_ASESMEN & INFORMASI_SEKOLAH
+ */
+export const gasSetActiveExam = async (
+  webAppUrl: string,
+  payload: {
+    username: string;
+    examId: string;
+  }
+): Promise<{ status: 'success' | 'error'; message: string; activeExam?: Exam }> => {
+  return postToGas(webAppUrl, {
+    action: 'SET_ACTIVE_EXAM',
     ...payload,
   });
 };

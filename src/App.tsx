@@ -63,6 +63,10 @@ import {
   gasDeleteTeacher,
   gasBulkDeleteTeachers,
   gasBatchTeachers,
+  gasAddExam,
+  gasUpdateExam,
+  gasDeleteExam,
+  gasSetActiveExam,
   gasRecordLoginLog,
   SpreadsheetCapacity,
   DriveDatabaseInfo,
@@ -224,6 +228,7 @@ export default function App() {
         const schoolsMap = res.data?.schoolsMap || {};
         const studentsMap = res.data?.studentsMap || {};
         const teachersMap = res.data?.teachersMap || {};
+        const examsMap = res.data?.examsMap || {};
         const designsMap = res.data?.designsMap || {};
 
         // Pastikan akun admin Nagata selalu ada
@@ -232,12 +237,13 @@ export default function App() {
           mergedAccounts = [DEFAULT_ACCOUNTS[0], ...mergedAccounts];
         }
 
-        // Kumpulkan SEMUA username unik dari Sheet AKUN, INFORMASI_SEKOLAH, DATA_SISWA, dan DESAIN_KARTU
+        // Kumpulkan SEMUA username unik dari Sheet AKUN, INFORMASI_SEKOLAH, DATA_SISWA, DATA_GURU, DATA_ASESMEN, dan DESAIN_KARTU
         const allUsernames = new Set<string>();
         mergedAccounts.forEach((a) => allUsernames.add(a.username));
         Object.keys(schoolsMap).forEach((k) => allUsernames.add(k));
         Object.keys(studentsMap).forEach((k) => allUsernames.add(k));
         Object.keys(teachersMap).forEach((k) => allUsernames.add(k));
+        Object.keys(examsMap).forEach((k) => allUsernames.add(k));
         Object.keys(designsMap).forEach((k) => allUsernames.add(k));
 
         // Susun schoolDataMap lengkap dari seluruh data spreadsheet
@@ -248,6 +254,11 @@ export default function App() {
           const schInfo = schoolsMap[u] || schoolsMap[rawU];
           const studs = deduplicateStudents(studentsMap[u] || studentsMap[rawU] || []);
           const teachs = deduplicateTeachers(teachersMap[u] || teachersMap[rawU] || DEFAULT_TEACHERS);
+          const rawExams = examsMap[u] || examsMap[rawU] || [];
+          const userExams: Exam[] = Array.isArray(rawExams) && rawExams.length > 0
+            ? rawExams
+            : (schInfo?.exam ? [schInfo.exam] : [DEFAULT_EXAM]);
+          const activeExam = userExams.find((e) => e.isActive) || schInfo?.exam || userExams[0] || DEFAULT_EXAM;
           const des = designsMap[u] || designsMap[rawU];
 
           const userSchoolData: UserSchoolData = {
@@ -257,7 +268,8 @@ export default function App() {
               name: acc?.schoolName || schInfo?.school?.name || '',
               npsn: acc?.npsn || schInfo?.school?.npsn || '',
             },
-            exam: schInfo?.exam || DEFAULT_EXAM,
+            exam: activeExam,
+            exams: userExams,
             students: studs,
             teachers: teachs,
             cardDesign: des?.cardDesign || DEFAULT_CARD_DESIGN,
@@ -273,6 +285,7 @@ export default function App() {
           const effectiveUser = targetUser || prev.currentUser;
           let currentSchool = prev.school || DEFAULT_SCHOOL;
           let currentExam = prev.exam || DEFAULT_EXAM;
+          let currentExams = prev.exams && prev.exams.length > 0 ? prev.exams : [DEFAULT_EXAM];
           let currentStudents = prev.students || [];
           let currentTeachers = prev.teachers || DEFAULT_TEACHERS;
           let currentDesign = prev.cardDesign || DEFAULT_CARD_DESIGN;
@@ -294,8 +307,9 @@ export default function App() {
             if (userSchool) {
               currentSchool = userSchool.school || currentSchool;
               currentExam = userSchool.exam || currentExam;
+              currentExams = userSchool.exams && userSchool.exams.length > 0 ? userSchool.exams : [userSchool.exam || DEFAULT_EXAM];
               currentStudents = userSchool.students || [];
-              currentTeachers = userSchool.teachers || currentTeachers;
+              currentTeachers = userSchool.teachers && userSchool.teachers.length > 0 ? userSchool.teachers : currentTeachers;
               currentDesign = userSchool.cardDesign || currentDesign;
               currentPrint = userSchool.printSettings || currentPrint;
               currentSelected = userSchool.selectedStudentIds || [];
@@ -308,6 +322,7 @@ export default function App() {
             schoolDataMap: newSchoolDataMap,
             school: currentSchool,
             exam: currentExam,
+            exams: currentExams,
             students: currentStudents,
             teachers: currentTeachers,
             cardDesign: currentDesign,
@@ -376,6 +391,7 @@ export default function App() {
         prev.schoolDataMap?.[activeUsername.toLowerCase()] || {
           school: prev.school,
           exam: prev.exam,
+          exams: prev.exams || [prev.exam],
           students: prev.students,
           teachers: prev.teachers,
           cardDesign: prev.cardDesign,
@@ -386,11 +402,15 @@ export default function App() {
       const updated = dataUpdater(currentData);
       const cleanStudents = deduplicateStudents(updated.students);
       const cleanTeachers = deduplicateTeachers(updated.teachers || prev.teachers || []);
+      const cleanExams = Array.isArray(updated.exams) && updated.exams.length > 0
+        ? updated.exams
+        : (updated.exam ? [updated.exam] : prev.exams);
 
       return {
         ...prev,
         school: updated.school,
         exam: updated.exam,
+        exams: cleanExams,
         students: cleanStudents,
         teachers: cleanTeachers,
         cardDesign: updated.cardDesign,
@@ -398,8 +418,8 @@ export default function App() {
         selectedStudentIds: updated.selectedStudentIds,
         schoolDataMap: {
           ...(prev.schoolDataMap || {}),
-          [activeUsername]: { ...updated, students: cleanStudents, teachers: cleanTeachers },
-          [activeUsername.toLowerCase()]: { ...updated, students: cleanStudents, teachers: cleanTeachers },
+          [activeUsername]: { ...updated, exams: cleanExams, students: cleanStudents, teachers: cleanTeachers },
+          [activeUsername.toLowerCase()]: { ...updated, exams: cleanExams, students: cleanStudents, teachers: cleanTeachers },
         },
       };
     });
@@ -418,6 +438,7 @@ export default function App() {
         prev.schoolDataMap?.[user.username.toLowerCase()];
       let userSchool = prev.school || DEFAULT_SCHOOL;
       let userExam = prev.exam || DEFAULT_EXAM;
+      let userExams = prev.exams && prev.exams.length > 0 ? prev.exams : [prev.exam || DEFAULT_EXAM];
       let userStudents = prev.students || [];
       let userTeachers = prev.teachers || DEFAULT_TEACHERS;
       let userDesign = prev.cardDesign || DEFAULT_CARD_DESIGN;
@@ -427,6 +448,7 @@ export default function App() {
       if (existingData) {
         userSchool = existingData.school || DEFAULT_SCHOOL;
         userExam = existingData.exam || DEFAULT_EXAM;
+        userExams = existingData.exams && existingData.exams.length > 0 ? existingData.exams : [userExam];
         userStudents = existingData.students || [];
         userTeachers = existingData.teachers && existingData.teachers.length > 0 ? existingData.teachers : (prev.teachers || DEFAULT_TEACHERS);
         userDesign = existingData.cardDesign || DEFAULT_CARD_DESIGN;
@@ -443,6 +465,7 @@ export default function App() {
         // For non-admin new accounts, start with empty student roster
         userStudents = user.role === 'admin' ? (prev.students || []) : [];
         userTeachers = prev.teachers || DEFAULT_TEACHERS;
+        userExams = prev.exams && prev.exams.length > 0 ? prev.exams : [DEFAULT_EXAM];
         userSelected = [];
       }
 
@@ -451,6 +474,7 @@ export default function App() {
         [user.username]: {
           school: userSchool,
           exam: userExam,
+          exams: userExams,
           students: userStudents,
           teachers: userTeachers,
           cardDesign: userDesign,
@@ -460,6 +484,7 @@ export default function App() {
         [user.username.toLowerCase()]: {
           school: userSchool,
           exam: userExam,
+          exams: userExams,
           students: userStudents,
           teachers: userTeachers,
           cardDesign: userDesign,
@@ -473,6 +498,7 @@ export default function App() {
         currentUser: user,
         school: userSchool,
         exam: userExam,
+        exams: userExams,
         students: userStudents,
         teachers: userTeachers,
         cardDesign: userDesign,
@@ -549,6 +575,11 @@ export default function App() {
           console.warn('Gagal mencatat log ke GAS:', gasErr);
         });
     }
+
+    try {
+      localStorage.setItem('portal_asesmen_camera_permission_prompted', 'true');
+      setShowCameraPermissionNotice(false);
+    } catch {}
 
     setPendingLoginUser(null);
     await finalizeLogin(targetUser);
@@ -782,7 +813,9 @@ export default function App() {
               username: u,
               school: sData.school,
               exam: sData.exam,
+              exams: sData.exams && sData.exams.length > 0 ? sData.exams : [sData.exam],
               students: sData.students,
+              teachers: sData.teachers || [],
               cardDesign: sData.cardDesign,
               printSettings: sData.printSettings,
             });
@@ -796,7 +829,9 @@ export default function App() {
           username: state.currentUser?.username || 'Nagata',
           school: state.school,
           exam: state.exam,
+          exams: state.exams && state.exams.length > 0 ? state.exams : [state.exam],
           students: state.students,
+          teachers: state.teachers || [],
           cardDesign: state.cardDesign,
           printSettings: state.printSettings,
         });
@@ -808,7 +843,7 @@ export default function App() {
         ...prev,
         googleSheets: { ...prev.googleSheets, lastSyncedAt: now, isConnected: true },
       }));
-      alert(`✓ Sinkronisasi Berhasil!\nSeluruh data sekolah (${totalSyncedStudents} siswa) tersimpan rapi ke Google Spreadsheet & Google Drive (/GENERATOR KARTU UJIAN/DATABASE/).`);
+      alert(`✓ Sinkronisasi Berhasil!\nSeluruh data sekolah (${totalSyncedStudents} siswa, ${state.teachers?.length || 0} guru, ${state.exams?.length || 1} asesmen) tersimpan rapi ke Google Spreadsheet & Google Drive.`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal menghubungi Google Apps Script';
       alert(`Error sinkronisasi: ${msg}`);
@@ -865,7 +900,7 @@ export default function App() {
     void handleSaveSchoolAndExam(state.school, exam);
   };
 
-  const handleAddExam = (newExam: Exam) => {
+  const handleAddExam = async (newExam: Exam) => {
     updateLocalSchoolData((prev) => {
       const existingExams = prev.exams && prev.exams.length > 0 ? prev.exams : [prev.exam];
       const updatedExams = [newExam, ...existingExams.filter((e) => e.id !== newExam.id)];
@@ -875,10 +910,30 @@ export default function App() {
         exams: updatedExams,
       };
     });
+
+    if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+      try {
+        setSyncStatus('syncing');
+        setSyncToastMessage(`Menyimpan asesmen ${newExam.name}...`);
+        const res = await gasAddExam(activeGasUrl, {
+          username: activeUsername,
+          schoolId: state.school?.id || `sch_${activeUsername}`,
+          exam: newExam,
+        });
+        if (res.status === 'success') {
+          showSyncToast(`✓ Asesmen '${newExam.name}' tersimpan di database`);
+        } else {
+          showSyncToast('Asesmen tersimpan di perangkat lokal', 'saved');
+        }
+      } catch {
+        showSyncToast('Asesmen tersimpan di perangkat lokal', 'saved');
+      }
+    }
+
     void handleSaveSchoolAndExam(state.school, newExam);
   };
 
-  const handleUpdateExamItem = (updatedExam: Exam) => {
+  const handleUpdateExamItem = async (updatedExam: Exam) => {
     updateLocalSchoolData((prev) => {
       const existingExams = prev.exams && prev.exams.length > 0 ? prev.exams : [prev.exam];
       const updatedExams = existingExams.map((e) => (e.id === updatedExam.id ? updatedExam : e));
@@ -889,12 +944,31 @@ export default function App() {
         exams: updatedExams,
       };
     });
+
+    if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+      try {
+        setSyncStatus('syncing');
+        setSyncToastMessage(`Memperbarui asesmen ${updatedExam.name}...`);
+        const res = await gasUpdateExam(activeGasUrl, {
+          username: activeUsername,
+          exam: updatedExam,
+        });
+        if (res.status === 'success') {
+          showSyncToast(`✓ Asesmen '${updatedExam.name}' berhasil diperbarui`);
+        } else {
+          showSyncToast('Perubahan asesmen tersimpan di perangkat lokal', 'saved');
+        }
+      } catch {
+        showSyncToast('Perubahan asesmen tersimpan di perangkat lokal', 'saved');
+      }
+    }
+
     if (state.exam.id === updatedExam.id) {
       void handleSaveSchoolAndExam(state.school, updatedExam);
     }
   };
 
-  const handleDeleteExamItem = (id: string) => {
+  const handleDeleteExamItem = async (id: string) => {
     updateLocalSchoolData((prev) => {
       const existingExams = prev.exams || [];
       const filtered = existingExams.filter((e) => e.id !== id);
@@ -905,6 +979,24 @@ export default function App() {
         exams: filtered,
       };
     });
+
+    if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+      try {
+        setSyncStatus('syncing');
+        setSyncToastMessage('Menghapus data asesmen...');
+        const res = await gasDeleteExam(activeGasUrl, {
+          username: activeUsername,
+          examId: id,
+        });
+        if (res.status === 'success') {
+          showSyncToast('✓ Data asesmen berhasil dihapus dari cloud');
+        } else {
+          showSyncToast('Data asesmen dihapus dari perangkat lokal', 'saved');
+        }
+      } catch {
+        showSyncToast('Data asesmen dihapus dari perangkat lokal', 'saved');
+      }
+    }
   };
 
   const handleSelectActiveExam = (selectedExam: Exam) => {
@@ -912,6 +1004,16 @@ export default function App() {
       ...prev,
       exam: selectedExam,
     }));
+
+    if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+      try {
+        void gasSetActiveExam(activeGasUrl, {
+          username: activeUsername,
+          examId: selectedExam.id,
+        });
+      } catch {}
+    }
+
     void handleSaveSchoolAndExam(state.school, selectedExam);
   };
 
@@ -1812,7 +1914,9 @@ export default function App() {
           currentUser={state.currentUser}
           school={state.school}
           exam={state.exam}
+          exams={state.exams}
           students={state.students}
+          teachers={state.teachers}
           cardDesign={state.cardDesign}
           printSettings={state.printSettings}
         />

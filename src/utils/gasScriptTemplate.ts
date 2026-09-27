@@ -51,6 +51,8 @@ var SHEET_NAMES = {
   AKUN: "AKUN",
   INFORMASI_SEKOLAH: "INFORMASI_SEKOLAH",
   DATA_SISWA: "DATA_SISWA",
+  DATA_GURU: "DATA_GURU",
+  DATA_ASESMEN: "DATA_ASESMEN",
   DESAIN_KARTU: "DESAIN_KARTU",
   LOG_PENGGUNA: "LOG_PENGGUNA"
 };
@@ -108,6 +110,28 @@ function initSheets() {
       "Kelas", "Tempat Lahir", "Tanggal Lahir", "Ruang Ujian", "Nomor Meja", "Foto URL", "Updated At"
     ]);
     sheetSiswa.getRange("A1:N1").setFontWeight("bold").setBackground("#10B981").setFontColor("#FFFFFF");
+  }
+
+  // 3.5 Sheet DATA_GURU (Data Guru, Pengawas, Proktor, & Teknisi)
+  var sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  if (!sheetGuru) {
+    sheetGuru = ss.insertSheet(SHEET_NAMES.DATA_GURU);
+    sheetGuru.appendRow([
+      "ID", "School ID", "Username", "NIP", "Nama Lengkap", "Jenis Kelamin",
+      "Agama", "Mata Pelajaran / Jabatan", "No HP", "Email", "Peran / Tugas", "Ruang Tugas", "Foto URL", "Updated At"
+    ]);
+    sheetGuru.getRange("A1:N1").setFontWeight("bold").setBackground("#8B5CF6").setFontColor("#FFFFFF");
+  }
+
+  // 3.6 Sheet DATA_ASESMEN (Daftar Jenis Asesmen / Ujian Sekolah Multi-Tingkat)
+  var sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  if (!sheetAsesmen) {
+    sheetAsesmen = ss.insertSheet(SHEET_NAMES.DATA_ASESMEN);
+    sheetAsesmen.appendRow([
+      "ID", "School ID", "Username", "Nama Asesmen", "Semester", "Tahun Pelajaran",
+      "Tanggal Pelaksanaan", "Titimangsa Lokasi", "Tanggal Titimangsa", "Jadwal Ujian", "Catatan Tata Tertib", "Status Aktif", "Updated At"
+    ]);
+    sheetAsesmen.getRange("A1:M1").setFontWeight("bold").setBackground("#0284C7").setFontColor("#FFFFFF");
   }
 
   // 4. Sheet DESAIN_KARTU
@@ -482,6 +506,66 @@ function doPost(e) {
       return createJsonResponse(bulkDelResult);
     }
 
+    // 16.1 BATCH DATA GURU (ATOMIC & TIDAK BERTUMPUK)
+    if (action === "BATCH_TEACHERS") {
+      var batchTeachResult = handleBatchTeachers(contents);
+      return createJsonResponse(batchTeachResult);
+    }
+
+    // 16.2 TAMBAH 1 GURU (CRUD EFISIEN)
+    if (action === "ADD_TEACHER") {
+      var addTeachResult = handleAddTeacher(contents);
+      return createJsonResponse(addTeachResult);
+    }
+
+    // 16.3 UPDATE 1 GURU (CRUD EFISIEN)
+    if (action === "UPDATE_TEACHER") {
+      var updTeachResult = handleUpdateTeacher(contents);
+      return createJsonResponse(updTeachResult);
+    }
+
+    // 16.4 HAPUS 1 GURU (CRUD EFISIEN)
+    if (action === "DELETE_TEACHER") {
+      var delTeachResult = handleDeleteTeacher(contents);
+      return createJsonResponse(delTeachResult);
+    }
+
+    // 16.5 HAPUS BANYAK GURU (CRUD EFISIEN)
+    if (action === "BULK_DELETE_TEACHERS") {
+      var bulkDelTeachResult = handleBulkDeleteTeachers(contents);
+      return createJsonResponse(bulkDelTeachResult);
+    }
+
+    // 16.6 BATCH DATA ASESMEN (ATOMIC & TIDAK BERTUMPUK)
+    if (action === "BATCH_EXAMS") {
+      var batchExResult = handleBatchExams(contents);
+      return createJsonResponse(batchExResult);
+    }
+
+    // 16.7 TAMBAH 1 ASESMEN (CRUD EFISIEN)
+    if (action === "ADD_EXAM") {
+      var addExResult = handleAddExam(contents);
+      return createJsonResponse(addExResult);
+    }
+
+    // 16.8 UPDATE 1 ASESMEN (CRUD EFISIEN)
+    if (action === "UPDATE_EXAM") {
+      var updExResult = handleUpdateExam(contents);
+      return createJsonResponse(updExResult);
+    }
+
+    // 16.9 HAPUS 1 ASESMEN (CRUD EFISIEN)
+    if (action === "DELETE_EXAM") {
+      var delExResult = handleDeleteExam(contents);
+      return createJsonResponse(delExResult);
+    }
+
+    // 16.10 SET ASESMEN AKTIF
+    if (action === "SET_ACTIVE_EXAM") {
+      var setActExResult = handleSetActiveExam(contents);
+      return createJsonResponse(setActExResult);
+    }
+
     // 17. BERSIHKAN & RAPIKAN SPREADSHEET (HAPUS KOLOM & BARIS KOSONG BERLEBIH)
     if (action === "CLEANUP_SPREADSHEET" || action === "OPTIMIZE_CAPACITY") {
       var cleanupResult = handleCleanupSpreadsheet();
@@ -791,6 +875,16 @@ function handleDeleteAccount(data) {
       }
     }
 
+    var sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+    if (sheetAsesmen) {
+      var aRows = sheetAsesmen.getDataRange().getValues();
+      for (var a = aRows.length - 1; a >= 1; a--) {
+        if (String(aRows[a][2]).toLowerCase() === username) {
+          sheetAsesmen.deleteRow(a + 1);
+        }
+      }
+    }
+
     var sheetSekolah = ss.getSheetByName(SHEET_NAMES.INFORMASI_SEKOLAH);
     if (sheetSekolah) {
       var schRows = sheetSekolah.getDataRange().getValues();
@@ -973,10 +1067,78 @@ function handleGetAllDatabaseData() {
     } catch (e) {}
   }
 
+  // 5. Data Guru (Sheet DATA_GURU)
+  var sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  var rowsGuru = sheetGuru ? sheetGuru.getDataRange().getValues() : [];
+  var teachersMap = {};
+  var seenTeacherKeys = {};
+
+  for (var g = 1; g < rowsGuru.length; g++) {
+    var gr = rowsGuru[g];
+    var gId = String(gr[0] || "").trim();
+    var gu = String(gr[2] || "").toLowerCase();
+    if (!gu || !gId) continue;
+
+    var gKey = gu + "_" + gId;
+    if (seenTeacherKeys[gKey]) continue;
+    seenTeacherKeys[gKey] = true;
+
+    if (!teachersMap[gu]) teachersMap[gu] = [];
+    teachersMap[gu].push({
+      id: gId,
+      nip: String(gr[3] || ""),
+      name: String(gr[4] || ""),
+      gender: String(gr[5]) === "P" ? "P" : "L",
+      religion: String(gr[6] || ""),
+      subject: String(gr[7] || ""),
+      phone: String(gr[8] || ""),
+      email: String(gr[9] || ""),
+      roleType: String(gr[10] || "guru"),
+      roomDuty: String(gr[11] || ""),
+      photoUrl: String(gr[12] || ""),
+      createdAt: String(gr[13] || new Date().toISOString()),
+      updatedAt: String(gr[13] || new Date().toISOString())
+    });
+  }
+
+  // 6. Data Asesmen (Sheet DATA_ASESMEN)
+  var sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  var rowsAsesmen = sheetAsesmen ? sheetAsesmen.getDataRange().getValues() : [];
+  var examsMap = {};
+  var seenExamKeys = {};
+
+  for (var a = 1; a < rowsAsesmen.length; a++) {
+    var ar = rowsAsesmen[a];
+    var aId = String(ar[0] || "").trim();
+    var au = String(ar[2] || "").toLowerCase();
+    if (!au || !aId) continue;
+
+    var aKey = au + "_" + aId;
+    if (seenExamKeys[aKey]) continue;
+    seenExamKeys[aKey] = true;
+
+    if (!examsMap[au]) examsMap[au] = [];
+    var isAct = String(ar[11]).toLowerCase() === "true" || ar[11] === true || ar[11] === 1;
+    examsMap[au].push({
+      id: aId,
+      name: String(ar[3] || ""),
+      semester: String(ar[4] || ""),
+      academicYear: String(ar[5] || ""),
+      dateText: String(ar[6] || ""),
+      location: String(ar[7] || ""),
+      signatureDate: String(ar[8] || ""),
+      scheduleInfo: String(ar[9] || ""),
+      extraNote: String(ar[10] || ""),
+      isActive: isAct
+    });
+  }
+
   return {
     accounts: accounts,
     schoolsMap: schoolsMap,
     studentsMap: studentsMap,
+    teachersMap: teachersMap,
+    examsMap: examsMap,
     designsMap: designsMap,
     loginLogs: handleGetLoginLogs()
   };
@@ -1010,8 +1172,11 @@ function handleSaveAllData(payload) {
     var jsonContent = JSON.stringify({
       school: school,
       exam: exam,
+      exams: payload.exams || [exam],
       studentsCount: students.length,
       students: students,
+      teachersCount: (payload.teachers || []).length,
+      teachers: payload.teachers || [],
       cardDesign: design,
       printSettings: printSettings,
       lastUpdated: now,
@@ -1158,10 +1323,32 @@ function handleSaveAllData(payload) {
     sheetDesain.appendRow(desainData);
   }
 
+  // 5. Simpan DATA_GURU di Spreadsheet
+  var teachers = payload.teachers || [];
+  if (Array.isArray(teachers) && teachers.length > 0) {
+    handleBatchTeachers({
+      username: username,
+      schoolId: school.id || ("sch_" + username),
+      teachers: teachers
+    });
+  }
+
+  // 6. Simpan DATA_ASESMEN di Spreadsheet
+  var exams = payload.exams || (payload.exam ? [Object.assign({}, payload.exam, { isActive: true })] : []);
+  if (Array.isArray(exams) && exams.length > 0) {
+    handleBatchExams({
+      username: username,
+      schoolId: school.id || ("sch_" + username),
+      exams: exams
+    });
+  }
+
   return {
     status: "success",
-    message: "Data " + students.length + " siswa & pengaturan berhasil disimpan ke Spreadsheet & Google Drive!",
+    message: "Data " + students.length + " siswa, guru & asesmen berhasil disimpan ke Spreadsheet & Google Drive!",
     totalStudentsSaved: students.length,
+    totalTeachersSaved: teachers.length,
+    totalExamsSaved: exams.length,
     driveFolderUrl: driveInfo ? driveInfo.schoolFolderUrl : "",
     drivePath: driveInfo ? driveInfo.schoolPath : "/GENERATOR KARTU UJIAN/DATABASE/" + schoolName + "/",
     photoFolderUrl: driveInfo ? driveInfo.photoFolderUrl : "",
@@ -1674,6 +1861,612 @@ function handleBatchStudents(contents) {
   };
 }
 
+/**
+ * ----------------------------------------------------------------------------
+ * SISTEM CRUD PINTAR: DATA GURU (Sheet DATA_GURU)
+ * ----------------------------------------------------------------------------
+ */
+
+function handleAddTeacher(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = String(contents.username || "Nagata").trim();
+  var teacher = contents.teacher || {};
+  var schoolId = contents.schoolId || "sch_" + username;
+  var now = new Date().toISOString();
+
+  if (!teacher.name && !teacher.nip) {
+    return { status: "error", message: "Data guru tidak lengkap (Nama / NIP kosong)." };
+  }
+
+  var sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  if (!sheetGuru) {
+    initSheets();
+    sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  }
+  var allRows = sheetGuru.getDataRange().getValues();
+
+  var existingRowIdx = -1;
+  for (var i = 1; i < allRows.length; i++) {
+    var r = allRows[i];
+    var rUser = String(r[2] || "").trim().toLowerCase();
+    if (rUser === username.toLowerCase()) {
+      if ((teacher.id && String(r[0]) === String(teacher.id)) ||
+          (teacher.nip && teacher.nip !== "-" && String(r[3]) === String(teacher.nip))) {
+        existingRowIdx = i + 1;
+        break;
+      }
+    }
+  }
+
+  var rowData = [
+    teacher.id || "tea_" + new Date().getTime(),
+    schoolId,
+    username,
+    teacher.nip || "",
+    teacher.name || "",
+    teacher.gender || "L",
+    teacher.religion || "",
+    teacher.subject || "",
+    teacher.phone || "",
+    teacher.email || "",
+    teacher.roleType || "guru",
+    teacher.roomDuty || "",
+    teacher.photoUrl || "",
+    now
+  ];
+
+  if (existingRowIdx > 0) {
+    sheetGuru.getRange(existingRowIdx, 1, 1, rowData.length).setValues([rowData]);
+  } else {
+    sheetGuru.appendRow(rowData);
+  }
+
+  return {
+    status: "success",
+    message: "Data guru '" + (teacher.name || teacher.nip) + "' berhasil disimpan ke database!",
+    teacher: {
+      id: rowData[0],
+      nip: teacher.nip || "",
+      name: teacher.name || "",
+      gender: teacher.gender || "L",
+      religion: teacher.religion || "",
+      subject: teacher.subject || "",
+      phone: teacher.phone || "",
+      email: teacher.email || "",
+      roleType: teacher.roleType || "guru",
+      roomDuty: teacher.roomDuty || "",
+      photoUrl: teacher.photoUrl || "",
+      createdAt: teacher.createdAt || now,
+      updatedAt: now
+    }
+  };
+}
+
+function handleUpdateTeacher(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = String(contents.username || "Nagata").trim();
+  var teacher = contents.teacher || {};
+  var now = new Date().toISOString();
+
+  if (!teacher.id && !teacher.nip) {
+    return { status: "error", message: "ID atau NIP guru diperlukan untuk update data." };
+  }
+
+  var sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  if (!sheetGuru) {
+    initSheets();
+    sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  }
+  var allRows = sheetGuru.getDataRange().getValues();
+
+  var targetRowIdx = -1;
+  for (var i = 1; i < allRows.length; i++) {
+    var r = allRows[i];
+    var rUser = String(r[2] || "").trim().toLowerCase();
+    if (rUser === username.toLowerCase()) {
+      if ((teacher.id && String(r[0]) === String(teacher.id)) ||
+          (teacher.nip && teacher.nip !== "-" && String(r[3]) === String(teacher.nip))) {
+        targetRowIdx = i + 1;
+        break;
+      }
+    }
+  }
+
+  if (targetRowIdx > 0) {
+    var updateRange = [
+      teacher.nip || "",
+      teacher.name || "",
+      teacher.gender || "L",
+      teacher.religion || "",
+      teacher.subject || "",
+      teacher.phone || "",
+      teacher.email || "",
+      teacher.roleType || "guru",
+      teacher.roomDuty || "",
+      teacher.photoUrl || "",
+      now
+    ];
+    sheetGuru.getRange(targetRowIdx, 4, 1, updateRange.length).setValues([updateRange]);
+    return {
+      status: "success",
+      message: "Data guru '" + teacher.name + "' berhasil diperbarui di database!",
+      teacher: teacher
+    };
+  } else {
+    return handleAddTeacher(contents);
+  }
+}
+
+function handleDeleteTeacher(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = String(contents.username || "Nagata").trim().toLowerCase();
+  var teacherId = String(contents.teacherId || contents.id || "").trim();
+  var teacherNip = String(contents.nip || "").trim();
+
+  if (!teacherId && !teacherNip) {
+    return { status: "error", message: "Teacher ID atau NIP wajib diisi untuk menghapus." };
+  }
+
+  var sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  if (!sheetGuru) return { status: "success", message: "Data guru telah bersih." };
+  var allRows = sheetGuru.getDataRange().getValues();
+  var deleted = false;
+
+  for (var i = allRows.length - 1; i >= 1; i--) {
+    var r = allRows[i];
+    var rId = String(r[0]).trim();
+    var rUser = String(r[2] || "").trim().toLowerCase();
+    var rNip = String(r[3] || "").trim();
+
+    var match = false;
+    if (rUser === username) {
+      if (teacherId && rId === teacherId) match = true;
+      else if (teacherNip && teacherNip !== "-" && rNip === teacherNip) match = true;
+    }
+
+    if (match) {
+      sheetGuru.deleteRow(i + 1);
+      deleted = true;
+      break;
+    }
+  }
+
+  return {
+    status: deleted ? "success" : "error",
+    message: deleted ? "Data guru berhasil dihapus dari database!" : "Data guru tidak ditemukan di database."
+  };
+}
+
+function handleBulkDeleteTeachers(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = String(contents.username || "Nagata").trim().toLowerCase();
+  var teacherIds = contents.teacherIds || contents.ids || [];
+  if (!Array.isArray(teacherIds)) teacherIds = [];
+
+  if (teacherIds.length === 0) {
+    return { status: "error", message: "Daftar ID guru untuk dihapus kosong." };
+  }
+
+  var idSet = {};
+  for (var k = 0; k < teacherIds.length; k++) {
+    idSet[String(teacherIds[k]).trim()] = true;
+  }
+
+  var sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  if (!sheetGuru) return { status: "success", deletedCount: 0 };
+  var allRows = sheetGuru.getDataRange().getValues();
+  var deletedCount = 0;
+
+  for (var i = allRows.length - 1; i >= 1; i--) {
+    var r = allRows[i];
+    var rId = String(r[0]).trim();
+    var rUser = String(r[2] || "").trim().toLowerCase();
+
+    if (rUser === username && idSet[rId]) {
+      sheetGuru.deleteRow(i + 1);
+      deletedCount++;
+    }
+  }
+
+  return {
+    status: "success",
+    message: "Berhasil menghapus " + deletedCount + " data guru dari database!",
+    deletedCount: deletedCount
+  };
+}
+
+function handleBatchTeachers(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = String(contents.username || "").toLowerCase();
+  var teachers = contents.teachers || [];
+  var schoolId = contents.schoolId || "sch_" + username;
+  var now = new Date().toISOString();
+
+  var sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  if (!sheetGuru) {
+    initSheets();
+    sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  }
+  var allData = sheetGuru.getDataRange().getValues();
+
+  var retainedRows = [];
+  for (var i = 1; i < allData.length; i++) {
+    if (String(allData[i][2]).trim().toLowerCase() !== username) {
+      retainedRows.push(allData[i]);
+    }
+  }
+
+  var seenKeys = {};
+  var cleanTeachers = [];
+  for (var tIdx = 0; tIdx < teachers.length; tIdx++) {
+    var tch = teachers[tIdx];
+    var key = (tch.nip && tch.nip !== "-") ? "nip_" + tch.nip : (tch.id || "tea_" + tIdx);
+    if (!seenKeys[key]) {
+      seenKeys[key] = true;
+      cleanTeachers.push(tch);
+    }
+  }
+
+  var newRows = cleanTeachers.map(function(t) {
+    return [
+      t.id || "tea_" + new Date().getTime() + "_" + Math.random().toString(36).substr(2, 4),
+      schoolId,
+      username,
+      t.nip || "",
+      t.name || "",
+      t.gender || "L",
+      t.religion || "",
+      t.subject || "",
+      t.phone || "",
+      t.email || "",
+      t.roleType || "guru",
+      t.roomDuty || "",
+      t.photoUrl || "",
+      t.updatedAt || now
+    ];
+  });
+
+  var combinedRows = retainedRows.concat(newRows);
+
+  if (sheetGuru.getLastRow() > 1) {
+    sheetGuru.deleteRows(2, sheetGuru.getLastRow() - 1);
+  }
+
+  if (combinedRows.length > 0) {
+    sheetGuru.getRange(2, 1, combinedRows.length, combinedRows[0].length).setValues(combinedRows);
+  }
+
+  return {
+    status: "success",
+    message: "Data " + cleanTeachers.length + " guru berhasil diperbarui tanpa penumpukan!",
+    totalTeachersSaved: cleanTeachers.length
+  };
+}
+
+/**
+ * ----------------------------------------------------------------------------
+ * SISTEM CRUD PINTAR: DATA ASESMEN / UJIAN (Sheet DATA_ASESMEN)
+ * ----------------------------------------------------------------------------
+ */
+
+function handleAddExam(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = String(contents.username || "Nagata").trim();
+  var exam = contents.exam || {};
+  var schoolId = contents.schoolId || "sch_" + username;
+  var now = new Date().toISOString();
+
+  if (!exam.name) {
+    return { status: "error", message: "Nama asesmen / ujian wajib diisi." };
+  }
+
+  var sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  if (!sheetAsesmen) {
+    initSheets();
+    sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  }
+  var allRows = sheetAsesmen.getDataRange().getValues();
+
+  var existingRowIdx = -1;
+  for (var i = 1; i < allRows.length; i++) {
+    var r = allRows[i];
+    var rUser = String(r[2] || "").trim().toLowerCase();
+    if (rUser === username.toLowerCase()) {
+      if (exam.id && String(r[0]) === String(exam.id)) {
+        existingRowIdx = i + 1;
+        break;
+      }
+    }
+  }
+
+  if (exam.isActive) {
+    for (var j = 1; j < allRows.length; j++) {
+      if (String(allRows[j][2]).trim().toLowerCase() === username.toLowerCase()) {
+        sheetAsesmen.getRange(j + 1, 12).setValue(false);
+      }
+    }
+  }
+
+  var rowData = [
+    exam.id || "exam_" + new Date().getTime(),
+    schoolId,
+    username,
+    exam.name || "",
+    exam.semester || "",
+    exam.academicYear || "",
+    exam.dateText || "",
+    exam.location || "",
+    exam.signatureDate || "",
+    exam.scheduleInfo || "",
+    exam.extraNote || "",
+    exam.isActive ? true : false,
+    now
+  ];
+
+  if (existingRowIdx > 0) {
+    sheetAsesmen.getRange(existingRowIdx, 1, 1, rowData.length).setValues([rowData]);
+  } else {
+    sheetAsesmen.appendRow(rowData);
+  }
+
+  if (exam.isActive) {
+    syncActiveExamToSchoolSheet(username, exam);
+  }
+
+  return {
+    status: "success",
+    message: "Asesmen '" + exam.name + "' berhasil disimpan ke database!",
+    exam: {
+      id: rowData[0],
+      name: exam.name || "",
+      semester: exam.semester || "",
+      academicYear: exam.academicYear || "",
+      dateText: exam.dateText || "",
+      location: exam.location || "",
+      signatureDate: exam.signatureDate || "",
+      scheduleInfo: exam.scheduleInfo || "",
+      extraNote: exam.extraNote || "",
+      isActive: exam.isActive ? true : false
+    }
+  };
+}
+
+function handleUpdateExam(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = String(contents.username || "Nagata").trim();
+  var exam = contents.exam || {};
+  var now = new Date().toISOString();
+
+  if (!exam.id) {
+    return handleAddExam(contents);
+  }
+
+  var sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  if (!sheetAsesmen) {
+    initSheets();
+    sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  }
+  var allRows = sheetAsesmen.getDataRange().getValues();
+
+  var targetRowIdx = -1;
+  for (var i = 1; i < allRows.length; i++) {
+    var r = allRows[i];
+    var rUser = String(r[2] || "").trim().toLowerCase();
+    if (rUser === username.toLowerCase() && String(r[0]) === String(exam.id)) {
+      targetRowIdx = i + 1;
+      break;
+    }
+  }
+
+  if (targetRowIdx > 0) {
+    if (exam.isActive) {
+      for (var j = 1; j < allRows.length; j++) {
+        if (String(allRows[j][2]).trim().toLowerCase() === username.toLowerCase() && (j + 1) !== targetRowIdx) {
+          sheetAsesmen.getRange(j + 1, 12).setValue(false);
+        }
+      }
+    }
+
+    var updateData = [
+      exam.name || "",
+      exam.semester || "",
+      exam.academicYear || "",
+      exam.dateText || "",
+      exam.location || "",
+      exam.signatureDate || "",
+      exam.scheduleInfo || "",
+      exam.extraNote || "",
+      exam.isActive ? true : false,
+      now
+    ];
+    sheetAsesmen.getRange(targetRowIdx, 4, 1, updateData.length).setValues([updateData]);
+
+    if (exam.isActive) {
+      syncActiveExamToSchoolSheet(username, exam);
+    }
+
+    return {
+      status: "success",
+      message: "Data asesmen '" + exam.name + "' berhasil diperbarui di database!",
+      exam: exam
+    };
+  } else {
+    return handleAddExam(contents);
+  }
+}
+
+function handleDeleteExam(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = String(contents.username || "Nagata").trim().toLowerCase();
+  var examId = String(contents.examId || contents.id || "").trim();
+
+  if (!examId) {
+    return { status: "error", message: "Exam ID wajib diisi untuk menghapus asesmen." };
+  }
+
+  var sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  if (!sheetAsesmen) return { status: "success", message: "Data asesmen telah bersih." };
+  var allRows = sheetAsesmen.getDataRange().getValues();
+  var deleted = false;
+
+  for (var i = allRows.length - 1; i >= 1; i--) {
+    var r = allRows[i];
+    var rId = String(r[0]).trim();
+    var rUser = String(r[2] || "").trim().toLowerCase();
+
+    if (rUser === username && rId === examId) {
+      sheetAsesmen.deleteRow(i + 1);
+      deleted = true;
+      break;
+    }
+  }
+
+  return {
+    status: deleted ? "success" : "error",
+    message: deleted ? "Data asesmen berhasil dihapus dari database!" : "Asesmen tidak ditemukan di database."
+  };
+}
+
+function handleSetActiveExam(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = String(contents.username || "Nagata").trim();
+  var examId = String(contents.examId || contents.id || "").trim();
+
+  var sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  if (!sheetAsesmen) {
+    initSheets();
+    sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  }
+  var allRows = sheetAsesmen.getDataRange().getValues();
+  var activeExamObj = null;
+
+  for (var i = 1; i < allRows.length; i++) {
+    var r = allRows[i];
+    var rId = String(r[0]).trim();
+    var rUser = String(r[2] || "").trim().toLowerCase();
+
+    if (rUser === username.toLowerCase()) {
+      var isTarget = (rId === examId);
+      sheetAsesmen.getRange(i + 1, 12).setValue(isTarget);
+      if (isTarget) {
+        activeExamObj = {
+          id: rId,
+          name: String(r[3] || ""),
+          semester: String(r[4] || ""),
+          academicYear: String(r[5] || ""),
+          dateText: String(r[6] || ""),
+          location: String(r[7] || ""),
+          signatureDate: String(r[8] || ""),
+          scheduleInfo: String(r[9] || ""),
+          extraNote: String(r[10] || ""),
+          isActive: true
+        };
+      }
+    }
+  }
+
+  if (activeExamObj) {
+    syncActiveExamToSchoolSheet(username, activeExamObj);
+  }
+
+  return {
+    status: "success",
+    message: "Asesmen aktif berhasil disetel!",
+    activeExam: activeExamObj
+  };
+}
+
+function handleBatchExams(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = String(contents.username || "").toLowerCase();
+  var exams = contents.exams || [];
+  var schoolId = contents.schoolId || "sch_" + username;
+  var now = new Date().toISOString();
+
+  var sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  if (!sheetAsesmen) {
+    initSheets();
+    sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  }
+  var allData = sheetAsesmen.getDataRange().getValues();
+
+  var retainedRows = [];
+  for (var i = 1; i < allData.length; i++) {
+    if (String(allData[i][2]).trim().toLowerCase() !== username) {
+      retainedRows.push(allData[i]);
+    }
+  }
+
+  var seenIds = {};
+  var cleanExams = [];
+  for (var eIdx = 0; eIdx < exams.length; eIdx++) {
+    var ex = exams[eIdx];
+    var key = ex.id || ("exam_" + eIdx);
+    if (!seenIds[key]) {
+      seenIds[key] = true;
+      cleanExams.push(ex);
+    }
+  }
+
+  var newRows = cleanExams.map(function(e) {
+    return [
+      e.id || "exam_" + new Date().getTime() + "_" + Math.random().toString(36).substr(2, 4),
+      schoolId,
+      username,
+      e.name || "",
+      e.semester || "",
+      e.academicYear || "",
+      e.dateText || "",
+      e.location || "",
+      e.signatureDate || "",
+      e.scheduleInfo || "",
+      e.extraNote || "",
+      e.isActive ? true : false,
+      now
+    ];
+  });
+
+  var combinedRows = retainedRows.concat(newRows);
+
+  if (sheetAsesmen.getLastRow() > 1) {
+    sheetAsesmen.deleteRows(2, sheetAsesmen.getLastRow() - 1);
+  }
+
+  if (combinedRows.length > 0) {
+    sheetAsesmen.getRange(2, 1, combinedRows.length, combinedRows[0].length).setValues(combinedRows);
+  }
+
+  return {
+    status: "success",
+    message: "Data " + cleanExams.length + " asesmen berhasil disimpan tanpa penumpukan!",
+    totalExamsSaved: cleanExams.length
+  };
+}
+
+function syncActiveExamToSchoolSheet(username, exam) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetSekolah = ss.getSheetByName(SHEET_NAMES.INFORMASI_SEKOLAH);
+    if (!sheetSekolah) return;
+    var rows = sheetSekolah.getDataRange().getValues();
+
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][1]).toLowerCase() === username.toLowerCase()) {
+        var rowIdx = i + 1;
+        sheetSekolah.getRange(rowIdx, 15).setValue(exam.name || "");
+        sheetSekolah.getRange(rowIdx, 16).setValue(exam.semester || "");
+        sheetSekolah.getRange(rowIdx, 17).setValue(exam.academicYear || "");
+        sheetSekolah.getRange(rowIdx, 18).setValue(exam.dateText || "");
+        sheetSekolah.getRange(rowIdx, 19).setValue(exam.location || "");
+        sheetSekolah.getRange(rowIdx, 20).setValue(exam.extraNote || "");
+        break;
+      }
+    }
+  } catch (errSync) {
+    Logger.log("Peringatan syncActiveExamToSchoolSheet: " + errSync.toString());
+  }
+}
+
 function loadAllDataForUser(username) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var cleanUser = String(username).toLowerCase();
@@ -1739,6 +2532,56 @@ function loadAllDataForUser(username) {
     }
   }
 
+  // 3.5. Guru
+  var sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
+  var rowsGuru = sheetGuru ? sheetGuru.getDataRange().getValues() : [];
+  var teachersList = [];
+
+  for (var tg = 1; tg < rowsGuru.length; tg++) {
+    var g = rowsGuru[tg];
+    if (String(g[2]).toLowerCase() === cleanUser || (!cleanUser && cleanUser === "")) {
+      teachersList.push({
+        id: String(g[0]),
+        nip: String(g[3] || ""),
+        name: String(g[4] || ""),
+        gender: String(g[5]) === "P" ? "P" : "L",
+        religion: String(g[6] || ""),
+        subject: String(g[7] || ""),
+        phone: String(g[8] || ""),
+        email: String(g[9] || ""),
+        roleType: String(g[10] || "guru"),
+        roomDuty: String(g[11] || ""),
+        photoUrl: String(g[12] || ""),
+        createdAt: String(g[13]),
+        updatedAt: String(g[13])
+      });
+    }
+  }
+
+  // 3.6. Asesmen
+  var sheetAsesmen = ss.getSheetByName(SHEET_NAMES.DATA_ASESMEN);
+  var rowsAsesmen = sheetAsesmen ? sheetAsesmen.getDataRange().getValues() : [];
+  var examsList = [];
+
+  for (var ea = 1; ea < rowsAsesmen.length; ea++) {
+    var a = rowsAsesmen[ea];
+    if (String(a[2]).toLowerCase() === cleanUser || (!cleanUser && cleanUser === "")) {
+      var isAct = String(a[11]).toLowerCase() === "true" || a[11] === true || a[11] === 1;
+      examsList.push({
+        id: String(a[0]),
+        name: String(a[3] || ""),
+        semester: String(a[4] || ""),
+        academicYear: String(a[5] || ""),
+        dateText: String(a[6] || ""),
+        location: String(a[7] || ""),
+        signatureDate: String(a[8] || ""),
+        scheduleInfo: String(a[9] || ""),
+        extraNote: String(a[10] || ""),
+        isActive: isAct
+      });
+    }
+  }
+
   var sheetDesain = ss.getSheetByName(SHEET_NAMES.DESAIN_KARTU);
   var rowsDesain = sheetDesain ? sheetDesain.getDataRange().getValues() : [];
   var cardDesign = null;
@@ -1758,7 +2601,9 @@ function loadAllDataForUser(username) {
   return {
     school: schoolData,
     exam: examData,
+    exams: examsList,
     students: studentsList,
+    teachers: teachersList,
     cardDesign: cardDesign,
     printSettings: printSettings
   };

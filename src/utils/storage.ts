@@ -114,10 +114,14 @@ export const loadStoredState = (): AppState => {
             const valTeachers = deduplicateTeachers(
               Array.isArray(val.teachers) && val.teachers.length > 0 ? val.teachers : DEFAULT_TEACHERS
             );
+            const valExams = Array.isArray(val.exams) && val.exams.length > 0
+              ? val.exams.filter((e: Exam) => e && e.name)
+              : (val.exam && val.exam.name ? [val.exam] : []);
             cleanSchoolDataMap[key] = {
               ...val,
               students: valStudents,
               teachers: valTeachers,
+              exams: valExams,
               selectedStudentIds: Array.isArray(val.selectedStudentIds)
                 ? Array.from(new Set(val.selectedStudentIds.filter((id: string) => valStudents.some((s) => s.id === id))))
                 : valStudents.map((s) => s.id),

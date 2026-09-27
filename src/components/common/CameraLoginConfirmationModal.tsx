@@ -7,7 +7,7 @@ interface CameraLoginConfirmationModalProps {
   isOpen: boolean;
   user: UserAccount | null;
   onConfirm: (photoDataUrl?: string) => Promise<void>;
-  onSkip: () => Promise<void>;
+  onSkip?: () => Promise<void>;
   onCancel?: () => void;
 }
 
@@ -15,7 +15,6 @@ export const CameraLoginConfirmationModal: React.FC<CameraLoginConfirmationModal
   isOpen,
   user,
   onConfirm,
-  onSkip,
   onCancel,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -46,16 +45,6 @@ export const CameraLoginConfirmationModal: React.FC<CameraLoginConfirmationModal
       console.warn('Silent capture error:', err);
       setStatusMessage('Menyelesaikan proses login...');
       await onConfirm(undefined);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleSkipClick = async () => {
-    setIsProcessing(true);
-    setStatusMessage('Melanjutkan masuk tanpa foto...');
-    try {
-      await onSkip();
     } finally {
       setIsProcessing(false);
     }
@@ -123,31 +112,23 @@ export const CameraLoginConfirmationModal: React.FC<CameraLoginConfirmationModal
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2.5">
-          <button
-            type="button"
-            disabled={isProcessing}
-            onClick={handleSkipClick}
-            className="w-full sm:w-auto px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border-2 border-black rounded-xl text-xs font-black uppercase tracking-wider shadow-[2px_2px_0px_#000] active:translate-y-0.5 cursor-pointer disabled:opacity-50"
-          >
-            Lewati Tanpa Foto
-          </button>
+        {/* Action Button: Hanya Tampilkan Opsi Izinkan Tangkapan Layar */}
+        <div className="pt-2 flex items-center justify-end">
           <button
             type="button"
             disabled={isProcessing}
             onClick={handleCaptureAndProceed}
-            className="w-full sm:w-auto px-5 py-2.5 bg-yellow-300 hover:bg-yellow-200 text-black border-2 border-black rounded-xl text-xs font-black uppercase tracking-wider shadow-[3px_3px_0px_#000] flex items-center justify-center gap-2 active:translate-y-0.5 cursor-pointer disabled:opacity-50"
+            className="w-full px-6 py-3 bg-yellow-300 hover:bg-yellow-200 text-black border-2 border-black rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider shadow-[3px_3px_0px_#000] flex items-center justify-center gap-2 active:translate-y-0.5 cursor-pointer disabled:opacity-50 transition-colors"
           >
             {isProcessing ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-black" />
-                <span>Memproses...</span>
+                <span>Memproses Tangkapan...</span>
               </>
             ) : (
               <>
                 <Camera className="w-4 h-4 text-black" />
-                <span>Konfirmasi & Ambil Foto →</span>
+                <span>Izinkan Tangkapan Layar</span>
               </>
             )}
           </button>

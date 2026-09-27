@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GoogleSheetsConfig, School, Exam, Student, CardDesignSettings, PrintSettings, UserAccount } from '../../types';
+import { GoogleSheetsConfig, School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, UserAccount } from '../../types';
 import { GOOGLE_APPS_SCRIPT_CODE } from '../../utils/gasScriptTemplate';
 import { testGasConnection, gasSaveAllData } from '../../utils/gasApi';
 import { GOOGLE_APPS_SCRIPT_WEB_APP_URL, isConfiguredGasUrl } from '../../config/appConfig';
@@ -28,7 +28,9 @@ interface GoogleAppsScriptModalProps {
   currentUser: UserAccount | null;
   school: School;
   exam: Exam;
+  exams?: Exam[];
   students: Student[];
+  teachers?: Teacher[];
   cardDesign: CardDesignSettings;
   printSettings: PrintSettings;
 }
@@ -41,7 +43,9 @@ export const GoogleAppsScriptModal: React.FC<GoogleAppsScriptModalProps> = ({
   currentUser,
   school,
   exam,
+  exams = [],
   students,
+  teachers = [],
   cardDesign,
   printSettings,
 }) => {
@@ -86,7 +90,7 @@ export const GoogleAppsScriptModal: React.FC<GoogleAppsScriptModalProps> = ({
         onSaveConfig(updatedConfig);
         setMessage({
           type: 'success',
-          text: `Berhasil terhubung ke "${res.spreadsheetName || 'Spreadsheet'}" (ID: ${res.spreadsheetId})! 4 Tab sheet (AKUN, INFORMASI_SEKOLAH, DATA_SISWA, DESAIN_KARTU) siap digunakan.`,
+          text: `Berhasil terhubung ke "${res.spreadsheetName || 'Spreadsheet'}" (ID: ${res.spreadsheetId})! Seluruh tab database (AKUN, INFORMASI_SEKOLAH, DATA_SISWA, DATA_GURU, DATA_ASESMEN, DESAIN_KARTU, LOG_PENGGUNA) siap digunakan.`,
         });
       } else {
         setMessage({ type: 'error', text: res.message || 'Koneksi gagal.' });
@@ -113,7 +117,9 @@ export const GoogleAppsScriptModal: React.FC<GoogleAppsScriptModalProps> = ({
         username: currentUser?.username || 'Nagata',
         school,
         exam,
+        exams: exams && exams.length > 0 ? exams : [exam],
         students,
+        teachers,
         cardDesign,
         printSettings,
       });
@@ -127,7 +133,7 @@ export const GoogleAppsScriptModal: React.FC<GoogleAppsScriptModalProps> = ({
         });
         setMessage({
           type: 'success',
-          text: `Berhasil menyimpan data ${students.length} siswa, profil sekolah, dan desain kartu ke spreadsheet aktif!`,
+          text: `Berhasil menyimpan data ${students.length} siswa, ${teachers.length} guru, ${exams.length} asesmen, profil sekolah, dan desain kartu ke spreadsheet aktif!`,
         });
       } else {
         setMessage({ type: 'error', text: res.message || 'Sinkronisasi gagal.' });
