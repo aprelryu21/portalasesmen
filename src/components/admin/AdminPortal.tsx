@@ -13,6 +13,12 @@ import { GOOGLE_APPS_SCRIPT_CODE } from '../../utils/gasScriptTemplate';
 import { SpreadsheetCapacity, DriveDatabaseInfo, gasCleanupSpreadsheet } from '../../utils/gasApi';
 import { formatLoginTime } from '../../utils/browserDetection';
 import {
+  extractDriveFileId,
+  getDriveThumbnailUrl,
+  getDriveAlternativeImageUrl,
+  getDriveViewerUrl,
+} from '../../utils/driveUrl';
+import {
   DEFAULT_SCHOOL,
   DEFAULT_EXAM,
   DEFAULT_CARD_DESIGN,
@@ -100,6 +106,209 @@ interface AdminPortalProps {
 
 export type AdminTab = 'insights' | 'accounts' | 'uploads' | 'user_logs' | 'settings';
 export type UploadDetailTab = 'cards' | 'students' | 'teachers' | 'photos' | 'school' | 'design';
+
+interface LogPhotoModalData {
+  username: string;
+  schoolName: string;
+  photoUrl: string;
+  loginTime: string;
+  browser: string;
+}
+
+const LogPhotoThumbnail: React.FC<{
+  photoUrl: string;
+  username: string;
+  onClick: () => void;
+}> = ({ photoUrl, username, onClick }) => {
+  const [loadError, setLoadError] = useState(false);
+  const [useAlt, setUseAlt] = useState(false);
+  const fileId = extractDriveFileId(photoUrl);
+
+  const thumbUrl = useAlt && fileId
+    ? getDriveAlternativeImageUrl(photoUrl, 300)
+    : getDriveThumbnailUrl(photoUrl, 300);
+
+  return (
+    <div className="inline-flex flex-col items-center gap-1.5">
+      <button
+        type="button"
+        onClick={onClick}
+        className="relative group block w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-black overflow-hidden shadow-[2px_2px_0px_#000] cursor-pointer hover:scale-105 active:translate-y-0.5 transition-all bg-neutral-900"
+        title="Klik untuk membuka / melihat foto kamera"
+      >
+        {!loadError ? (
+          <img
+            src={thumbUrl}
+            alt={`Foto Login ${username}`}
+            className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+            onError={() => {
+              if (!useAlt && fileId) {
+                setUseAlt(true);
+              } else {
+                setLoadError(true);
+              }
+            }}
+          />
+        ) : (
+          <div className="w-full h-full bg-amber-50 flex flex-col items-center justify-center p-1 text-center">
+            <Camera className="w-5 h-5 text-indigo-700" />
+            <span className="text-[8px] font-black uppercase text-neutral-800 leading-none mt-1">
+              Buka Foto
+            </span>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
+          <Maximize2 className="w-4 h-4" />
+        </div>
+      </button>
+      <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+        <Camera className="w-3 h-3 text-emerald-600" /> Terfoto
+      </span>
+    </div>
+  );
+};
+
+const LogPhotoModalViewer: React.FC<{
+  modal: LogPhotoModalData;
+  onClose: () => void;
+}> = ({ modal, onClose }) => {
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [useAlt, setUseAlt] = useState(false);
+
+  const fileId = extractDriveFileId(modal.photoUrl);
+  const driveOpenUrl = getDriveViewerUrl(modal.photoUrl);
+
+  const directImageUrl = useAlt && fileId
+    ? getDriveAlternativeImageUrl(modal.photoUrl, 1200)
+    : getDriveThumbnailUrl(modal.photoUrl, 1200);
+
+  const isDriveLink = Boolean(fileId) || modal.photoUrl.includes('drive.google.com');
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white border-3 border-black shadow-[8px_8px_0px_#000] rounded-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
+        {/* Modal Header */}
+        <div className="p-4 bg-yellow-300 border-b-2 border-black flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Camera className="w-5 h-5 text-black" />
+            <div>
+              <h3 className="text-sm font-black uppercase text-black leading-tight">
+                Tangkapan Kamera Verifikasi Masuk
+              </h3>
+              <div className="text-[11px] font-bold text-neutral-800">
+                @{modal.username} • {modal.schoolName}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 hover:bg-black/10 border-2 border-black rounded-lg cursor-pointer transition-colors"
+          >
+            <X className="w-4 h-4 text-black" />
+          </button>
+        </div>
+
+        {/* Photo Container */}
+        <div className="p-4 bg-neutral-900 flex items-center justify-center min-h-[300px] max-h-[440px] overflow-hidden relative">
+          {!loadFailed ? (
+            <img
+              src={directImageUrl}
+              alt={`Tangkapan Kamera ${modal.username}`}
+              className="max-h-[400px] max-w-full rounded-xl border-2 border-white/20 object-contain shadow-2xl"
+              onError={() => {
+                if (!useAlt && fileId) {
+                  setUseAlt(true);
+                } else {
+                  setLoadFailed(true);
+                }
+              }}
+            />
+          ) : (
+            <div className="w-full py-8 px-4 text-center flex flex-col items-center justify-center space-y-3 bg-neutral-800 rounded-xl border border-white/10 text-white">
+              <div className="w-14 h-14 bg-yellow-400 text-black rounded-2xl flex items-center justify-center border-2 border-black shadow-[3px_3px_0px_#000]">
+                <HardDrive className="w-7 h-7 text-black" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-black text-sm text-yellow-300 uppercase">
+                  File Foto Tersedia di Google Drive
+                </h4>
+                <p className="text-xs text-neutral-300 max-w-xs mx-auto">
+                  Pratinjau langsung dibatasi peramban, namun berkas foto tersimpan dengan aman di folder Google Drive Anda.
+                </p>
+              </div>
+              <a
+                href={driveOpenUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-2 px-4 py-2.5 bg-yellow-300 hover:bg-yellow-200 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[3px_3px_0px_#000] cursor-pointer"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>Buka Foto di Tab Baru Google Drive</span>
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Details Footer */}
+        <div className="p-4 bg-neutral-50 border-t-2 border-black space-y-3">
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="p-2.5 bg-white border border-neutral-300 rounded-xl space-y-0.5">
+              <div className="text-[10px] font-black uppercase text-neutral-500 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-neutral-400" /> Waktu Terfoto
+              </div>
+              <div className="font-black text-neutral-900 text-xs">
+                {modal.loginTime}
+              </div>
+            </div>
+
+            <div className="p-2.5 bg-white border border-neutral-300 rounded-xl space-y-0.5">
+              <div className="text-[10px] font-black uppercase text-neutral-500 flex items-center gap-1">
+                <Laptop className="w-3 h-3 text-neutral-400" /> Peramban (Browser)
+              </div>
+              <div className="font-bold text-neutral-900 text-xs truncate">
+                {modal.browser}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-1 gap-2 flex-wrap">
+            {isDriveLink ? (
+              <a
+                href={driveOpenUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-yellow-300 hover:bg-yellow-200 text-neutral-900 border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-black" />
+                <span>Buka Berkas Google Drive</span>
+              </a>
+            ) : modal.photoUrl.startsWith('data:image/') ? (
+              <a
+                href={modal.photoUrl}
+                download={`foto_login_${modal.username}.jpg`}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-yellow-100 text-neutral-900 border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-black" />
+                <span>Unduh File Foto</span>
+              </a>
+            ) : (
+              <span className="text-[10px] text-neutral-400 font-semibold">Tersimpan di database lokal</span>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 bg-neutral-100 hover:bg-neutral-200 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] cursor-pointer ml-auto"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({
   currentUser,
@@ -2024,7 +2233,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                       title="Klik untuk melihat foto lebih besar"
                                     >
                                       {s.photoUrl ? (
-                                        <img src={s.photoUrl} alt="" className="w-full h-full object-cover" />
+                                        <img src={getDriveThumbnailUrl(s.photoUrl, 400)} alt="" className="w-full h-full object-cover" />
                                       ) : (
                                         <GenderAvatar gender={s.gender} className="w-full h-full" />
                                       )}
@@ -2166,7 +2375,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                       title="Klik untuk melihat foto lebih besar"
                                     >
                                       {t.photoUrl ? (
-                                        <img src={t.photoUrl} alt="" className="w-full h-full object-cover" />
+                                        <img src={getDriveThumbnailUrl(t.photoUrl, 400)} alt="" className="w-full h-full object-cover" />
                                       ) : (
                                         <GenderAvatar gender={t.gender} className="w-full h-full" />
                                       )}
@@ -2312,7 +2521,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             >
                               <div className="w-16 h-20 rounded-lg border-2 border-black overflow-hidden bg-white shadow-xs group-hover:scale-105 transition-transform">
                                 {s.photoUrl ? (
-                                  <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" />
+                                  <img src={getDriveThumbnailUrl(s.photoUrl, 400)} alt={s.name} className="w-full h-full object-cover" />
                                 ) : (
                                   <GenderAvatar gender={s.gender} className="w-full h-full" />
                                 )}
@@ -2362,7 +2571,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             >
                               <div className="w-16 h-20 rounded-lg border-2 border-black overflow-hidden bg-white shadow-xs group-hover:scale-105 transition-transform">
                                 {t.photoUrl ? (
-                                  <img src={t.photoUrl} alt={t.name} className="w-full h-full object-cover" />
+                                  <img src={getDriveThumbnailUrl(t.photoUrl, 400)} alt={t.name} className="w-full h-full object-cover" />
                                 ) : (
                                   <GenderAvatar gender={t.gender} className="w-full h-full" />
                                 )}
@@ -2836,34 +3045,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                               {/* 4. Tangkapan Kamera */}
                               <td className="py-3.5 px-4 text-center">
                                 {item.photoUrl ? (
-                                  <div className="inline-flex flex-col items-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setSelectedLogPhotoModal({
-                                          username: item.username,
-                                          schoolName: displayName,
-                                          photoUrl: item.photoUrl!,
-                                          loginTime: formatLoginTime(item.loginTime),
-                                          browser: item.browser,
-                                        })
-                                      }
-                                      className="relative group block w-14 h-14 sm:w-16 sm:h-16 rounded-xl border-2 border-black overflow-hidden shadow-[2px_2px_0px_#000] cursor-pointer hover:scale-105 active:translate-y-0.5 transition-all bg-neutral-900"
-                                      title="Klik untuk memperbesar foto kamera"
-                                    >
-                                      <img
-                                        src={item.photoUrl}
-                                        alt={`Foto Login ${item.username}`}
-                                        className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
-                                      />
-                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
-                                        <Maximize2 className="w-4 h-4" />
-                                      </div>
-                                    </button>
-                                    <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
-                                      <Camera className="w-3 h-3 text-emerald-600" /> Terfoto
-                                    </span>
-                                  </div>
+                                  <LogPhotoThumbnail
+                                    photoUrl={item.photoUrl}
+                                    username={item.username}
+                                    onClick={() =>
+                                      setSelectedLogPhotoModal({
+                                        username: item.username,
+                                        schoolName: displayName,
+                                        photoUrl: item.photoUrl!,
+                                        loginTime: formatLoginTime(item.loginTime),
+                                        browser: item.browser,
+                                      })
+                                    }
+                                  />
                                 ) : (
                                   <div className="inline-flex flex-col items-center gap-1 text-neutral-400">
                                     <div className="w-12 h-12 bg-neutral-100 border border-dashed border-neutral-300 rounded-xl flex items-center justify-center">
@@ -3499,80 +3693,76 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       {/* MODAL LIGHTBOX FOTO TANGKAPAN KAMERA LOG MASUK                           */}
       {/* ========================================================================= */}
       {selectedLogPhotoModal && (
+        <LogPhotoModalViewer
+          modal={selectedLogPhotoModal}
+          onClose={() => setSelectedLogPhotoModal(null)}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL LIGHTBOX FOTO SISWA & GURU                                         */}
+      {/* ========================================================================= */}
+      {previewPhotoModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white border-3 border-black shadow-[8px_8px_0px_#000] rounded-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
+          <div className="bg-white border-3 border-black shadow-[8px_8px_0px_#000] rounded-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-4 bg-yellow-300 border-b-2 border-black flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Camera className="w-5 h-5 text-black" />
-                <div>
-                  <h3 className="text-sm font-black uppercase text-black leading-tight">
-                    Tangkapan Kamera Verifikasi Masuk
-                  </h3>
-                  <div className="text-[11px] font-bold text-neutral-800">
-                    @{selectedLogPhotoModal.username} • {selectedLogPhotoModal.schoolName}
-                  </div>
+              <div>
+                <h3 className="text-sm font-black uppercase text-black leading-tight">
+                  {previewPhotoModal.name}
+                </h3>
+                <div className="text-[11px] font-bold text-neutral-800">
+                  {previewPhotoModal.subtitle || previewPhotoModal.identifier}
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedLogPhotoModal(null)}
+                onClick={() => setPreviewPhotoModal(null)}
                 className="p-1.5 hover:bg-black/10 border-2 border-black rounded-lg cursor-pointer transition-colors"
               >
                 <X className="w-4 h-4 text-black" />
               </button>
             </div>
 
-            {/* Photo Container */}
-            <div className="p-4 bg-neutral-900 flex items-center justify-center min-h-[280px] max-h-[420px] overflow-hidden">
-              <img
-                src={selectedLogPhotoModal.photoUrl}
-                alt={`Tangkapan Kamera ${selectedLogPhotoModal.username}`}
-                className="max-h-[380px] max-w-full rounded-xl border-2 border-white/20 object-contain shadow-2xl"
-              />
+            <div className="p-4 bg-neutral-900 flex items-center justify-center min-h-[260px] max-h-[360px] overflow-hidden">
+              {previewPhotoModal.photoUrl ? (
+                <img
+                  src={getDriveThumbnailUrl(previewPhotoModal.photoUrl, 800)}
+                  alt={previewPhotoModal.name}
+                  className="max-h-[320px] max-w-full rounded-xl border-2 border-white/20 object-contain shadow-2xl"
+                  onError={(e) => {
+                    const alt = getDriveAlternativeImageUrl(previewPhotoModal.photoUrl, 800);
+                    if (e.currentTarget.src !== alt) {
+                      e.currentTarget.src = alt;
+                    }
+                  }}
+                />
+              ) : (
+                <div className="w-32 h-40">
+                  <GenderAvatar gender={previewPhotoModal.gender || 'L'} className="w-full h-full" />
+                </div>
+              )}
             </div>
 
-            {/* Details Footer */}
-            <div className="p-4 bg-neutral-50 border-t-2 border-black space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2.5 bg-white border border-neutral-300 rounded-xl space-y-0.5">
-                  <div className="text-[10px] font-black uppercase text-neutral-500 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-neutral-400" /> Waktu Terfoto
-                  </div>
-                  <div className="font-black text-neutral-900 text-xs">
-                    {selectedLogPhotoModal.loginTime}
-                  </div>
-                </div>
-
-                <div className="p-2.5 bg-white border border-neutral-300 rounded-xl space-y-0.5">
-                  <div className="text-[10px] font-black uppercase text-neutral-500 flex items-center gap-1">
-                    <Laptop className="w-3 h-3 text-neutral-400" /> Peramban (Browser)
-                  </div>
-                  <div className="font-bold text-neutral-900 text-xs truncate">
-                    {selectedLogPhotoModal.browser}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                {selectedLogPhotoModal.photoUrl.startsWith('http') ? (
+            <div className="p-4 bg-neutral-50 border-t-2 border-black flex items-center justify-between">
+              <span className="text-[11px] font-bold text-neutral-600">
+                {previewPhotoModal.badge || (previewPhotoModal.photoUrl ? 'Foto Tersedia' : 'Avatar Standar')}
+              </span>
+              <div className="flex gap-2">
+                {previewPhotoModal.photoUrl && extractDriveFileId(previewPhotoModal.photoUrl) && (
                   <a
-                    href={selectedLogPhotoModal.photoUrl}
+                    href={getDriveViewerUrl(previewPhotoModal.photoUrl)}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-yellow-100 text-neutral-900 border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] cursor-pointer"
+                    className="px-3 py-1.5 bg-yellow-300 hover:bg-yellow-200 text-black border-2 border-black rounded-lg text-xs font-black uppercase flex items-center gap-1 shadow-[2px_2px_0px_#000]"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Buka Berkas Drive</span>
+                    <span>Drive</span>
                   </a>
-                ) : (
-                  <span className="text-[10px] text-neutral-400 font-semibold">Tersimpan di database lokal & cloud</span>
                 )}
-
                 <button
                   type="button"
-                  onClick={() => setSelectedLogPhotoModal(null)}
-                  className="px-5 py-2 bg-yellow-300 hover:bg-yellow-200 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] cursor-pointer"
+                  onClick={() => setPreviewPhotoModal(null)}
+                  className="px-4 py-1.5 bg-white hover:bg-neutral-100 text-black border-2 border-black rounded-lg text-xs font-black uppercase shadow-[2px_2px_0px_#000]"
                 >
                   Tutup
                 </button>

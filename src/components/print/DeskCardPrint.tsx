@@ -183,15 +183,17 @@ export const DeskCardPrint: React.FC<DeskCardPrintProps> = ({
         </div>
       </div>
 
-      {/* Theme Selection Slider Box */}
-      <ThemeSliderBox
-        selectedThemeId={deskThemeId}
-        onSelectTheme={(id) => setDeskThemeId(id)}
-        baseColor={deskThemeColor}
-        onChangeBaseColor={(col) => setDeskThemeColor(col)}
-        title="10 Pilihan Tema ID Bangku / Kartu Meja"
-        subtitle="Geser untuk memilih tema. Sesuaikan warna dasar kartu meja sebelum dicetak."
-      />
+      {/* Theme Selection Slider Box (Hidden on Print) */}
+      <div className="no-print">
+        <ThemeSliderBox
+          selectedThemeId={deskThemeId}
+          onSelectTheme={(id) => setDeskThemeId(id)}
+          baseColor={deskThemeColor}
+          onChangeBaseColor={(col) => setDeskThemeColor(col)}
+          title="10 Pilihan Tema ID Bangku / Kartu Meja"
+          subtitle="Geser untuk memilih tema. Sesuaikan warna dasar kartu meja sebelum dicetak."
+        />
+      </div>
 
       {/* 2. SETTINGS DRAWER */}
       {showSettings && (
@@ -309,7 +311,7 @@ export const DeskCardPrint: React.FC<DeskCardPrintProps> = ({
 
       {/* Modal Overlay Inspeksi Pinch-to-Zoom Kartu Meja */}
       {inspectedStudent && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
+        <div className="no-print fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
           <div className="bg-white border-3 border-black shadow-[8px_8px_0px_#000] rounded-2xl w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden">
             <div className="p-3 bg-amber-300 border-b-2 border-black flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">

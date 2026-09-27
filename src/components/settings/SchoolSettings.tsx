@@ -677,12 +677,18 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
 
         {/* Tabel Log Masuk Sekolah */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wider text-neutral-800">
-              Catatan Sesi Masuk Terakhir
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-wider text-neutral-800">
+                Catatan Sesi Masuk (7 Terakhir)
+              </span>
+              <span className="text-[9px] font-bold text-neutral-600 bg-neutral-100 border border-neutral-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-neutral-500" />
+                Potret Keamanan: Hanya Admin
+              </span>
+            </div>
             <span className="text-[10px] font-bold text-neutral-500">
-              Menampilkan sesi akun: @{currentUser?.username || 'sekolah'}
+              Menampilkan 7 sesi masuk terakhir akun: @{currentUser?.username || 'sekolah'}
             </span>
           </div>
 
@@ -714,17 +720,17 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-neutral-100 border-b-2 border-black font-black uppercase text-[10px] text-neutral-700 tracking-wider">
-                        <th className="py-2.5 px-3">No</th>
+                        <th className="py-2.5 px-3 w-12 text-center">No</th>
                         <th className="py-2.5 px-3">Waktu Login</th>
                         <th className="py-2.5 px-3">Browser yang Digunakan</th>
-                        <th className="py-2.5 px-3 text-center">Status</th>
-                        <th className="py-2.5 px-3 text-center">Foto Masuk</th>
+                        <th className="py-2.5 px-3 text-center w-36">POTRET DIRI</th>
+                        <th className="py-2.5 px-3 text-center w-24">STATUS</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-200">
-                      {schoolLogs.slice(0, 15).map((log, idx) => (
+                      {schoolLogs.slice(0, 7).map((log, idx) => (
                         <tr key={log.id || idx} className="hover:bg-yellow-50/50 transition-colors">
-                          <td className="py-2.5 px-3 font-mono text-[11px] text-neutral-500 font-bold">
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-neutral-500 font-bold text-center">
                             {idx + 1}
                           </td>
                           <td className="py-2.5 px-3 font-bold text-neutral-900 whitespace-nowrap">
@@ -740,20 +746,31 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
                             </div>
                           </td>
                           <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-400 rounded-md text-[10px] font-black uppercase">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              {log.status || 'Berhasil'}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
                             {log.photoUrl ? (
-                              <div className="inline-flex items-center gap-1 text-[10px] font-bold text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300">
-                                <Camera className="w-3 h-3 text-emerald-600" />
-                                <span>Tercatat</span>
+                              <div
+                                className="inline-flex flex-col items-center justify-center"
+                                title="Hanya admin yang bisa melihat potret keamanan ini"
+                              >
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-400 rounded-md text-[10px] font-black uppercase tracking-wide">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  <span>TERKIRIM</span>
+                                </span>
+                                <span className="text-[9px] text-neutral-500 font-bold mt-0.5">
+                                  (Hanya Admin)
+                                </span>
                               </div>
                             ) : (
-                              <span className="text-[10px] text-neutral-400 italic">Dilewati</span>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-neutral-100 text-neutral-500 border border-neutral-300 rounded text-[10px] font-bold">
+                                <Camera className="w-3 h-3 text-neutral-400" />
+                                <span>Dilewati</span>
+                              </span>
                             )}
+                          </td>
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-400 rounded-md text-[10px] font-black uppercase">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                              <span>{log.status || 'Berhasil'}</span>
+                            </span>
                           </td>
                         </tr>
                       ))}

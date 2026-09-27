@@ -1803,8 +1803,10 @@ function handleRecordLoginLog(contents) {
       var fileName = "LOGIN_" + cleanUser + "_" + now.getTime() + ".jpg";
 
       var file = logFolder.createFile(Utilities.newBlob(bytes, mime, fileName));
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      photoUrl = "https://drive.google.com/uc?export=view&id=" + file.getId();
+      try {
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      } catch (errShare) {}
+      photoUrl = "https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w1000";
     } catch (errDrive) {
       photoUrl = "";
     }

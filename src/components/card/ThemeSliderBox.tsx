@@ -39,7 +39,7 @@ export const ThemeSliderBox: React.FC<ThemeSliderBoxProps> = ({
   };
 
   return (
-    <div className={`bg-white border-2 border-black rounded-xl p-3 sm:p-3.5 shadow-[3px_3px_0px_#000] space-y-3 ${className}`}>
+    <div className={`no-print bg-white border-2 border-black rounded-xl p-3 sm:p-3.5 shadow-[3px_3px_0px_#000] space-y-3 ${className}`}>
       {/* Header bar with title and navigation arrows */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">

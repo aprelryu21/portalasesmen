@@ -502,15 +502,17 @@ export const ProctorGuestPreview: React.FC<ProctorGuestPreviewProps> = ({
         </div>
       )}
 
-      {/* 3. TEMA SELECTION SLIDER BOX (KOTAK GESER KOMPAK DENGAN PILIHAN WARNA DASAR) */}
-      <ThemeSliderBox
-        selectedThemeId={themeId}
-        onSelectTheme={(id) => setThemeId(id)}
-        baseColor={themeColor}
-        onChangeBaseColor={(col) => setThemeColor(col)}
-        title={isProctor ? 'Pilih Tema ID Card Pengawas' : 'Pilih Tema ID Card Tamu'}
-        subtitle="Kotak geser tema agar ringkas dan tidak memakan ruang layar. Pilih tema & sesuaikan warna dasar kartu."
-      />
+      {/* 3. TEMA SELECTION SLIDER BOX (Hidden on Print) */}
+      <div className="no-print">
+        <ThemeSliderBox
+          selectedThemeId={themeId}
+          onSelectTheme={(id) => setThemeId(id)}
+          baseColor={themeColor}
+          onChangeBaseColor={(col) => setThemeColor(col)}
+          title={isProctor ? 'Pilih Tema ID Card Pengawas' : 'Pilih Tema ID Card Tamu'}
+          subtitle="Kotak geser tema agar ringkas dan tidak memakan ruang layar. Pilih tema & sesuaikan warna dasar kartu."
+        />
+      </div>
 
       {/* 4. PROCTOR FILTER TOOLBAR */}
       {isProctor && (
