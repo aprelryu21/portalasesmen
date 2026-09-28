@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { School, Exam, Student, Teacher } from '../../types';
-import { parseExamSchedule, formatScheduleDateIndo } from '../../utils/scheduleHelper';
+import {
+  parseExamSchedule,
+  formatScheduleDateIndo,
+  formatReadableIndonesianDate,
+} from '../../utils/scheduleHelper';
 import {
   FileText,
   Building2,
@@ -17,12 +21,7 @@ import {
   ArrowRight,
   Printer,
   Sparkles,
-  CheckCircle2,
-  Clock,
-  Layers,
-  MapPin,
   School as SchoolIcon,
-  ChevronRight,
 } from 'lucide-react';
 
 export type ExamAdminDocType =
@@ -239,10 +238,17 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
   const docInfo = activeDoc ? ADMIN_DOCUMENTS.find((d) => d.id === activeDoc) : null;
   const scheduleItems = parseExamSchedule(exam?.scheduleInfo);
 
+  // Email resmi: jika tidak ada data email maka tampilkan '-' (jangan diisi otomatis)
   const schoolEmail =
-    school?.npsn
-      ? `${school.npsn.trim().toLowerCase()}@sekolah.belajar.id`
-      : 'info@sekolah.sch.id';
+    school?.email && school.email.trim().length > 0 ? school.email.trim() : '-';
+
+  // Format tanggal titimangsa yang bersih dan rapi (bebas dari format raw Date JS seperti GMT+0700)
+  const cleanSignatureDate =
+    formatReadableIndonesianDate(exam?.signatureDate) ||
+    formatReadableIndonesianDate(exam?.dateText ? exam.dateText.split('-')[0].trim() : '') ||
+    '01 Desember 2026';
+
+  const titimangsaLocation = exam?.location || school?.regency || 'Kediri';
 
   // Handler untuk print dokumen aktif
   const handlePrint = () => {
@@ -251,14 +257,14 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
   return (
     <div className="space-y-5 animate-in fade-in duration-150">
-      {/* Dynamic CSS untuk Print A4 Presisi */}
+      {/* Dynamic CSS untuk Print A4 Presisi dengan Margin 3cm Atas, 4cm Kiri, 3cm Kanan, 3cm Bawah */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
           @media print {
             @page {
               size: A4 portrait;
-              margin: 12mm 15mm;
+              margin: 3cm 3cm 3cm 4cm !important; /* Atas 3cm, Kanan 3cm, Bawah 3cm, Kiri 4cm */
             }
             html, body {
               background: white !important;
@@ -277,9 +283,11 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               width: 100% !important;
               min-height: auto !important;
               height: auto !important;
+              font-family: "Times New Roman", Times, serif !important;
+              line-height: 1.5 !important;
             }
             .cover-border-frame {
-              border-width: 3.5px !important;
+              border-width: 3px !important;
             }
           }
         `,
@@ -307,7 +315,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
           <div className="h-5 w-px bg-neutral-300 mx-1 shrink-0" />
 
-          {/* 11 Sub-Menu Tabs */}
+          {/* 11 Sub-Menu Tabs Administrasi Ujian */}
           {ADMIN_DOCUMENTS.map((doc) => {
             const isSelected = activeDoc === doc.id;
             return (
@@ -366,7 +374,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   {docInfo?.title}
                 </h2>
                 <p className="text-xs text-neutral-600 font-medium">
-                  {docInfo?.subtitle}
+                  {docInfo?.subtitle} • Margin: 3cm Atas, 4cm Kiri, 3cm Kanan, 3cm Bawah
                 </p>
               </div>
             </div>
@@ -405,78 +413,93 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
           {/* ========================================================
               AREA KONTEN DOKUMEN CETAK A4 RESMI
+              Margin: Atas 3cm, Kiri 4cm, Kanan 3cm, Bawah 3cm
+              Font: Times New Roman, Line-Height: 1.5
              ======================================================== */}
-          <div className="flex justify-center p-0 sm:p-2">
+          <div className="flex justify-center p-0 sm:p-2 overflow-x-auto">
             {/* 1. DOKUMEN 1: COVER */}
             {activeDoc === 'cover' && (
               <div
-                className="a4-print-sheet bg-white border border-neutral-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] w-[210mm] min-h-[297mm] p-[14mm] sm:p-[16mm] flex flex-col justify-between text-center relative overflow-hidden"
-                style={{ boxSizing: 'border-box' }}
+                className="a4-print-sheet bg-white border border-neutral-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-black flex flex-col justify-between text-center relative overflow-hidden"
+                style={{
+                  width: '210mm',
+                  minHeight: '297mm',
+                  paddingTop: '3cm',
+                  paddingLeft: '4cm',
+                  paddingRight: '3cm',
+                  paddingBottom: '3cm',
+                  fontFamily: '"Times New Roman", Times, serif',
+                  lineHeight: 1.5,
+                  boxSizing: 'border-box',
+                }}
               >
                 {/* Frame Garis Ganda Resmi Sampul */}
-                <div className="cover-border-frame border-[4px] border-black p-[10mm] sm:p-[12mm] h-full flex flex-col justify-between items-center text-center relative">
+                <div className="cover-border-frame border-[3px] border-black p-6 sm:p-8 h-full flex flex-col justify-between items-center text-center relative">
                   {/* Garis Dalam Tipis */}
                   <div className="absolute inset-[3mm] border border-black pointer-events-none" />
 
-                  {/* 1. BAGIAN ATAS: BERKAS ADMINISTRASI, PELAKSANAAN ASESMEN (Size 18, Huruf Besar) */}
-                  <div className="space-y-1 pt-6 sm:pt-8 w-full">
+                  {/* 1. BAGIAN ATAS: BERKAS ADMINISTRASI, PELAKSANAAN ASESMEN (Size 20, Huruf Besar) */}
+                  <div className="space-y-2 pt-4 w-full">
                     <h1
-                      className="font-black uppercase tracking-wider text-black leading-snug"
-                      style={{ fontSize: '18pt', lineHeight: 1.3 }}
+                      className="font-bold uppercase tracking-wider text-black leading-snug"
+                      style={{ fontSize: '20pt', lineHeight: 1.4 }}
                     >
                       BERKAS ADMINISTRASI
                     </h1>
                     <h2
-                      className="font-black uppercase tracking-wider text-black leading-snug"
-                      style={{ fontSize: '18pt', lineHeight: 1.3 }}
+                      className="font-bold uppercase tracking-wider text-black leading-snug"
+                      style={{ fontSize: '20pt', lineHeight: 1.4 }}
                     >
                       PELAKSANAAN ASESMEN
                     </h2>
                   </div>
 
                   {/* 2. BAGIAN TENGAH: LOGO SEKOLAH DENGAN JARAK CUKUP DENGAN TEKS ATAS & BAWAH */}
-                  <div className="my-auto py-10 sm:py-14 flex flex-col items-center justify-center">
+                  <div className="my-auto py-8 sm:py-12 flex flex-col items-center justify-center">
                     {school?.logoUrl ? (
                       <img
                         src={school.logoUrl}
                         alt={`Logo ${school.name}`}
-                        className="w-40 h-40 sm:w-48 sm:h-48 object-contain drop-shadow-xs"
+                        className="w-36 h-36 sm:w-44 sm:h-44 object-contain drop-shadow-xs"
                       />
                     ) : (
-                      <div className="w-40 h-40 border-2 border-dashed border-neutral-400 rounded-2xl flex flex-col items-center justify-center p-4 text-neutral-400">
+                      <div className="w-36 h-36 border-2 border-dashed border-neutral-400 rounded-2xl flex flex-col items-center justify-center p-4 text-neutral-400">
                         <Building2 className="w-16 h-16 mb-2" />
                         <span className="text-xs font-bold uppercase">Logo Sekolah</span>
                       </div>
                     )}
                   </div>
 
-                  {/* 3. BAGIAN BAWAH: NAMA ASESMEN, SEMESTER, NAMA SEKOLAH (SIZE 20), TAHUN PELAJARAN (SIZE 18) */}
-                  <div className="space-y-3.5 pb-6 sm:pb-8 w-full">
+                  {/* 3. BAGIAN BAWAH: NAMA ASESMEN (SIZE 16), SEMESTER (SIZE 16), NAMA SEKOLAH (SIZE 20), TAHUN PELAJARAN (SIZE 16) */}
+                  <div className="space-y-3 pb-4 w-full">
+                    {/* Nama Asesmen: Ukuran 16 */}
                     <div
-                      className="font-black uppercase tracking-wide text-black leading-snug"
-                      style={{ fontSize: '18pt', lineHeight: 1.3 }}
+                      className="font-bold uppercase tracking-wide text-black leading-snug"
+                      style={{ fontSize: '16pt', lineHeight: 1.4 }}
                     >
                       {exam?.name || 'ASESMEN SUMATIF AKHIR SEMESTER'}
                     </div>
 
+                    {/* Semester: Ukuran 16 */}
                     <div
-                      className="font-black uppercase tracking-wide text-black leading-snug"
-                      style={{ fontSize: '18pt', lineHeight: 1.3 }}
+                      className="font-bold uppercase tracking-wide text-black leading-snug"
+                      style={{ fontSize: '16pt', lineHeight: 1.4 }}
                     >
                       {exam?.semester || 'SEMESTER GANJIL'}
                     </div>
 
                     {/* Khusus Nama Sekolah: Ukuran 20 */}
                     <div
-                      className="font-black uppercase tracking-wider text-black leading-snug pt-1"
-                      style={{ fontSize: '20pt', lineHeight: 1.3 }}
+                      className="font-bold uppercase tracking-wider text-black leading-snug pt-1"
+                      style={{ fontSize: '20pt', lineHeight: 1.4 }}
                     >
                       {school?.name || 'NAMA SATUAN PENDIDIKAN'}
                     </div>
 
+                    {/* Tahun Pelajaran: Ukuran 16 */}
                     <div
-                      className="font-black uppercase tracking-wide text-black leading-snug"
-                      style={{ fontSize: '18pt', lineHeight: 1.3 }}
+                      className="font-bold uppercase tracking-wide text-black leading-snug"
+                      style={{ fontSize: '16pt', lineHeight: 1.4 }}
                     >
                       TAHUN PELAJARAN {exam?.academicYear || '2026/2027'}
                     </div>
@@ -488,76 +511,96 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             {/* 2. DOKUMEN 2: PROFIL SEKOLAH */}
             {activeDoc === 'school_profile' && (
               <div
-                className="a4-print-sheet bg-white border border-neutral-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] w-[210mm] min-h-[297mm] p-[18mm] sm:p-[20mm] text-black flex flex-col justify-between"
-                style={{ fontSize: '12pt', lineHeight: 1.5, boxSizing: 'border-box' }}
+                className="a4-print-sheet bg-white border border-neutral-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-black flex flex-col justify-between"
+                style={{
+                  width: '210mm',
+                  minHeight: '297mm',
+                  paddingTop: '3cm',
+                  paddingLeft: '4cm',
+                  paddingRight: '3cm',
+                  paddingBottom: '3cm',
+                  fontFamily: '"Times New Roman", Times, serif',
+                  fontSize: '12pt',
+                  lineHeight: 1.5,
+                  boxSizing: 'border-box',
+                }}
               >
                 <div>
-                  {/* Judul: PROFIL SEKOLAH PENYELENGGARA & NAMA ASESMEN + SEMESTER (Bold) */}
-                  <div className="text-center pb-6 border-b-2 border-black space-y-1">
-                    <h1 className="font-bold uppercase tracking-wide text-[14pt]">
+                  {/* Judul: PROFIL SEKOLAH PENYELENGGARA, NAMA ASESMEN, TAHUN PELAJARAN (Ukuran 14 Bold) */}
+                  <div className="text-center pb-5 border-b-2 border-black space-y-1">
+                    <h1
+                      className="font-bold uppercase tracking-wide"
+                      style={{ fontSize: '14pt', lineHeight: 1.4 }}
+                    >
                       PROFIL SEKOLAH PENYELENGGARA
                     </h1>
-                    <h2 className="font-bold uppercase tracking-wide text-[13pt]">
-                      {exam?.name || 'ASESMEN SUMATIF'} {exam?.semester ? `• ${exam.semester}` : ''}
+                    <h2
+                      className="font-bold uppercase tracking-wide"
+                      style={{ fontSize: '14pt', lineHeight: 1.4 }}
+                    >
+                      {exam?.name || 'ASESMEN SUMATIF'}
                     </h2>
-                    <p className="font-bold uppercase tracking-wide text-[12pt] text-neutral-800">
+                    <p
+                      className="font-bold uppercase tracking-wide"
+                      style={{ fontSize: '14pt', lineHeight: 1.4 }}
+                    >
                       TAHUN PELAJARAN {exam?.academicYear || '2026/2027'}
                     </p>
                   </div>
 
-                  {/* Isian Data Profil Sekolah */}
+                  {/* Isian Data Profil Sekolah (Font 12pt, Jarak 1.5) */}
                   <div className="my-6">
                     <table className="w-full text-left" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
                       <tbody>
                         <tr>
-                          <td className="w-[190px] sm:w-[210px] font-bold py-1.5 align-top">Nama Sekolah</td>
-                          <td className="w-[20px] font-bold py-1.5 align-top">:</td>
-                          <td className="py-1.5 uppercase font-bold text-neutral-900">{school?.name || '-'}</td>
+                          <td className="w-[180px] font-bold py-1 align-top">Nama Sekolah</td>
+                          <td className="w-[20px] font-bold py-1 align-top">:</td>
+                          <td className="py-1 uppercase font-bold text-neutral-900">{school?.name || '-'}</td>
                         </tr>
                         <tr>
-                          <td className="font-bold py-1.5 align-top">NPSN</td>
-                          <td className="font-bold py-1.5 align-top">:</td>
-                          <td className="py-1.5 font-mono">{school?.npsn || '-'}</td>
+                          <td className="font-bold py-1 align-top">NPSN</td>
+                          <td className="font-bold py-1 align-top">:</td>
+                          <td className="py-1 font-mono">{school?.npsn || '-'}</td>
                         </tr>
                         <tr>
-                          <td className="font-bold py-1.5 align-top">Jenjang Pendidikan</td>
-                          <td className="font-bold py-1.5 align-top">:</td>
-                          <td className="py-1.5">{detectEducationLevel(school?.name)}</td>
+                          <td className="font-bold py-1 align-top">Jenjang Pendidikan</td>
+                          <td className="font-bold py-1 align-top">:</td>
+                          <td className="py-1">{detectEducationLevel(school?.name)}</td>
                         </tr>
                         <tr>
-                          <td className="font-bold py-1.5 align-top">Status Sekolah</td>
-                          <td className="font-bold py-1.5 align-top">:</td>
-                          <td className="py-1.5">{detectSchoolStatus(school?.name)}</td>
+                          <td className="font-bold py-1 align-top">Status Sekolah</td>
+                          <td className="font-bold py-1 align-top">:</td>
+                          <td className="py-1">{detectSchoolStatus(school?.name)}</td>
                         </tr>
                         <tr>
-                          <td className="font-bold py-1.5 align-top">Alamat</td>
-                          <td className="font-bold py-1.5 align-top">:</td>
-                          <td className="py-1.5">{school?.address || '-'}</td>
+                          <td className="font-bold py-1 align-top">Alamat</td>
+                          <td className="font-bold py-1 align-top">:</td>
+                          <td className="py-1">{school?.address || '-'}</td>
                         </tr>
                         <tr>
-                          <td className="font-bold py-1.5 align-top">Desa / Kelurahan</td>
-                          <td className="font-bold py-1.5 align-top">:</td>
-                          <td className="py-1.5">{school?.village || '-'}</td>
+                          <td className="font-bold py-1 align-top">Desa / Kelurahan</td>
+                          <td className="font-bold py-1 align-top">:</td>
+                          <td className="py-1">{school?.village || '-'}</td>
                         </tr>
                         <tr>
-                          <td className="font-bold py-1.5 align-top">Kecamatan</td>
-                          <td className="font-bold py-1.5 align-top">:</td>
-                          <td className="py-1.5">{school?.district || '-'}</td>
+                          <td className="font-bold py-1 align-top">Kecamatan</td>
+                          <td className="font-bold py-1 align-top">:</td>
+                          <td className="py-1">{school?.district || '-'}</td>
                         </tr>
                         <tr>
-                          <td className="font-bold py-1.5 align-top">Kabupaten / Kota</td>
-                          <td className="font-bold py-1.5 align-top">:</td>
-                          <td className="py-1.5">{school?.regency || '-'}</td>
+                          <td className="font-bold py-1 align-top">Kabupaten / Kota</td>
+                          <td className="font-bold py-1 align-top">:</td>
+                          <td className="py-1">{school?.regency || '-'}</td>
                         </tr>
                         <tr>
-                          <td className="font-bold py-1.5 align-top">Provinsi</td>
-                          <td className="font-bold py-1.5 align-top">:</td>
-                          <td className="py-1.5">{school?.province || '-'}</td>
+                          <td className="font-bold py-1 align-top">Provinsi</td>
+                          <td className="font-bold py-1 align-top">:</td>
+                          <td className="py-1">{school?.province || '-'}</td>
                         </tr>
                         <tr>
-                          <td className="font-bold py-1.5 align-top">Email</td>
-                          <td className="font-bold py-1.5 align-top">:</td>
-                          <td className="py-1.5 text-neutral-800 font-mono">{schoolEmail}</td>
+                          <td className="font-bold py-1 align-top">Email</td>
+                          <td className="font-bold py-1 align-top">:</td>
+                          <td className="py-1">{schoolEmail}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -565,11 +608,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                 </div>
 
                 {/* Kolom Tanda Tangan Kepala Sekolah (Bawah Kanan) */}
-                <div className="pt-8 flex justify-end">
+                <div className="pt-6 flex justify-end">
                   <div className="w-[75mm] text-center" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
                     <p>
-                      {exam?.location || school?.regency || 'Kediri'},{' '}
-                      {exam?.signatureDate || exam?.dateText || '01 Desember 2026'}
+                      {titimangsaLocation}, {cleanSignatureDate}
                     </p>
                     <p className="font-bold">
                       {school?.headTitle || 'Kepala Sekolah'},
@@ -597,27 +639,38 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               </div>
             )}
 
-            {/* 3. DOKUMEN 3: SURAT PERNYATAAN KERAHASIAAN */}
+            {/* 3. DOKUMEN 3: SURAT PERNYATAAN MENJAGA KERAHASIAAN */}
             {activeDoc === 'confidentiality_statement' && (
               <div
-                className="a4-print-sheet bg-white border border-neutral-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] w-[210mm] min-h-[297mm] p-[18mm] sm:p-[20mm] text-black flex flex-col justify-between"
-                style={{ fontSize: '12pt', lineHeight: 1.5, boxSizing: 'border-box' }}
+                className="a4-print-sheet bg-white border border-neutral-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-black flex flex-col justify-between"
+                style={{
+                  width: '210mm',
+                  minHeight: '297mm',
+                  paddingTop: '3cm',
+                  paddingLeft: '4cm',
+                  paddingRight: '3cm',
+                  paddingBottom: '3cm',
+                  fontFamily: '"Times New Roman", Times, serif',
+                  fontSize: '12pt',
+                  lineHeight: 1.5,
+                  boxSizing: 'border-box',
+                }}
               >
                 <div>
                   {/* Kop Surat Sekolah Resmi */}
-                  <div className="pb-4 border-b-2 border-black flex items-center gap-4">
+                  <div className="pb-3 border-b-2 border-black flex items-center gap-4">
                     {school?.logoUrl && (
                       <img
                         src={school.logoUrl}
                         alt="Logo Sekolah"
-                        className="w-18 h-18 object-contain shrink-0"
+                        className="w-16 h-16 object-contain shrink-0"
                       />
                     )}
                     <div className="flex-1 text-center">
-                      <h3 className="font-bold text-[12pt] uppercase tracking-wide">
+                      <h3 className="font-bold uppercase tracking-wide text-[11pt]">
                         PEMERINTAH {school?.regency ? school.regency.toUpperCase() : 'KABUPATEN / KOTA'}
                       </h3>
-                      <h2 className="font-bold text-[14pt] uppercase tracking-wider">
+                      <h2 className="font-bold uppercase tracking-wider text-[13pt]">
                         {school?.name || 'NAMA SATUAN PENDIDIKAN'}
                       </h2>
                       <p className="text-[10pt] text-neutral-700 leading-snug">
@@ -629,10 +682,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   </div>
 
                   {/* Garis Ganda Pembatas Kop */}
-                  <div className="border-b border-black mt-0.5 mb-6" />
+                  <div className="border-b border-black mt-0.5 mb-5" />
 
-                  {/* Judul Surat: SURAT PERNYATAAN MENJAGA KERAHASIAAN (Bold) */}
-                  <div className="text-center mb-6">
+                  {/* Judul Surat: SURAT PERNYATAAN MENJAGA KERAHASIAAN (Bold, Underline) */}
+                  <div className="text-center mb-5">
                     <h1 className="font-bold uppercase tracking-wider text-[13pt] underline">
                       SURAT PERNYATAAN MENJAGA KERAHASIAAN
                     </h1>
@@ -642,10 +695,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   <p className="mb-2">Yang bertanda tangan di bawah ini :</p>
 
                   {/* Tabel Identitas Kepala Sekolah */}
-                  <table className="w-full text-left mb-4" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
+                  <table className="w-full text-left mb-3" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
                     <tbody>
                       <tr>
-                        <td className="w-[150px] font-semibold py-0.5 align-top">Nama</td>
+                        <td className="w-[140px] font-semibold py-0.5 align-top">Nama</td>
                         <td className="w-[20px] font-semibold py-0.5 align-top">:</td>
                         <td className="py-0.5 font-bold uppercase">{school?.principalName || '-'}</td>
                       </tr>
@@ -681,7 +734,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   </p>
 
                   {/* Poin Butir 1, 2, 3 */}
-                  <ol className="list-decimal pl-6 space-y-2 mb-4 text-justify leading-[1.5]">
+                  <ol className="list-decimal pl-6 space-y-2 mb-3 text-justify leading-[1.5]">
                     <li>
                       Menyadari Hakekat dan Kerahasiaan{' '}
                       <strong>
@@ -706,28 +759,23 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   </p>
                 </div>
 
-                {/* Kolom Tanda Tangan Bawah Kanan dengan Materai */}
+                {/* Kolom Tanda Tangan Bawah Kanan (Tanpa Kotak Materai) */}
                 <div className="pt-6 flex justify-end">
                   <div className="w-[75mm] text-center" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
                     <p>
-                      {exam?.location || school?.regency || 'Kediri'},{' '}
-                      {exam?.signatureDate || exam?.dateText || '01 Desember 2026'}
+                      {titimangsaLocation}, {cleanSignatureDate}
                     </p>
                     <p className="font-bold">Yang membuat pernyataan,</p>
 
-                    {/* Kotak Materai 10.000 & Scan TTD */}
-                    <div className="h-[26mm] flex items-center justify-center my-1 relative">
-                      <div className="w-24 h-14 border border-dashed border-neutral-400 rounded flex flex-col items-center justify-center text-[7.5pt] text-neutral-400">
-                        <span>MATERAI</span>
-                        <span className="font-bold">Rp 10.000</span>
-                      </div>
-                      {school?.principalSignatureUrl && (
+                    {/* Area Tanda Tangan Langsung (Tanpa Materai) */}
+                    <div className="h-[24mm] flex items-center justify-center my-1 relative">
+                      {school?.principalSignatureUrl ? (
                         <img
                           src={school.principalSignatureUrl}
                           alt="Tanda Tangan Kepala Sekolah"
-                          className="h-[24mm] object-contain absolute"
+                          className="h-[22mm] object-contain mx-auto"
                         />
-                      )}
+                      ) : null}
                     </div>
 
                     <p className="font-bold underline uppercase">
@@ -746,8 +794,19 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               activeDoc !== 'school_profile' &&
               activeDoc !== 'confidentiality_statement' && (
                 <div
-                  className="a4-print-sheet bg-white border border-neutral-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] w-[210mm] min-h-[297mm] p-[18mm] sm:p-[20mm] text-black flex flex-col justify-between"
-                  style={{ fontSize: '12pt', lineHeight: 1.5 }}
+                  className="a4-print-sheet bg-white border border-neutral-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-black flex flex-col justify-between"
+                  style={{
+                    width: '210mm',
+                    minHeight: '297mm',
+                    paddingTop: '3cm',
+                    paddingLeft: '4cm',
+                    paddingRight: '3cm',
+                    paddingBottom: '3cm',
+                    fontFamily: '"Times New Roman", Times, serif',
+                    fontSize: '12pt',
+                    lineHeight: 1.5,
+                    boxSizing: 'border-box',
+                  }}
                 >
                   <div className="space-y-6">
                     {/* Header Kop */}
@@ -794,8 +853,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   <div className="pt-6 flex justify-end">
                     <div className="w-[75mm] text-center" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
                       <p>
-                        {exam?.location || school?.regency || 'Kediri'},{' '}
-                        {exam?.signatureDate || exam?.dateText || '01 Desember 2026'}
+                        {titimangsaLocation}, {cleanSignatureDate}
                       </p>
                       <p className="font-bold">
                         {school?.headTitle || 'Kepala Sekolah'},
@@ -831,7 +889,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   Administrasi Pelaksanaan Ujian
                 </h2>
                 <p className="text-xs sm:text-sm text-neutral-700 max-w-2xl font-medium mt-1">
-                  Pusat pencetakan bundel portofolio administrasi ujian untuk <strong>{exam?.name || 'Asesmen Ujian'}</strong> di <strong>{school?.name || 'Sekolah'}</strong>. Silakan pilih dokumen yang ingin dicetak di bawah ini.
+                  Pusat pencetakan bundel portofolio administrasi ujian untuk <strong>{exam?.name || 'Asesmen Ujian'}</strong> di <strong>{school?.name || 'Sekolah'}</strong>. Standar margin: 3cm atas, 4cm kiri, 3cm kanan, 3cm bawah • Font: Times New Roman (1,5 spasi).
                 </p>
               </div>
 
@@ -890,7 +948,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   {/* Action Button */}
                   <div className="pt-4 mt-3 border-t border-neutral-100 flex items-center justify-between">
                     <span className="text-[10px] text-neutral-400 font-mono">
-                      Format A4 Resmi
+                      Format A4 (Times New Roman)
                     </span>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-300 group-hover:bg-yellow-200 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[1.5px_1.5px_0px_#000] transition-all">
                       <span>Buka Berkas</span>

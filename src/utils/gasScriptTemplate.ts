@@ -1094,8 +1094,8 @@ function handleGetAllDatabaseData() {
         province: String(r[9]),
         logoUrl: (r[10] && String(r[10]).toLowerCase() !== "undefined" && String(r[10]).toLowerCase() !== "null") ? String(r[10]).trim() : "",
         principalName: String(r[11]),
-        principalNip: String(r[12]),
-        headTitle: String(r[13]) || "Kepala Sekolah"
+        headTitle: String(r[13]) || "Kepala Sekolah",
+        email: r[22] ? String(r[22]) : ""
       },
       exam: {
         id: "exam_" + String(r[0]),
@@ -1376,7 +1376,8 @@ function handleSaveAllData(payload) {
     exam.location || "",
     exam.extraNote || "",
     driveInfo ? driveInfo.schoolFolderUrl : "",
-    now
+    now,
+    school.email || ""
   ];
 
   if (sekolahRowIdx > 0) {
@@ -1624,7 +1625,8 @@ function handleSaveSchoolSettings(contents) {
     exam.location || "",
     exam.extraNote || "",
     driveInfo ? driveInfo.schoolFolderUrl : "",
-    now
+    now,
+    school.email || ""
   ];
 
   if (rowIdx > 0) {
@@ -2734,7 +2736,8 @@ function loadAllDataForUser(username) {
         logoUrl: (r[10] && String(r[10]).toLowerCase() !== "undefined" && String(r[10]).toLowerCase() !== "null") ? String(r[10]).trim() : "",
         principalName: String(r[11]),
         principalNip: String(r[12]),
-        headTitle: String(r[13]) || "Kepala Sekolah"
+        headTitle: String(r[13]) || "Kepala Sekolah",
+        email: r[22] ? String(r[22]) : ""
       };
       examData = {
         id: "exam_" + String(r[0]),

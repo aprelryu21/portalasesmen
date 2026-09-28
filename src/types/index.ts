@@ -15,6 +15,7 @@ export interface School {
   principalName: string;
   principalNip: string;
   headTitle: string; // e.g. "Kepala Sekolah"
+  email?: string; // Email resmi sekolah
 }
 
 export interface Exam {

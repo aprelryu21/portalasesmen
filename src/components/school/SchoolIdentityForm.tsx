@@ -379,6 +379,23 @@ export const SchoolIdentityForm: React.FC<SchoolIdentityFormProps> = ({
             </div>
           </div>
 
+          {/* Email Resmi Sekolah */}
+          <div>
+            <label className="block text-xs font-black uppercase text-neutral-700 mb-1">
+              Email Resmi Sekolah
+            </label>
+            <input
+              type="email"
+              value={localSchool.email || ''}
+              onChange={(e) => setLocalSchool({ ...localSchool, email: e.target.value })}
+              placeholder="Contoh: sdn1kandangan@gmail.com atau sdn1kandangan@sch.id"
+              className="w-full px-3 py-2 text-xs font-bold border-2 border-black rounded-xl focus:bg-yellow-50 focus:outline-hidden"
+            />
+            <p className="text-[10.5px] text-neutral-500 mt-1 font-medium">
+              Digunakan pada formulir profil sekolah dan lembar administrasi ujian resmi. Jika dikosongkan, akan ditampilkan tanda strip (-).
+            </p>
+          </div>
+
           {/* Kepala Sekolah */}
           <div className="pt-2 border-t border-neutral-200">
             <h4 className="text-xs font-black uppercase tracking-wider text-neutral-500 mb-3">

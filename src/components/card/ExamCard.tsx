@@ -4,6 +4,7 @@ import { SchoolLogo } from '../common/SchoolLogo';
 import { GenderAvatar } from '../common/GenderAvatar';
 import { QrCodeImage } from '../common/QrCodeImage';
 import { getThemeById, resolveThemeStyles } from '../../config/cardThemes';
+import { formatReadableIndonesianDate } from '../../utils/scheduleHelper';
 
 const DEFAULT_STUDENT_PREVIEW: Student = {
   id: 'preview',
@@ -87,12 +88,13 @@ export const ExamCard: React.FC<ExamCardProps> = ({
   const widthMm = isPortrait ? Math.min(design.widthMm, design.heightMm) : Math.max(design.widthMm, design.heightMm);
   const heightMm = isPortrait ? Math.max(design.widthMm, design.heightMm) : Math.min(design.widthMm, design.heightMm);
 
-  const effectiveSignDate =
+  const rawSignDate =
     safeExam.signatureDate && safeExam.signatureDate.trim().length > 0
       ? safeExam.signatureDate.trim()
       : safeExam.dateText
       ? safeExam.dateText.split('-')[0].trim()
       : '2026';
+  const effectiveSignDate = formatReadableIndonesianDate(rawSignDate);
 
   // 10 Distinct Themes System
   const theme = getThemeById(design.templatePreset);

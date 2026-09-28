@@ -52,6 +52,79 @@ export function formatScheduleDateIndo(dateStr?: string, short = true): string {
 }
 
 /**
+ * Membersihkan dan memformat tanggal tanda tangan / titimangsa agar tidak muncul
+ * format timestamp JavaScript mentah seperti "Sat Sep 26 2026 00:00:00 GMT+0700 (Waktu Indonesia Barat)"
+ * dan mengubahnya menjadi format tanggal Indonesia sewajarnya (misal: "26 September 2026").
+ */
+export function formatReadableIndonesianDate(raw?: string | null): string {
+  if (!raw || !raw.trim()) return '';
+  const trimmed = raw.trim();
+
+  const monthNamesLong = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+
+  // 1. Cek apakah ada format Date JS seperti "Sat Sep 26 2026 ... GMT+..." atau kata hari Inggris
+  const isRawJsDate =
+    /GMT[+-]\d{4}|(Waktu Indonesia|WIB|WITA|WIT)|^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+[A-Za-z]{3}\s+\d+/i.test(trimmed);
+  const isIsoDate = /^\d{4}-\d{2}-\d{2}(T|\b)/.test(trimmed);
+
+  if (isRawJsDate || isIsoDate) {
+    try {
+      const parsedDate = new Date(trimmed);
+      if (!isNaN(parsedDate.getTime())) {
+        const day = String(parsedDate.getDate()).padStart(2, '0');
+        const month = monthNamesLong[parsedDate.getMonth()];
+        const year = parsedDate.getFullYear();
+        return `${day} ${month} ${year}`;
+      }
+    } catch {
+      // lanjut ke parser berikutnya
+    }
+  }
+
+  // 2. Format YYYY-MM-DD
+  const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (ymdMatch) {
+    const year = ymdMatch[1];
+    const monthIdx = parseInt(ymdMatch[2], 10) - 1;
+    const day = ymdMatch[3].padStart(2, '0');
+    if (monthIdx >= 0 && monthIdx < 12) {
+      return `${day} ${monthNamesLong[monthIdx]} ${year}`;
+    }
+  }
+
+  // 3. Format "DD/MM/YYYY" atau "DD-MM-YYYY"
+  const dmyMatch = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0');
+    const monthIdx = parseInt(dmyMatch[2], 10) - 1;
+    const year = dmyMatch[3];
+    if (monthIdx >= 0 && monthIdx < 12) {
+      return `${day} ${monthNamesLong[monthIdx]} ${year}`;
+    }
+  }
+
+  // 4. Jika memuat nama bulan bahasa Inggris (misal "Sep 26, 2026")
+  try {
+    const parsedDate = new Date(trimmed);
+    if (!isNaN(parsedDate.getTime()) && parsedDate.getFullYear() > 1900 && parsedDate.getFullYear() < 2100) {
+      if (/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(trimmed)) {
+        const day = String(parsedDate.getDate()).padStart(2, '0');
+        const month = monthNamesLong[parsedDate.getMonth()];
+        const year = parsedDate.getFullYear();
+        return `${day} ${month} ${year}`;
+      }
+    }
+  } catch {
+    // lanjut
+  }
+
+  return trimmed;
+}
+
+/**
  * Mengubah string scheduleInfo (bisa berupa JSON atau teks legacy) menjadi array ExamScheduleItem
  */
 export function parseExamSchedule(raw?: string): ExamScheduleItem[] {

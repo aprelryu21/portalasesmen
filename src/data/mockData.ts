@@ -15,6 +15,7 @@ export const DEFAULT_SCHOOL: School = {
   principalName: '',
   principalNip: '',
   headTitle: 'Kepala Sekolah',
+  email: '',
 };
 
 export const DEFAULT_EXAM: Exam = {

@@ -6,6 +6,7 @@ import {
   parseExamSchedule,
   serializeExamSchedule,
   formatScheduleDateIndo,
+  formatReadableIndonesianDate,
 } from '../../utils/scheduleHelper';
 import {
   BookOpen,
@@ -318,7 +319,7 @@ export const AssessmentList: React.FC<AssessmentListProps> = ({
                   {ex.signatureDate && (
                     <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300 text-[10px] font-bold">
                       <FileText className="w-3 h-3 text-amber-700" />
-                      TTD: {ex.signatureDate}
+                      TTD: {formatReadableIndonesianDate(ex.signatureDate)}
                     </span>
                   )}
                   {ex.location && (
