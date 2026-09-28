@@ -6,6 +6,7 @@ import { ProctorGuestPreview } from './ProctorGuestPreview';
 import { PinchZoomCardContainer } from '../card/PinchZoomCardContainer';
 import { A4SheetContainer } from './A4SheetContainer';
 import { PrintConfirmationModal } from './PrintConfirmationModal';
+import { ExamPosterPrint } from './ExamPosterPrint';
 import {
   Printer,
   Settings2,
@@ -643,7 +644,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
                   <Megaphone className="w-7 h-7" />
                 </div>
                 <span className="px-2.5 py-1 bg-purple-300 text-purple-950 border border-black rounded-md text-[10px] font-black uppercase tracking-wider shadow-[1px_1px_0px_#000]">
-                  Akan Dikembangkan
+                  Siap Cetak A4
                 </span>
               </div>
 
@@ -655,22 +656,22 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
                   Poster Tata Tertib &amp; Panduan Ruang
                 </p>
                 <p className="text-xs text-neutral-700 leading-relaxed mt-2.5">
-                  Fungsi untuk mencetak poster pengumuman ujian (A4 / A3) beresolusi tajam seperti Tata Tertib Ujian, Poster &quot;Harap Tenang Ada Ujian&quot;, dan Denah Alur Masuk Ruangan.
+                  Fungsi untuk mencetak poster pengumuman ujian (A4 penuh) beresolusi tinggi dengan 6 pilihan tema resmi, 5 gaya visual premium, serta watermark logo dan nama sekolah.
                 </p>
               </div>
 
               <div className="space-y-1.5 pt-2 border-t border-neutral-200 text-xs font-semibold text-neutral-700">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                  <span>Poster &quot;Harap Tenang, Ada Ujian!&quot; &amp; Larangan HP</span>
+                  <span>Harap Tenang, Bebas HP/Kamera &amp; Ruangan Asesmen</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                  <span>Tata Tertib Peserta Ujian &amp; Sanksi Pelanggaran</span>
+                  <span>Ruang Panitia, Kepala Sekolah, dan Tamu &amp; Pengawas</span>
                 </div>
                 <div className="flex items-center gap-2 text-purple-800 font-bold">
                   <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                  <span>Status: Fungsi akan dikembangkan mendatang</span>
+                  <span>6 Tema • 5 Gaya Tampilan Unik A4 Penuh Watermark</span>
                 </div>
               </div>
             </div>
@@ -854,131 +855,15 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
     );
   }
 
-  // 6. SUB-GENERATOR 6: CETAK POSTER UJIAN (AKAN DIKEMBANGKAN MENDATANG)
+  // 6. SUB-GENERATOR 6: CETAK POSTER UJIAN A4 (6 TEMA • 5 GAYA)
   if (activeCategory === 'exam_poster') {
     return (
-      <div className="space-y-6">
-        {renderCategorySwitcher()}
-
-        {/* Header Banner */}
-        <div className="bg-purple-100 border-3 border-black shadow-[6px_6px_0px_#000] rounded-2xl p-5 sm:p-6 space-y-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-600 text-white rounded text-[10px] font-black uppercase tracking-wider mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-white" />
-                Status: Akan Dikembangkan Mendatang
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
-                <Megaphone className="w-6 h-6 text-purple-700" />
-                Cetak Poster &amp; Pengumuman Ujian
-              </h2>
-              <p className="text-xs sm:text-sm text-neutral-700 max-w-2xl font-medium mt-1">
-                Fasilitas pencetakan poster resmi untuk mading, gerbang sekolah, dan pintu ruang asesmen dengan tata letak Neobrutalism beresolusi tinggi (A4 &amp; A3).
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setActiveCategory('menu')}
-              className="px-4 py-2 bg-white hover:bg-neutral-100 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer shrink-0"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Kembali ke Menu</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Mock Poster Previews */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Poster 1 */}
-          <div className="bg-white border-3 border-black rounded-2xl p-4 shadow-[5px_5px_0px_#000] flex flex-col justify-between space-y-4">
-            <div className="space-y-3">
-              <div className="p-4 bg-yellow-300 border-2 border-black rounded-xl text-center space-y-2">
-                <span className="inline-block px-2 py-0.5 bg-black text-white text-[9px] font-black rounded uppercase">
-                  Peringatan Ruang Ujian
-                </span>
-                <h4 className="text-base font-black uppercase leading-tight text-black">
-                  HARAP TENANG!
-                  <br />
-                  SEDANG UJIAN BERLANGSUNG
-                </h4>
-                <div className="text-[10px] font-bold text-neutral-800">
-                  Dilarang membuat gaduh &amp; memasuki area ruang ujian tanpa izin
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-black uppercase">Poster 1: Peringatan Ketenangan</h4>
-                <p className="text-[11px] text-neutral-600 mt-1">
-                  Ditempel di pintu ruang ujian dan lorong kelas. Dilengkapi ikon larangan HP dan suara gaduh.
-                </p>
-              </div>
-            </div>
-
-            <span className="w-full py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-center text-xs font-bold text-neutral-500">
-              Akan Dikembangkan Mendatang
-            </span>
-          </div>
-
-          {/* Poster 2 */}
-          <div className="bg-white border-3 border-black rounded-2xl p-4 shadow-[5px_5px_0px_#000] flex flex-col justify-between space-y-4">
-            <div className="space-y-3">
-              <div className="p-4 bg-cyan-200 border-2 border-black rounded-xl text-center space-y-2">
-                <span className="inline-block px-2 py-0.5 bg-black text-white text-[9px] font-black rounded uppercase">
-                  Regulasi &amp; Tata Tertib
-                </span>
-                <h4 className="text-base font-black uppercase leading-tight text-black">
-                  TATA TERTIB PESERTA ASESMEN
-                </h4>
-                <div className="text-[10px] font-bold text-neutral-800 text-left space-y-0.5">
-                  <div>1. Hadir 15 menit sebelum ujian dimulai</div>
-                  <div>2. Wajib membawa kartu peserta ujian</div>
-                  <div>3. Dilarang membawa alat komunikasi / HP</div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-black uppercase">Poster 2: Tata Tertib Peserta</h4>
-                <p className="text-[11px] text-neutral-600 mt-1">
-                  Format tata tertib lengkap dengan sanksi pelanggaran dan poin integritas kejujuran.
-                </p>
-              </div>
-            </div>
-
-            <span className="w-full py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-center text-xs font-bold text-neutral-500">
-              Akan Dikembangkan Mendatang
-            </span>
-          </div>
-
-          {/* Poster 3 */}
-          <div className="bg-white border-3 border-black rounded-2xl p-4 shadow-[5px_5px_0px_#000] flex flex-col justify-between space-y-4">
-            <div className="space-y-3">
-              <div className="p-4 bg-emerald-200 border-2 border-black rounded-xl text-center space-y-2">
-                <span className="inline-block px-2 py-0.5 bg-black text-white text-[9px] font-black rounded uppercase">
-                  Informasi Alur
-                </span>
-                <h4 className="text-base font-black uppercase leading-tight text-black">
-                  DENAH &amp; ALUR RUANG ASESMEN
-                </h4>
-                <div className="text-[10px] font-bold text-neutral-800">
-                  {school?.name || 'Sekolah'} • {exam?.name || 'Asesmen'}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-black uppercase">Poster 3: Denah &amp; Alur Lokasi</h4>
-                <p className="text-[11px] text-neutral-600 mt-1">
-                  Petunjuk arah menuju posko pengawas, ruang 1 s/d ruang akhir, toilet, dan UKS.
-                </p>
-              </div>
-            </div>
-
-            <span className="w-full py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-center text-xs font-bold text-neutral-500">
-              Akan Dikembangkan Mendatang
-            </span>
-          </div>
-        </div>
-      </div>
+      <ExamPosterPrint
+        school={school}
+        exam={exam}
+        students={students}
+        onBackToMenu={() => setActiveCategory('menu')}
+      />
     );
   }
 
