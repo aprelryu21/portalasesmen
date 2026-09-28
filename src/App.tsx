@@ -410,6 +410,8 @@ export default function App() {
           students: prev.students,
           teachers: prev.teachers,
           cardDesign: prev.cardDesign,
+          posterDesign: prev.posterDesign,
+          answerSheetDesign: prev.answerSheetDesign,
           printSettings: prev.printSettings,
           selectedStudentIds: prev.selectedStudentIds,
         };
@@ -429,6 +431,8 @@ export default function App() {
         students: cleanStudents,
         teachers: cleanTeachers,
         cardDesign: updated.cardDesign,
+        posterDesign: updated.posterDesign !== undefined ? updated.posterDesign : prev.posterDesign,
+        answerSheetDesign: updated.answerSheetDesign !== undefined ? updated.answerSheetDesign : prev.answerSheetDesign,
         printSettings: updated.printSettings,
         selectedStudentIds: updated.selectedStudentIds,
         schoolDataMap: {
@@ -457,6 +461,8 @@ export default function App() {
       let userStudents = prev.students || [];
       let userTeachers = prev.teachers || DEFAULT_TEACHERS;
       let userDesign = prev.cardDesign || DEFAULT_CARD_DESIGN;
+      let userPosterDesign = prev.posterDesign || DEFAULT_POSTER_DESIGN;
+      let userAnswerSheetDesign = prev.answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN;
       let userPrint = prev.printSettings || DEFAULT_PRINT_SETTINGS;
       let userSelected = prev.selectedStudentIds || [];
 
@@ -467,6 +473,8 @@ export default function App() {
         userStudents = existingData.students || [];
         userTeachers = existingData.teachers && existingData.teachers.length > 0 ? existingData.teachers : (prev.teachers || DEFAULT_TEACHERS);
         userDesign = existingData.cardDesign || DEFAULT_CARD_DESIGN;
+        userPosterDesign = existingData.posterDesign || DEFAULT_POSTER_DESIGN;
+        userAnswerSheetDesign = existingData.answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN;
         userPrint = existingData.printSettings || DEFAULT_PRINT_SETTINGS;
         userSelected = existingData.selectedStudentIds || [];
       } else {
@@ -493,6 +501,8 @@ export default function App() {
           students: userStudents,
           teachers: userTeachers,
           cardDesign: userDesign,
+          posterDesign: userPosterDesign,
+          answerSheetDesign: userAnswerSheetDesign,
           printSettings: userPrint,
           selectedStudentIds: userSelected,
         },
@@ -503,6 +513,8 @@ export default function App() {
           students: userStudents,
           teachers: userTeachers,
           cardDesign: userDesign,
+          posterDesign: userPosterDesign,
+          answerSheetDesign: userAnswerSheetDesign,
           printSettings: userPrint,
           selectedStudentIds: userSelected,
         },
@@ -517,6 +529,8 @@ export default function App() {
         students: userStudents,
         teachers: userTeachers,
         cardDesign: userDesign,
+        posterDesign: userPosterDesign,
+        answerSheetDesign: userAnswerSheetDesign,
         printSettings: userPrint,
         selectedStudentIds: userSelected,
         schoolDataMap: updatedSchoolDataMap,

@@ -560,14 +560,7 @@ const RenderAnswerSheetDocument: React.FC<RenderDocProps> = ({
             II. ISIAN SINGKAT
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] pt-0.5">
-            {Array.from({ length: questions.isianCount }).map((_, idx) => (
-              <div key={idx} className="flex items-center gap-1.5">
-                <span className="w-6 font-bold shrink-0">{idx + 1}.</span>
-                <span className="flex-1 border-b border-dotted border-black h-4"></span>
-              </div>
-            ))}
-          </div>
+          {renderPrintIsianColumns(questions.isianCount)}
         </div>
       )}
 
@@ -625,9 +618,9 @@ function renderPrintPgColumns(count: number, options: 'ABCD' | 'ABCDE') {
 
     for (let num = startNum; num <= endNum; num++) {
       colItems.push(
-        <div key={num} className="flex items-center justify-between py-0.5 border-b border-neutral-100">
-          <span className="w-5 font-bold text-neutral-900 shrink-0 text-[10px] sm:text-[11px]">{num}.</span>
-          <div className="flex items-center gap-1 sm:gap-1.5">
+        <div key={num} className="flex items-center gap-1.5 py-0.5 border-b border-neutral-200/60">
+          <span className="w-5 font-bold text-neutral-900 shrink-0 text-[10px] sm:text-[11px] text-right">{num}.</span>
+          <div className="flex items-center gap-1">
             {letters.map((letter) => (
               <span
                 key={letter}
@@ -649,4 +642,47 @@ function renderPrintPgColumns(count: number, options: 'ABCD' | 'ABCDE') {
   }
 
   return columns;
+}
+
+function renderPrintIsianColumns(count: number) {
+  const rowsPerCol = 5;
+  const numColumns = Math.ceil(count / rowsPerCol);
+
+  const columns = [];
+  for (let col = 0; col < numColumns; col++) {
+    const startNum = col * rowsPerCol + 1;
+    const endNum = Math.min((col + 1) * rowsPerCol, count);
+    const colItems = [];
+
+    for (let num = startNum; num <= endNum; num++) {
+      colItems.push(
+        <div key={num} className="flex items-center gap-1.5 py-0.5">
+          <span className="w-5 font-bold shrink-0 text-right text-neutral-900">{num}.</span>
+          <span className="flex-1 border-b border-dotted border-black h-4"></span>
+        </div>
+      );
+    }
+
+    columns.push(
+      <div key={col} className="space-y-1 flex-1 min-w-[130px]">
+        {colItems}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`grid gap-x-6 gap-y-2 text-[11px] pt-1 ${
+        numColumns === 1
+          ? 'grid-cols-1'
+          : numColumns === 2
+          ? 'grid-cols-2'
+          : numColumns === 3
+          ? 'grid-cols-3'
+          : 'grid-cols-4'
+      }`}
+    >
+      {columns}
+    </div>
+  );
 }

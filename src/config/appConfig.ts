@@ -14,7 +14,7 @@
  *    Semua pengguna di seluruh perangkat otomatis langsung terhubung ke database baru.
  */
 
-export const GOOGLE_APPS_SCRIPT_WEB_APP_URL: string = "https://script.google.com/macros/s/AKfycbx2dXmUU_GELyGd_bwQhXQ3pn2eG_3vBh1WVwQ4ZTshVPfe6yXXR9fQbwzqgYRZYzDQ/exec";
+export const GOOGLE_APPS_SCRIPT_WEB_APP_URL: string = "https://script.google.com/macros/s/AKfycbx29StERy5C_6WTvnpofk-L1Ars4YNomjzzBpcEwTgN2aT2XyjdJ8lt9cPbo2jUznom/exec";
 
 /**
  * Helper untuk mengecek apakah URL Web App valid dan sudah dikonfigurasi di dalam kode.

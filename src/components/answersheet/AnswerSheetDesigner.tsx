@@ -46,37 +46,50 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
 
+  // Local state for instant, smooth typing and reactive preview
+  const [localDesign, setLocalDesign] = useState<AnswerSheetDesignSettings>(design);
+
+  useEffect(() => {
+    setLocalDesign(design);
+  }, [design]);
+
   // Helper updater for Kop
   const updateKop = (field: keyof AnswerSheetDesignSettings['kop'], value: any) => {
-    onUpdateDesign({
-      ...design,
+    const nextDesign: AnswerSheetDesignSettings = {
+      ...localDesign,
       kop: {
-        ...design.kop,
+        ...localDesign.kop,
         [field]: value,
       },
-    });
+    };
+    setLocalDesign(nextDesign);
+    onUpdateDesign(nextDesign);
   };
 
   // Helper updater for Identity
   const updateIdentity = (field: keyof AnswerSheetDesignSettings['identity'], value: string) => {
-    onUpdateDesign({
-      ...design,
+    const nextDesign: AnswerSheetDesignSettings = {
+      ...localDesign,
       identity: {
-        ...design.identity,
+        ...localDesign.identity,
         [field]: value,
       },
-    });
+    };
+    setLocalDesign(nextDesign);
+    onUpdateDesign(nextDesign);
   };
 
   // Helper updater for Questions
   const updateQuestions = (field: keyof AnswerSheetDesignSettings['questions'], value: any) => {
-    onUpdateDesign({
-      ...design,
+    const nextDesign: AnswerSheetDesignSettings = {
+      ...localDesign,
       questions: {
-        ...design.questions,
+        ...localDesign.questions,
         [field]: value,
       },
-    });
+    };
+    setLocalDesign(nextDesign);
+    onUpdateDesign(nextDesign);
   };
 
   const handleSaveToCloud = async () => {
@@ -84,7 +97,7 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
     setIsSaving(true);
     setSaveSuccess(false);
     try {
-      await onSaveToCloud(design);
+      await onSaveToCloud(localDesign);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (e) {
@@ -96,8 +109,8 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
   };
 
   const handleResetToSchoolDefault = () => {
-    onUpdateDesign({
-      ...design,
+    const nextDesign: AnswerSheetDesignSettings = {
+      ...localDesign,
       kop: {
         showLogo: true,
         logoUrl: school.logoUrl || '',
@@ -108,14 +121,16 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
         line5: `Telepon: ${school.phone || '-'} | Pos-el: ${school.email || '-'}`,
       },
       identity: {
-        ...design.identity,
+        ...localDesign.identity,
         examTitle: exam.name ? exam.name.toUpperCase() : 'ASESMEN SUMATIF',
         yearTitle: exam.academicYear ? `TAHUN PELAJARAN ${exam.academicYear}` : 'TAHUN PELAJARAN 2024 – 2025',
       },
-    });
+    };
+    setLocalDesign(nextDesign);
+    onUpdateDesign(nextDesign);
   };
 
-  const { kop, identity, questions, fontFamily } = design;
+  const { kop, identity, questions, fontFamily } = localDesign;
 
   // Calculate question summary & estimated pages
   const totalQuestions =
@@ -551,7 +566,11 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
                     <label className="text-xs font-bold text-neutral-800">Jenis Huruf (Font)</label>
                     <select
                       value={fontFamily}
-                      onChange={(e) => onUpdateDesign({ ...design, fontFamily: e.target.value as any })}
+                      onChange={(e) => {
+                        const next = { ...localDesign, fontFamily: e.target.value as any };
+                        setLocalDesign(next);
+                        onUpdateDesign(next);
+                      }}
                       className="w-full px-3 py-1.5 text-xs border-2 border-black rounded-lg font-bold bg-white cursor-pointer"
                     >
                       <option value="sans">Modern Sans (Arial / Inter)</option>
@@ -909,19 +928,12 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
 
             {/* BAGIAN II: ISIAN SINGKAT */}
             {questions.enableIsian && (
-              <div className="space-y-2 pt-2">
+              <div className="space-y-1.5 pt-2">
                 <div className="text-xs font-black uppercase border-b border-black pb-0.5">
                   II. ISIAN SINGKAT
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] pt-0.5">
-                  {Array.from({ length: questions.isianCount }).map((_, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5">
-                      <span className="w-6 font-bold shrink-0">{idx + 1}.</span>
-                      <span className="flex-1 border-b border-dotted border-black h-4"></span>
-                    </div>
-                  ))}
-                </div>
+                {renderIsianColumns(questions.isianCount)}
               </div>
             )}
 
@@ -971,15 +983,11 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
 
 /**
  * Helper untuk menyusun butir PG menjadi kolom-kolom rapi (5 sampai 10 nomor ke bawah)
+ * Jarak antara nomor dan opsi pilihan (A) (B) (C) (D) dirapatkan
  */
 function renderPgColumns(count: number, options: 'ABCD' | 'ABCDE') {
   const letters = options === 'ABCDE' ? ['A', 'B', 'C', 'D', 'E'] : ['A', 'B', 'C', 'D'];
 
-  // Tentukan baris per kolom: jika 10 nomor -> 5 per kolom (2 kolom)
-  // jika 15 -> 5 per kolom (3 kolom)
-  // jika 20 -> 10 per kolom (2 kolom) atau 5 (4 kolom)
-  // jika 25 -> 5 per kolom (5 kolom)
-  // jika 50 -> 10 per kolom (5 kolom)
   const rowsPerCol = count <= 15 ? 5 : count === 25 ? 5 : 10;
   const numColumns = Math.ceil(count / rowsPerCol);
 
@@ -991,13 +999,13 @@ function renderPgColumns(count: number, options: 'ABCD' | 'ABCDE') {
 
     for (let num = startNum; num <= endNum; num++) {
       colItems.push(
-        <div key={num} className="flex items-center justify-between py-0.5 border-b border-neutral-100">
-          <span className="w-5 font-bold text-neutral-900 shrink-0 text-[10px] sm:text-[11px]">{num}.</span>
-          <div className="flex items-center gap-1 sm:gap-1.5">
+        <div key={num} className="flex items-center gap-1.5 py-0.5 border-b border-neutral-200/60">
+          <span className="w-5 font-bold text-neutral-900 shrink-0 text-[10px] sm:text-[11px] text-right">{num}.</span>
+          <div className="flex items-center gap-1">
             {letters.map((letter) => (
               <span
                 key={letter}
-                className="w-4 h-4 rounded-full border border-black flex items-center justify-center text-[9px] font-bold text-neutral-800 select-none hover:bg-neutral-100 cursor-pointer"
+                className="w-4 h-4 rounded-full border border-black flex items-center justify-center text-[9px] font-bold text-neutral-900 select-none hover:bg-neutral-100 cursor-pointer"
               >
                 {letter}
               </span>
@@ -1015,4 +1023,50 @@ function renderPgColumns(count: number, options: 'ABCD' | 'ABCDE') {
   }
 
   return columns;
+}
+
+/**
+ * Helper untuk menyusun butir Isian Singkat: 1 sampai 5 kebawah, 6 sampai 10 disebelahnya, dst
+ */
+function renderIsianColumns(count: number) {
+  const rowsPerCol = 5;
+  const numColumns = Math.ceil(count / rowsPerCol);
+
+  const columns = [];
+  for (let col = 0; col < numColumns; col++) {
+    const startNum = col * rowsPerCol + 1;
+    const endNum = Math.min((col + 1) * rowsPerCol, count);
+    const colItems = [];
+
+    for (let num = startNum; num <= endNum; num++) {
+      colItems.push(
+        <div key={num} className="flex items-center gap-1.5 py-0.5">
+          <span className="w-5 font-bold shrink-0 text-right text-neutral-900">{num}.</span>
+          <span className="flex-1 border-b border-dotted border-black h-4"></span>
+        </div>
+      );
+    }
+
+    columns.push(
+      <div key={col} className="space-y-1 flex-1 min-w-[130px]">
+        {colItems}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`grid gap-x-6 gap-y-2 text-[11px] pt-1 ${
+        numColumns === 1
+          ? 'grid-cols-1'
+          : numColumns === 2
+          ? 'grid-cols-2'
+          : numColumns === 3
+          ? 'grid-cols-3'
+          : 'grid-cols-4'
+      }`}
+    >
+      {columns}
+    </div>
+  );
 }
