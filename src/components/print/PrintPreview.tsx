@@ -835,6 +835,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
           exam={currentExam}
           students={printableStudents}
           teachers={teachers}
+          answerSheetDesign={answerSheetDesign}
           onBackToMenu={() => setActiveCategory('menu')}
           renderGlobalCategorySwitcher={renderCategorySwitcher}
         />

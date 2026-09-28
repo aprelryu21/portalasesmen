@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { School, Exam, Student, Teacher } from '../../types';
+import { School, Exam, Student, Teacher, AnswerSheetDesignSettings } from '../../types';
+import { DEFAULT_ANSWER_SHEET_DESIGN } from '../../data/mockData';
 import {
   parseExamSchedule,
   formatScheduleDateIndo,
@@ -45,6 +46,7 @@ interface ExamAdminPrintProps {
   exam: Exam;
   students: Student[];
   teachers: Teacher[];
+  answerSheetDesign?: AnswerSheetDesignSettings;
   onBackToMenu: () => void;
   renderGlobalCategorySwitcher?: () => React.ReactNode;
 }
@@ -233,6 +235,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
   exam,
   students,
   teachers,
+  answerSheetDesign,
   onBackToMenu,
   renderGlobalCategorySwitcher,
 }) => {
@@ -259,33 +262,187 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
   };
 
   // ========================================================
+  // DATA KOP SEKOLAH RESMI DARI DATABASE (Terintegrasi Penuh dengan Desain / Database)
+  // ========================================================
+  const activeKopSettings = answerSheetDesign?.kop || DEFAULT_ANSWER_SHEET_DESIGN.kop;
+  const rawRegency = school?.regency ? school.regency.toUpperCase().trim() : '';
+  const cleanRegencyName = rawRegency.replace(/^(PEMERINTAH\s+)?(KABUPATEN|KOTA)?\s*/i, '').trim() || 'KEDIRI';
+  const defaultLine1 = `PEMERINTAH KABUPATEN ${cleanRegencyName}`;
+
+  const kopLine1 =
+    activeKopSettings?.line1 && activeKopSettings.line1.trim().length > 0
+      ? activeKopSettings.line1
+      : defaultLine1;
+
+  const kopLine2 =
+    activeKopSettings?.line2 && activeKopSettings.line2.trim().length > 0
+      ? activeKopSettings.line2
+      : 'DINAS PENDIDIKAN';
+
+  const kopLine3 =
+    activeKopSettings?.line3 && activeKopSettings.line3.trim().length > 0
+      ? activeKopSettings.line3
+      : (school?.name || 'SD NEGERI MEDOWO 1');
+
+  const defaultLine4 = [
+    school?.address,
+    school?.village ? `Ds. ${school.village}` : '',
+    school?.district ? `Kec. ${school.district}` : '',
+    school?.regency ? `Kab. ${cleanRegencyName}` : '',
+    (school as any)?.postalCode,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const kopLine4 =
+    activeKopSettings?.line4 && activeKopSettings.line4.trim().length > 0
+      ? activeKopSettings.line4
+      : (defaultLine4 || 'Jl Raya Medowo Ds. Medowo, Kec. Kandangan, Kab. Kediri 64294');
+
+  const defaultLine5 = `Telepon : ${(school as any)?.phone || '-'} , Pos-el : ${schoolEmail}`;
+  const kopLine5 =
+    activeKopSettings?.line5 && activeKopSettings.line5.trim().length > 0
+      ? activeKopSettings.line5
+      : defaultLine5;
+
+  const kopLogo = activeKopSettings?.logoUrl || school?.logoUrl || '';
+  const showLogo = activeKopSettings?.showLogo !== false;
+
+  // Garis ganda pembatas kop resmi
+  const renderKopDivider = () => (
+    <div className="w-full my-2">
+      <div className="border-b-[2.5px] border-black w-full" />
+      <div className="border-b border-black w-full mt-[1.5px]" />
+    </div>
+  );
+
+  // Komponen KOP Surat Resmi Sekolah (Berdasarkan Database)
+  const renderOfficialSchoolKop = () => (
+    <div className="w-full pb-1">
+      <div className="flex items-center gap-3.5">
+        {showLogo && (
+          <div className="w-20 h-20 shrink-0 flex items-center justify-center">
+            {kopLogo ? (
+              <img
+                src={kopLogo}
+                alt="Logo Sekolah"
+                className="max-h-full max-w-full object-contain"
+              />
+            ) : (
+              <div className="w-16 h-16 border-2 border-dashed border-neutral-400 rounded flex items-center justify-center text-[10px] text-neutral-400 font-bold uppercase">
+                Logo
+              </div>
+            )}
+          </div>
+        )}
+        <div className="flex-1 text-center space-y-0.5">
+          {kopLine1 && (
+            <div className="text-[11pt] font-bold tracking-wider uppercase leading-snug">
+              {kopLine1}
+            </div>
+          )}
+          {kopLine2 && (
+            <div className="text-[12pt] font-bold tracking-wider uppercase leading-snug">
+              {kopLine2}
+            </div>
+          )}
+          {kopLine3 && (
+            <div className="text-[14pt] font-black tracking-wide uppercase leading-tight text-neutral-950">
+              {kopLine3}
+            </div>
+          )}
+          {kopLine4 && (
+            <div className="text-[9.5pt] leading-tight text-neutral-800">
+              {kopLine4}
+            </div>
+          )}
+          {kopLine5 && (
+            <div className="text-[9pt] leading-tight text-neutral-700">
+              {kopLine5}
+            </div>
+          )}
+        </div>
+      </div>
+      {renderKopDivider()}
+    </div>
+  );
+
+  // Komponen Tanda Tangan Resmi (Dilengkapi break-inside avoid agar utuh berpindah ke halaman kedua bila melampaui batas 3cm margin bawah)
+  const renderSignatureBlock = (title = 'Kepala Sekolah', showDate = true) => (
+    <div
+      className="admin-signature-block pt-6 flex justify-end"
+      style={{
+        pageBreakInside: 'avoid',
+        breakInside: 'avoid',
+      }}
+    >
+      <div className="w-[75mm] text-center" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
+        {showDate && (
+          <p>
+            {titimangsaLocation}, {cleanSignatureDate}
+          </p>
+        )}
+        <p className="font-bold">
+          {school?.headTitle || title},
+        </p>
+
+        {/* Area Tanda Tangan / Scan */}
+        <div className="h-[22mm] flex items-center justify-center my-1 relative">
+          {school?.principalSignatureUrl ? (
+            <img
+              src={school.principalSignatureUrl}
+              alt="Tanda Tangan Kepala Sekolah"
+              className="h-[20mm] object-contain mx-auto"
+            />
+          ) : null}
+        </div>
+
+        <p className="font-bold underline uppercase">
+          {school?.principalName || 'NAMA KEPALA SEKOLAH'}
+        </p>
+        <p className="font-mono text-[11pt]">
+          NIP. {school?.principalNip || '-'}
+        </p>
+      </div>
+    </div>
+  );
+
+  // Base styling untuk lembar A4 Administrasi (Margin 3cm Atas, 4cm Kiri, 3cm Kanan, 3cm Bawah, Tanpa Kotak Border/Scrollbar)
+  const basePageStyle: React.CSSProperties = {
+    width: '210mm',
+    minHeight: '297mm',
+    paddingTop: '30mm',
+    paddingLeft: '40mm',
+    paddingRight: '30mm',
+    paddingBottom: '30mm',
+    fontFamily: '"Times New Roman", Times, "Liberation Serif", serif',
+    fontSize: '12pt',
+    lineHeight: 1.5,
+    boxSizing: 'border-box',
+    borderRadius: '0px',
+    border: 'none',
+    boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+    backgroundColor: '#ffffff',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+    overflow: 'visible',
+  };
+
+  // ========================================================
   // 1. RENDER COVER (Ukuran 20pt Atas/Sekolah, 16pt Asesmen/Semester/Tahun, Center Vertikal & Horizontal, Frame 3-4-3-3cm)
   // ========================================================
   const renderCoverPage = (key = 'cover_page') => (
     <div
       key={key}
-      className="a4-admin-page bg-white text-black relative"
+      className="a4-admin-page bg-white text-black relative no-scrollbar"
       style={{
-        width: '210mm',
-        height: '296.5mm',
-        minHeight: '296.5mm',
-        maxHeight: '296.5mm',
-        paddingTop: '30mm',
-        paddingLeft: '40mm',
-        paddingRight: '30mm',
-        paddingBottom: '30mm',
-        fontFamily: '"Times New Roman", Times, "Liberation Serif", serif',
-        lineHeight: 1.5,
-        boxSizing: 'border-box',
-        borderRadius: '0px',
-        border: 'none',
-        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-        overflow: 'hidden',
+        ...basePageStyle,
+        height: '297mm',
       }}
     >
       {/* 
         Frame Garis Mengikuti Batas Margin Dokumen dari Kertas (Pas 3cm atas, 4cm kiri, 3cm kanan, 3cm bawah)
-        Ukuran: Lebar 140mm (210-40-30), Tinggi 236.5mm (296.5-30-30)
+        Ukuran: Lebar 140mm (210-40-30), Tinggi 237mm (297-30-30)
         Isi Cover Dibuat Pas di Tengah Secara Vertikal & Horizontal
       */}
       <div
@@ -380,25 +537,8 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
   const renderSchoolProfilePage = (key = 'school_profile_page') => (
     <div
       key={key}
-      className="a4-admin-page bg-white text-black flex flex-col justify-between"
-      style={{
-        width: '210mm',
-        height: '296.5mm',
-        minHeight: '296.5mm',
-        maxHeight: '296.5mm',
-        paddingTop: '30mm',
-        paddingLeft: '40mm',
-        paddingRight: '30mm',
-        paddingBottom: '30mm',
-        fontFamily: '"Times New Roman", Times, "Liberation Serif", serif',
-        fontSize: '12pt',
-        lineHeight: 1.5,
-        boxSizing: 'border-box',
-        borderRadius: '0px',
-        border: 'none',
-        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-        overflow: 'hidden',
-      }}
+      className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      style={basePageStyle}
     >
       <div>
         {/* Judul: PROFIL SEKOLAH PENYELENGGARA, NAMA ASESMEN, TAHUN PELAJARAN (Ukuran 14pt Bold) */}
@@ -483,103 +623,35 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       </div>
 
       {/* Kolom Tanda Tangan Kepala Sekolah (Bawah Kanan) */}
-      <div className="pt-6 flex justify-end">
-        <div className="w-[75mm] text-center" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
-          <p>
-            {titimangsaLocation}, {cleanSignatureDate}
-          </p>
-          <p className="font-bold">
-            {school?.headTitle || 'Kepala Sekolah'},
-          </p>
-
-          {/* Area Tanda Tangan / Scan */}
-          <div className="h-[24mm] flex items-center justify-center my-1">
-            {school?.principalSignatureUrl ? (
-              <img
-                src={school.principalSignatureUrl}
-                alt="Tanda Tangan Kepala Sekolah"
-                className="h-[22mm] object-contain mx-auto"
-              />
-            ) : null}
-          </div>
-
-          <p className="font-bold underline uppercase">
-            {school?.principalName || 'NAMA KEPALA SEKOLAH'}
-          </p>
-          <p className="font-mono text-[11pt]">
-            NIP. {school?.principalNip || '-'}
-          </p>
-        </div>
-      </div>
+      {renderSignatureBlock()}
     </div>
   );
 
   // ========================================================
-  // 3. RENDER SURAT PERNYATAAN KERAHASIAAN (Hapus Kotak Materai, Font 12pt, Jarak 1.5, Bersih)
+  // 3. RENDER SURAT PERNYATAAN KERAHASIAAN (KOP Resmi Database, Tanpa Kotak Materai, Margin 3-4-3-3cm)
   // ========================================================
   const renderConfidentialityStatementPage = (key = 'confidentiality_page') => (
     <div
       key={key}
-      className="a4-admin-page bg-white text-black flex flex-col justify-between"
-      style={{
-        width: '210mm',
-        height: '296.5mm',
-        minHeight: '296.5mm',
-        maxHeight: '296.5mm',
-        paddingTop: '30mm',
-        paddingLeft: '40mm',
-        paddingRight: '30mm',
-        paddingBottom: '30mm',
-        fontFamily: '"Times New Roman", Times, "Liberation Serif", serif',
-        fontSize: '12pt',
-        lineHeight: 1.5,
-        boxSizing: 'border-box',
-        borderRadius: '0px',
-        border: 'none',
-        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-        overflow: 'hidden',
-      }}
+      className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      style={basePageStyle}
     >
       <div>
-        {/* Kop Surat Sekolah Resmi */}
-        <div className="pb-3 border-b-2 border-black flex items-center gap-4">
-          {school?.logoUrl && (
-            <img
-              src={school.logoUrl}
-              alt="Logo Sekolah"
-              className="w-16 h-16 object-contain shrink-0"
-            />
-          )}
-          <div className="flex-1 text-center">
-            <h3 className="font-bold uppercase tracking-wide text-[11pt]">
-              PEMERINTAH {school?.regency ? school.regency.toUpperCase() : 'KABUPATEN / KOTA'}
-            </h3>
-            <h2 className="font-bold uppercase tracking-wider text-[13pt]">
-              {school?.name || 'NAMA SATUAN PENDIDIKAN'}
-            </h2>
-            <p className="text-[10pt] text-neutral-700 leading-snug">
-              {[school?.address, school?.village, school?.district, school?.regency, school?.province]
-                .filter(Boolean)
-                .join(', ')}
-            </p>
-          </div>
-        </div>
-
-        {/* Garis Ganda Pembatas Kop */}
-        <div className="border-b border-black mt-0.5 mb-5" />
+        {/* Kop Resmi Sekolah dari Database */}
+        {renderOfficialSchoolKop()}
 
         {/* Judul Surat: SURAT PERNYATAAN MENJAGA KERAHASIAAN (Bold, Underline) */}
-        <div className="text-center mb-5">
+        <div className="text-center my-3">
           <h1 className="font-bold uppercase tracking-wider text-[13pt] underline">
             SURAT PERNYATAAN MENJAGA KERAHASIAAN
           </h1>
         </div>
 
         {/* Pembuka */}
-        <p className="mb-2">Yang bertanda tangan di bawah ini :</p>
+        <p className="mb-1.5 text-justify">Yang bertanda tangan di bawah ini :</p>
 
         {/* Tabel Identitas Kepala Sekolah */}
-        <table className="w-full text-left mb-3" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
+        <table className="w-full text-left mb-2.5" style={{ fontSize: '11.5pt', lineHeight: 1.45 }}>
           <tbody>
             <tr>
               <td className="w-[140px] font-semibold py-0.5 align-top">Nama</td>
@@ -609,7 +681,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         </table>
 
         {/* Paragraf Inti */}
-        <p className="text-justify mb-2 leading-[1.5]">
+        <p className="text-justify mb-2 leading-[1.45]">
           Dalam rangka Pelaksanaan dan Penyelenggaraan{' '}
           <strong>
             {exam?.name || 'Asesmen Sumatif'} {exam?.semester || 'Semester Ganjil'}
@@ -618,7 +690,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         </p>
 
         {/* Poin Butir 1, 2, 3 */}
-        <ol className="list-decimal pl-6 space-y-2 mb-3 text-justify leading-[1.5]">
+        <ol className="list-decimal pl-6 space-y-1.5 mb-2.5 text-justify leading-[1.45]">
           <li>
             Menyadari Hakekat dan Kerahasiaan{' '}
             <strong>
@@ -635,125 +707,317 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         </ol>
 
         {/* Paragraf Penutup */}
-        <p className="text-justify leading-[1.5]">
+        <p className="text-justify leading-[1.45]">
           Pernyataan ini saya buat dan tanda tangani dengan sebenarnya, dalam keadaan sadar, tanpa
           paksaan oleh pihak lain, serta penuh rasa tanggung jawab. Apabila saya melakukan
           perbuatan-perbuatan yang bertentangan dengan pernyataan di atas, saya bersedia dituntut dan
-          diberi sanksi dengan undang-undang hukum yang berlaku.
+          diberi sanksi sesuai perundang-undangan hukum yang berlaku.
         </p>
       </div>
 
       {/* Kolom Tanda Tangan Bawah Kanan (Tanpa Kotak Materai) */}
-      <div className="pt-6 flex justify-end">
-        <div className="w-[75mm] text-center" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
-          <p>
-            {titimangsaLocation}, {cleanSignatureDate}
-          </p>
-          <p className="font-bold">Yang membuat pernyataan,</p>
-
-          {/* Area Tanda Tangan Langsung (Tanpa Materai) */}
-          <div className="h-[24mm] flex items-center justify-center my-1 relative">
-            {school?.principalSignatureUrl ? (
-              <img
-                src={school.principalSignatureUrl}
-                alt="Tanda Tangan Kepala Sekolah"
-                className="h-[22mm] object-contain mx-auto"
-              />
-            ) : null}
-          </div>
-
-          <p className="font-bold underline uppercase">
-            {school?.principalName || 'NAMA KEPALA SEKOLAH'}
-          </p>
-          <p className="font-mono text-[11pt]">
-            NIP. {school?.principalNip || '-'}
-          </p>
-        </div>
-      </div>
+      {renderSignatureBlock('Yang membuat pernyataan')}
     </div>
   );
 
   // ========================================================
-  // 4. RENDER TEMPLATE BERKAS DOKUMEN 4-11 (Struktur Bersih A4 Tanpa Kotak Border/Rounded)
+  // 6. RENDER JADWAL ASESMEN (KOP Resmi Database, Matriks Jadwal, Format 3-4-3-3cm)
+  // Sesuai aturan: jika melebihi batas 3cm margin bawah, geser ke halaman kedua secara utuh
   // ========================================================
-  const renderPlaceholderDocPage = (targetDoc: AdminDocItem, key: string) => (
-    <div
-      key={key}
-      className="a4-admin-page bg-white text-black flex flex-col justify-between"
-      style={{
-        width: '210mm',
-        height: '296.5mm',
-        minHeight: '296.5mm',
-        maxHeight: '296.5mm',
-        paddingTop: '30mm',
-        paddingLeft: '40mm',
-        paddingRight: '30mm',
-        paddingBottom: '30mm',
-        fontFamily: '"Times New Roman", Times, "Liberation Serif", serif',
-        fontSize: '12pt',
-        lineHeight: 1.5,
-        boxSizing: 'border-box',
-        borderRadius: '0px',
-        border: 'none',
-        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-        overflow: 'hidden',
-      }}
-    >
-      <div>
-        {/* Header Kop */}
-        <div className="text-center pb-4 border-b-2 border-black space-y-1">
-          {school?.logoUrl && (
-            <img
-              src={school.logoUrl}
-              alt="Logo Sekolah"
-              className="w-16 h-16 mx-auto object-contain mb-2"
-            />
-          )}
-          <h3 className="font-bold text-[12pt] uppercase">
-            {school?.name || 'NAMA SATUAN PENDIDIKAN'}
-          </h3>
-          <h2 className="font-bold text-[14pt] uppercase tracking-wide">
-            {targetDoc.title}
-          </h2>
-          <p className="text-[11pt] text-neutral-700 font-semibold uppercase">
-            {exam?.name} {exam?.semester} — TAHUN PELAJARAN {exam?.academicYear}
-          </p>
-        </div>
+  const renderAssessmentSchedulePage = (key = 'assessment_schedule_page') => {
+    // Jika data jadwal lebih dari 7 hari, pecah otomatis menjadi 2 halaman agar mematuhi margin bawah 3cm
+    const needsSecondPage = scheduleItems.length > 7;
+    const page1Items = needsSecondPage ? scheduleItems.slice(0, 7) : scheduleItems;
+    const page2Items = needsSecondPage ? scheduleItems.slice(7) : [];
 
-        {/* Content Notice / Ringkasan Data */}
-        <div className="my-8 space-y-4">
-          <p className="text-justify leading-[1.5]">
-            Dokumen <strong>{targetDoc.title}</strong> merupakan bagian dari kelengkapan portofolio administrasi ujian{' '}
-            <strong>{exam?.name}</strong> di lingkungan <strong>{school?.name}</strong>.
-          </p>
-          <p className="text-justify leading-[1.5]">
-            {targetDoc.description}
-          </p>
+    const renderScheduleTableRows = (items: typeof scheduleItems, startIdx = 0) => {
+      if (items.length === 0) {
+        return (
+          <tr>
+            <td colSpan={5} className="p-3 text-center text-neutral-500 italic border-b border-black">
+              Data jadwal pelaksanaan asesmen belum dikonfigurasi pada menu Data Asesmen.
+            </td>
+          </tr>
+        );
+      }
+      return items.map((it, idx) => (
+        <tr key={it.id || idx} className="border-b border-black">
+          <td className="p-2 border-r border-black text-center">{startIdx + idx + 1}</td>
+          <td className="p-2 border-r border-black font-semibold">
+            {it.day}{it.date ? `, ${formatScheduleDateIndo(it.date)}` : ''}
+          </td>
+          <td className="p-2 border-r border-black font-mono text-center">{it.time || '07.30 - 09.30'}</td>
+          <td className="p-2 border-r border-black font-semibold">{it.subject || '-'}</td>
+          <td className="p-2 text-center text-xs text-neutral-600">{(it as any).notes || it.subject2 || '-'}</td>
+        </tr>
+      ));
+    };
 
-          {/* Quick Context Summary based on document */}
-          {targetDoc.id === 'assessment_schedule' && (
-            <div className="mt-4 pt-4 border-t border-neutral-300">
-              <span className="text-[11pt] font-bold uppercase block mb-2">
-                Preview Jadwal Asesmen ({scheduleItems.length} Hari Terdata):
-              </span>
+    return (
+      <React.Fragment key={key}>
+        {/* HALAMAN 1 JADWAL ASESMEN */}
+        <div
+          className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+          style={basePageStyle}
+        >
+          <div>
+            {/* Kop Resmi Sekolah dari Database */}
+            {renderOfficialSchoolKop()}
+
+            {/* Judul Dokumen */}
+            <div className="text-center my-4 space-y-1">
+              <h1 className="font-bold uppercase tracking-wider text-[13pt] underline">
+                JADWAL PELAKSANAAN ASESMEN
+              </h1>
+              <h2 className="font-bold uppercase text-[12pt]">
+                {exam?.name || 'ASESMEN SUMATIF'} {exam?.semester ? `• ${exam.semester.toUpperCase()}` : ''}
+              </h2>
+              <p className="font-bold uppercase text-[11pt]">
+                TAHUN PELAJARAN {exam?.academicYear || '2026/2027'}
+              </p>
+            </div>
+
+            {/* Tabel Jadwal Resmi */}
+            <div className="my-4">
               <table className="w-full text-left border border-black" style={{ fontSize: '11pt', lineHeight: 1.4 }}>
                 <thead>
-                  <tr className="bg-neutral-100 border-b border-black">
-                    <th className="p-1.5 border-r border-black w-10 text-center">No</th>
-                    <th className="p-1.5 border-r border-black">Hari & Tanggal</th>
-                    <th className="p-1.5 border-r border-black">Waktu</th>
-                    <th className="p-1.5">Mata Pelajaran</th>
+                  <tr className="bg-neutral-100 border-b border-black font-bold text-center">
+                    <th className="p-2 border-r border-black w-10">No</th>
+                    <th className="p-2 border-r border-black w-44">Hari &amp; Tanggal</th>
+                    <th className="p-2 border-r border-black w-36">Waktu</th>
+                    <th className="p-2 border-r border-black">Mata Pelajaran</th>
+                    <th className="p-2 w-28">Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody>{renderScheduleTableRows(page1Items, 0)}</tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Jika tidak membutuhkan halaman 2, tanda tangan langsung di bawah halaman 1 */}
+          {!needsSecondPage && renderSignatureBlock()}
+        </div>
+
+        {/* HALAMAN 2 (Bila jadwal melebihi batas 3cm margin bawah kertas, kolom ttd digeser ke halaman kedua) */}
+        {needsSecondPage && (
+          <div
+            className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+            style={basePageStyle}
+          >
+            <div>
+              {/* Lanjutan Tabel Jadwal */}
+              <div className="mb-4">
+                <p className="text-xs italic text-neutral-600 mb-2 font-semibold">
+                  (Lanjutan Jadwal Pelaksanaan Asesmen)
+                </p>
+                <table className="w-full text-left border border-black" style={{ fontSize: '11pt', lineHeight: 1.4 }}>
+                  <thead>
+                    <tr className="bg-neutral-100 border-b border-black font-bold text-center">
+                      <th className="p-2 border-r border-black w-10">No</th>
+                      <th className="p-2 border-r border-black w-44">Hari &amp; Tanggal</th>
+                      <th className="p-2 border-r border-black w-36">Waktu</th>
+                      <th className="p-2 border-r border-black">Mata Pelajaran</th>
+                      <th className="p-2 w-28">Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody>{renderScheduleTableRows(page2Items, 7)}</tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Kolom Tanda Tangan Utuh di Halaman 2 */}
+            {renderSignatureBlock()}
+          </div>
+        )}
+      </React.Fragment>
+    );
+  };
+
+  // ========================================================
+  // 4. RENDER BERKAS DOKUMEN LAINNYA (SK Panitia, Rekap Peserta, Pengawas Ruang, Presensi, Tata Tertib)
+  // Seluruh dokumen menggunakan KOP Resmi Sekolah dari Database & Format 3-4-3-3cm
+  // ========================================================
+  const renderPlaceholderDocPage = (targetDoc: AdminDocItem, key: string) => {
+    // Jadwal Asesmen dialihkan ke renderer khusus jadwal
+    if (targetDoc.id === 'assessment_schedule') {
+      return renderAssessmentSchedulePage(key);
+    }
+
+    return (
+      <div
+        key={key}
+        className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+        style={basePageStyle}
+      >
+        <div>
+          {/* Header Kop Resmi Sekolah dari Database */}
+          {renderOfficialSchoolKop()}
+
+          {/* Judul Dokumen Resmi */}
+          <div className="text-center my-3 space-y-1">
+            <h1 className="font-bold uppercase tracking-wide text-[13pt] underline">
+              {targetDoc.title}
+            </h1>
+            <h2 className="font-bold text-[11.5pt] uppercase">
+              {exam?.name || 'ASESMEN SUMATIF'} {exam?.semester ? `• ${exam.semester.toUpperCase()}` : ''}
+            </h2>
+            <p className="font-semibold text-[10.5pt] text-neutral-800 uppercase">
+              TAHUN PELAJARAN {exam?.academicYear || '2026/2027'}
+            </p>
+          </div>
+
+          {/* ========================================================
+              ISI DOKUMEN SPESIFIK SESUAI JENIS DOKUMEN ADMINISTRASI
+             ======================================================== */}
+          {/* 4. SURAT KEPUTUSAN PANITIA */}
+          {targetDoc.id === 'committee_decree' && (
+            <div className="my-4 space-y-3" style={{ fontSize: '11.5pt', lineHeight: 1.45 }}>
+              <div className="text-center font-bold text-xs uppercase mb-2">
+                Nomor: 421.2 / {exam?.id ? String(exam.id).slice(-4) : '048'} / PAN-AS / {new Date().getFullYear()}
+              </div>
+              <p className="text-justify">
+                Kepala {school?.name || 'Satuan Pendidikan'}, menimbang perlunya kelancaran dan ketertiban pelaksanaan{' '}
+                <strong>{exam?.name}</strong> Tahun Pelajaran {exam?.academicYear} :
+              </p>
+              <div className="space-y-1 text-justify">
+                <p><strong>MEMUTUSKAN :</strong></p>
+                <ol className="list-decimal pl-6 space-y-1">
+                  <li>Menetapkan susunan panitia pelaksana asesmen sebagaimana terlampir dalam keputusan ini.</li>
+                  <li>Panitia bertugas mempersiapkan administrasi, naskah soal, ruang asesmen, dan pelaporan hasil.</li>
+                  <li>Segala biaya yang timbul dibebankan pada anggaran kegiatan sekolah yang sesuai.</li>
+                </ol>
+              </div>
+
+              {/* Tabel Susunan Panitia */}
+              <div className="pt-2">
+                <table className="w-full text-left border border-black" style={{ fontSize: '10.5pt', lineHeight: 1.35 }}>
+                  <thead>
+                    <tr className="bg-neutral-100 border-b border-black text-center font-bold">
+                      <th className="p-1.5 border-r border-black w-10">No</th>
+                      <th className="p-1.5 border-r border-black w-44">Jabatan Kepanitiaan</th>
+                      <th className="p-1.5 border-r border-black">Nama Lengkap</th>
+                      <th className="p-1.5 w-32">Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-black">
+                      <td className="p-1.5 border-r border-black text-center">1</td>
+                      <td className="p-1.5 border-r border-black font-semibold">Penanggung Jawab</td>
+                      <td className="p-1.5 border-r border-black font-bold uppercase">{school?.principalName || 'Kepala Sekolah'}</td>
+                      <td className="p-1.5 text-center text-xs">Kepala Sekolah</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="p-1.5 border-r border-black text-center">2</td>
+                      <td className="p-1.5 border-r border-black font-semibold">Ketua Panitia</td>
+                      <td className="p-1.5 border-r border-black">{teachers[0]?.name || 'Guru Senior / Wakasek'}</td>
+                      <td className="p-1.5 text-center text-xs">Pendidik</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="p-1.5 border-r border-black text-center">3</td>
+                      <td className="p-1.5 border-r border-black font-semibold">Sekretaris</td>
+                      <td className="p-1.5 border-r border-black">{teachers[1]?.name || 'Guru Pelaksana'}</td>
+                      <td className="p-1.5 text-center text-xs">Pendidik</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="p-1.5 border-r border-black text-center">4</td>
+                      <td className="p-1.5 border-r border-black font-semibold">Bendahara</td>
+                      <td className="p-1.5 border-r border-black">{teachers[2]?.name || 'Bendahara Sekolah'}</td>
+                      <td className="p-1.5 text-center text-xs">Pendidik</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="p-1.5 border-r border-black text-center">5</td>
+                      <td className="p-1.5 border-r border-black font-semibold">Seksi Penggandaan &amp; Naskah</td>
+                      <td className="p-1.5 border-r border-black">{teachers[3]?.name || 'Tenaga Kependidikan'}</td>
+                      <td className="p-1.5 text-center text-xs">Tenaga Kependidikan</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 5. JUMLAH PESERTA */}
+          {targetDoc.id === 'participant_count' && (
+            <div className="my-4 space-y-3" style={{ fontSize: '11.5pt', lineHeight: 1.45 }}>
+              <p className="text-justify">
+                Rekapitulasi resmi data jumlah siswa peserta <strong>{exam?.name}</strong> di lingkungan{' '}
+                <strong>{school?.name}</strong> terdata sebagai berikut :
+              </p>
+              <table className="w-full text-left border border-black" style={{ fontSize: '11pt', lineHeight: 1.4 }}>
+                <thead>
+                  <tr className="bg-neutral-100 border-b border-black text-center font-bold">
+                    <th className="p-2 border-r border-black w-12">No</th>
+                    <th className="p-2 border-r border-black">Rombel / Kelas</th>
+                    <th className="p-2 border-r border-black w-24">Laki-laki</th>
+                    <th className="p-2 border-r border-black w-24">Perempuan</th>
+                    <th className="p-2 border-r border-black w-28">Jumlah</th>
+                    <th className="p-2 w-32">Keterangan</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {scheduleItems.slice(0, 6).map((it, idx) => (
-                    <tr key={it.id || idx} className="border-b border-neutral-300">
-                      <td className="p-1.5 border-r border-black text-center">{idx + 1}</td>
-                      <td className="p-1.5 border-r border-black font-semibold">
-                        {it.day}{it.date ? `, ${formatScheduleDateIndo(it.date)}` : ''}
+                  <tr className="border-b border-black">
+                    <td className="p-2 border-r border-black text-center">1</td>
+                    <td className="p-2 border-r border-black font-semibold">Peserta Terdaftar Keseluruhan</td>
+                    <td className="p-2 border-r border-black text-center font-mono">
+                      {students.filter((s) => s.gender === 'L').length}
+                    </td>
+                    <td className="p-2 border-r border-black text-center font-mono">
+                      {students.filter((s) => s.gender === 'P').length}
+                    </td>
+                    <td className="p-2 border-r border-black text-center font-bold font-mono">
+                      {students.length}
+                    </td>
+                    <td className="p-2 text-center text-xs">Siswa Aktif</td>
+                  </tr>
+                  <tr className="bg-neutral-50 font-bold border-b border-black">
+                    <td colSpan={4} className="p-2 border-r border-black text-center uppercase">
+                      Total Peserta Asesmen
+                    </td>
+                    <td className="p-2 border-r border-black text-center font-bold font-mono">
+                      {students.length} Siswa
+                    </td>
+                    <td className="p-2 text-center text-xs">Lengkap</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="pt-2 text-xs text-neutral-600">
+                * Distribusi ruang ujian disesuaikan dengan kapasitas standar rombel dan protokol pelaksanaan sekolah.
+              </div>
+            </div>
+          )}
+
+          {/* 7. PENGAWAS RUANG */}
+          {targetDoc.id === 'room_proctors' && (
+            <div className="my-4 space-y-3" style={{ fontSize: '11pt', lineHeight: 1.4 }}>
+              <p className="text-justify">
+                Daftar penetapan tugas guru pengawas ruang ujian <strong>{exam?.name}</strong> :
+              </p>
+              <table className="w-full text-left border border-black" style={{ fontSize: '10.5pt', lineHeight: 1.35 }}>
+                <thead>
+                  <tr className="bg-neutral-100 border-b border-black text-center font-bold">
+                    <th className="p-2 border-r border-black w-10">No</th>
+                    <th className="p-2 border-r border-black w-24">Ruang</th>
+                    <th className="p-2 border-r border-black">Nama Guru Pengawas</th>
+                    <th className="p-2 border-r border-black w-36">NIP</th>
+                    <th className="p-2 w-28">Tanda Tangan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(teachers.length > 0 ? teachers.slice(0, 6) : [1, 2, 3, 4]).map((t, idx) => (
+                    <tr key={typeof t === 'object' ? t.id || idx : idx} className="border-b border-black">
+                      <td className="p-2 border-r border-black text-center">{idx + 1}</td>
+                      <td className="p-2 border-r border-black text-center font-bold">Ruang {idx + 1}</td>
+                      <td className="p-2 border-r border-black font-semibold">
+                        {typeof t === 'object' ? t.name : `Guru Pengawas ${idx + 1}`}
                       </td>
-                      <td className="p-1.5 border-r border-black font-mono">{it.time || '07.30 - 09.30'}</td>
-                      <td className="p-1.5">{it.subject || '-'}</td>
+                      <td className="p-2 border-r border-black font-mono text-center text-xs">
+                        {typeof t === 'object' ? t.nip || '-' : '-'}
+                      </td>
+                      <td className="p-2 text-center text-xs">
+                        <div className="h-6 flex items-center justify-center font-mono text-neutral-400">
+                          {idx + 1}. .........
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -761,54 +1025,136 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             </div>
           )}
 
-          {targetDoc.id === 'participant_count' && (
-            <div className="mt-4 pt-4 border-t border-neutral-300">
-              <table className="w-full text-left border border-black" style={{ fontSize: '11pt', lineHeight: 1.4 }}>
+          {/* 8. DAFTAR HADIR PANITIA */}
+          {targetDoc.id === 'committee_attendance' && (
+            <div className="my-4 space-y-3" style={{ fontSize: '11pt', lineHeight: 1.4 }}>
+              <p className="text-justify">
+                Presensi kehadiran harian panitia penyelenggara ujian <strong>{exam?.name}</strong> :
+              </p>
+              <table className="w-full text-left border border-black" style={{ fontSize: '10.5pt', lineHeight: 1.35 }}>
                 <thead>
-                  <tr className="bg-neutral-100 border-b border-black">
-                    <th className="p-1.5 border-r border-black text-center w-12">No</th>
-                    <th className="p-1.5 border-r border-black">Kategori</th>
-                    <th className="p-1.5 text-center">Jumlah</th>
+                  <tr className="bg-neutral-100 border-b border-black text-center font-bold">
+                    <th className="p-2 border-r border-black w-10">No</th>
+                    <th className="p-2 border-r border-black">Nama Panitia</th>
+                    <th className="p-2 border-r border-black w-40">Jabatan</th>
+                    <th className="p-2 border-r border-black w-24">Waktu</th>
+                    <th className="p-2 w-28">Tanda Tangan</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-neutral-300">
-                    <td className="p-1.5 border-r border-black text-center">1</td>
-                    <td className="p-1.5 border-r border-black">Total Peserta Terdaftar</td>
-                    <td className="p-1.5 text-center font-bold">{students.length} Siswa</td>
-                  </tr>
-                  <tr className="border-b border-neutral-300">
-                    <td className="p-1.5 border-r border-black text-center">2</td>
-                    <td className="p-1.5 border-r border-black">Guru Pengawas & Panitia</td>
-                    <td className="p-1.5 text-center font-bold">{teachers.length} Guru</td>
-                  </tr>
+                  {(teachers.length > 0 ? teachers.slice(0, 6) : [1, 2, 3, 4]).map((t, idx) => (
+                    <tr key={typeof t === 'object' ? t.id || idx : idx} className="border-b border-black">
+                      <td className="p-2 border-r border-black text-center">{idx + 1}</td>
+                      <td className="p-2 border-r border-black font-semibold">
+                        {typeof t === 'object' ? t.name : `Panitia ${idx + 1}`}
+                      </td>
+                      <td className="p-2 border-r border-black text-xs font-medium">
+                        {idx === 0 ? 'Ketua Panitia' : idx === 1 ? 'Sekretaris' : idx === 2 ? 'Bendahara' : 'Anggota Panitia'}
+                      </td>
+                      <td className="p-2 border-r border-black text-center font-mono text-xs">07.00 WIB</td>
+                      <td className="p-2 text-center text-xs">
+                        <div className="h-6 flex items-center justify-center font-mono text-neutral-400">
+                          {idx + 1}. .........
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Footer Tanda Tangan */}
-      <div className="pt-6 flex justify-end">
-        <div className="w-[75mm] text-center" style={{ fontSize: '12pt', lineHeight: 1.5 }}>
-          <p>
-            {titimangsaLocation}, {cleanSignatureDate}
-          </p>
-          <p className="font-bold">
-            {school?.headTitle || 'Kepala Sekolah'},
-          </p>
-          <div className="h-[22mm]" />
-          <p className="font-bold underline uppercase">
-            {school?.principalName || 'NAMA KEPALA SEKOLAH'}
-          </p>
-          <p className="font-mono text-[11pt]">
-            NIP. {school?.principalNip || '-'}
-          </p>
+          {/* 9. DAFTAR HADIR PESERTA */}
+          {targetDoc.id === 'participant_attendance' && (
+            <div className="my-4 space-y-3" style={{ fontSize: '11pt', lineHeight: 1.4 }}>
+              <div className="flex justify-between text-xs font-bold border-b border-black pb-1.5 mb-2">
+                <span>Ruang : 01</span>
+                <span>Mata Pelajaran : ....................</span>
+                <span>Sesi : 1 (07.30 - 09.30)</span>
+              </div>
+              <table className="w-full text-left border border-black" style={{ fontSize: '10.5pt', lineHeight: 1.35 }}>
+                <thead>
+                  <tr className="bg-neutral-100 border-b border-black text-center font-bold">
+                    <th className="p-2 border-r border-black w-10">No</th>
+                    <th className="p-2 border-r border-black w-24">No Meja</th>
+                    <th className="p-2 border-r border-black w-28">NISN</th>
+                    <th className="p-2 border-r border-black">Nama Siswa</th>
+                    <th className="p-2 w-28">Tanda Tangan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(students.length > 0 ? students.slice(0, 7) : [1, 2, 3, 4, 5, 6, 7]).map((s, idx) => (
+                    <tr key={typeof s === 'object' ? s.id || idx : idx} className="border-b border-black">
+                      <td className="p-2 border-r border-black text-center">{idx + 1}</td>
+                      <td className="p-2 border-r border-black text-center font-mono font-bold">
+                        {typeof s === 'object' ? s.examSeat || (s as any).seatNumber || `01-${String(idx + 1).padStart(2, '0')}` : `01-${String(idx + 1).padStart(2, '0')}`}
+                      </td>
+                      <td className="p-2 border-r border-black font-mono text-center text-xs">
+                        {typeof s === 'object' ? s.nisn || '-' : '-'}
+                      </td>
+                      <td className="p-2 border-r border-black font-semibold uppercase">
+                        {typeof s === 'object' ? s.name : `Peserta Asesmen ${idx + 1}`}
+                      </td>
+                      <td className="p-2 text-center text-xs">
+                        <div className="h-6 flex items-center justify-center font-mono text-neutral-400">
+                          {idx + 1}. .........
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* 10. TATA TERTIB PESERTA */}
+          {targetDoc.id === 'student_rules' && (
+            <div className="my-4 space-y-2 text-justify" style={{ fontSize: '11pt', lineHeight: 1.45 }}>
+              <p className="font-bold underline mb-1">A. KEWAJIBAN PESERTA :</p>
+              <ol className="list-decimal pl-6 space-y-1 mb-2">
+                <li>Memasuki ruangan setelah tanda masuk dibunyikan, yakni 15 (lima belas) menit sebelum ujian dimulai.</li>
+                <li>Membawa Kartu Tanda Peserta Ujian dan alat tulis yang diperlukan (pensil 2B, pulpen, penghapus).</li>
+                <li>Mengisi daftar hadir peserta ujian dengan menggunakan pulpen yang disediakan atau dibawa sendiri.</li>
+                <li>Mengerjakan soal asesmen secara jujur, mandiri, dan tidak bekerja sama dengan peserta lain.</li>
+                <li>Memeriksa keutuhan dan kelengkapan lembar soal serta lembar jawaban asesmen.</li>
+              </ol>
+
+              <p className="font-bold underline mb-1">B. LARANGAN PESERTA :</p>
+              <ol className="list-decimal pl-6 space-y-1">
+                <li>Dilarang membawa perangkat komunikasi elektronik (HP, kamera, smartwatch) ke dalam ruang ujian.</li>
+                <li>Dilarang membawa buku, catatan, atau contekan dalam bentuk apapun ke tempat duduk peserta.</li>
+                <li>Dilarang bertanya atau meminjam alat tulis kepada peserta lain selama ujian berlangsung.</li>
+                <li>Dilarang meninggalkan ruangan ujian sebelum batas waktu minimal ujian berakhir tanpa izin pengawas.</li>
+              </ol>
+            </div>
+          )}
+
+          {/* 11. TATA TERTIB PENGAWAS */}
+          {targetDoc.id === 'proctor_rules' && (
+            <div className="my-4 space-y-2 text-justify" style={{ fontSize: '11pt', lineHeight: 1.45 }}>
+              <p className="font-bold underline mb-1">A. PERSIAPAN PENGAWAS :</p>
+              <ol className="list-decimal pl-6 space-y-1 mb-2">
+                <li>Hadir di ruang panitia ujian sekurang-kurangnya 30 (tiga puluh) menit sebelum ujian dimulai.</li>
+                <li>Menerima naskah soal, lembar jawaban, daftar hadir, dan berita acara dari panitia pelaksana.</li>
+                <li>Memeriksa kelengkapan administrasi ruang ujian sebelum mengizinkan peserta memasuki ruangan.</li>
+              </ol>
+
+              <p className="font-bold underline mb-1">B. PELAKSANAAN PENGAWASAN :</p>
+              <ol className="list-decimal pl-6 space-y-1">
+                <li>Membacakan tata tertib peserta ujian dan memastikan setiap peserta menempati nomor meja yang tepat.</li>
+                <li>Mengedarkan daftar hadir peserta dan memeriksa kecocokan identitas kartu peserta.</li>
+                <li>Menjaga ketenangan, ketertiban, dan kewaspadaan suasana ruang ujian secara profesional.</li>
+                <li>Menghitung kelengkapan lembar jawaban setelah ujian selesai sebelum peserta meninggalkan ruangan.</li>
+              </ol>
+            </div>
+          )}
         </div>
+
+        {/* Footer Tanda Tangan Resmi */}
+        {renderSignatureBlock()}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-5 animate-in fade-in duration-150">
@@ -816,17 +1162,28 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       <style
         dangerouslySetInnerHTML={{
           __html: `
+          /* Utilitas Penghilang Scrollbar di Layar */
+          .no-scrollbar {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+          }
+          .no-scrollbar::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+          }
+
           @media print {
             @page {
               size: A4 portrait;
-              margin: 0 !important;
+              margin: 30mm 30mm 30mm 40mm !important; /* Standar Resmi: Atas 3cm, Kanan 3cm, Bawah 3cm, Kiri 4cm */
             }
             html, body {
               background: white !important;
               color: black !important;
               margin: 0 !important;
               padding: 0 !important;
-              width: 210mm !important;
+              width: 100% !important;
               height: auto !important;
               min-height: 0 !important;
               overflow: visible !important;
@@ -838,7 +1195,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             }
             .print-only-container {
               display: block !important;
-              width: 210mm !important;
+              width: 100% !important;
               margin: 0 !important;
               padding: 0 !important;
               background: transparent !important;
@@ -847,34 +1204,35 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               box-shadow: none !important;
               border: none !important;
               border-radius: 0 !important;
-              padding-top: 30mm !important;
-              padding-left: 40mm !important;
-              padding-right: 30mm !important;
-              padding-bottom: 30mm !important;
+              padding: 0 !important; /* Margin 3-4-3-3cm ditangani langsung secara presisi oleh @page */
               box-sizing: border-box !important;
-              width: 210mm !important;
-              height: 296.5mm !important;
-              min-height: 296.5mm !important;
-              max-height: 296.5mm !important;
+              width: 100% !important;
+              min-height: 0 !important;
+              height: auto !important;
+              max-height: none !important;
               margin: 0 !important;
               page-break-after: always !important;
               break-after: page !important;
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
               font-family: "Times New Roman", Times, "Liberation Serif", serif !important;
               line-height: 1.5 !important;
-              overflow: hidden !important;
+              overflow: visible !important;
               background: white !important;
             }
             .a4-admin-page:last-child {
               page-break-after: auto !important;
               break-after: auto !important;
             }
+            /* Aturan Penyelamat TTD: Jangan pernah memotong kolom tanda tangan di tengah */
+            .admin-signature-block {
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
+            }
+            /* Frame Sampul Cover Pas 3cm atas, 4cm kiri, 3cm kanan, 3cm bawah */
             .cover-border-frame {
               width: 100% !important;
-              height: 100% !important;
-              min-height: 100% !important;
-              max-height: 100% !important;
+              height: 237mm !important;
+              min-height: 237mm !important;
+              max-height: 237mm !important;
               box-sizing: border-box !important;
             }
           }
@@ -890,7 +1248,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       {activeDoc === null ? (
         renderGlobalCategorySwitcher && renderGlobalCategorySwitcher()
       ) : (
-        <div className="no-print bg-white border-2 sm:border-3 border-black rounded-xl sm:rounded-2xl p-2.5 sm:p-3 shadow-[3px_3px_0px_#000] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <div className="no-print bg-white border-2 sm:border-3 border-black rounded-xl sm:rounded-2xl p-2.5 sm:p-3 shadow-[3px_3px_0px_#000] flex items-center gap-1.5 overflow-x-auto no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <button
             type="button"
             onClick={() => setActiveDoc(null)}
@@ -1031,9 +1389,12 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
           {/* ========================================================
               1. TAMPILAN PREVIEW DI LAYAR (NO-PRINT)
-              Dilengkapi pembungkus responsif, info halaman, dan tips cetak
+              Dilengkapi pembungkus responsif, info halaman, dan bebas dari scrollbar apapun
              ======================================================== */}
-          <div className="no-print flex flex-col items-center justify-center py-6 px-2 sm:px-4 space-y-6 overflow-x-auto bg-neutral-100/70 rounded-2xl border border-neutral-200">
+          <div
+            className="no-print flex flex-col items-center justify-center py-6 px-2 sm:px-4 space-y-6 overflow-x-auto no-scrollbar bg-neutral-100/70 rounded-2xl border border-neutral-200"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             {/* Tips Cetak Presisi WYSIWYG */}
             <div className="w-full max-w-[210mm] bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-900 flex items-center gap-2.5 shadow-xs">
               <Printer className="w-4 h-4 text-amber-700 shrink-0" />
@@ -1076,10 +1437,12 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                 {ADMIN_DOCUMENTS.slice(3).map((d) => (
                   <div key={d.id} className="w-full flex flex-col items-center">
                     <div className="mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
-                      <span>Halaman {d.number}:</span>
+                      <span>Dokumen {d.number}:</span>
                       <strong className="text-black">{d.title}</strong>
                     </div>
-                    {renderPlaceholderDocPage(d, `screen_bulk_${d.number}`)}
+                    {d.id === 'assessment_schedule'
+                      ? renderAssessmentSchedulePage(`screen_bulk_${d.number}`)
+                      : renderPlaceholderDocPage(d, `screen_bulk_${d.number}`)}
                   </div>
                 ))}
               </div>
@@ -1090,9 +1453,12 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                 {activeDoc === 'school_profile' && renderSchoolProfilePage('screen_single_school_profile')}
                 {activeDoc === 'confidentiality_statement' &&
                   renderConfidentialityStatementPage('screen_single_confidentiality')}
+                {activeDoc === 'assessment_schedule' &&
+                  renderAssessmentSchedulePage('screen_single_schedule')}
                 {activeDoc !== 'cover' &&
                   activeDoc !== 'school_profile' &&
                   activeDoc !== 'confidentiality_statement' &&
+                  activeDoc !== 'assessment_schedule' &&
                   docInfo &&
                   renderPlaceholderDocPage(docInfo, 'screen_single_placeholder')}
               </>
@@ -1111,7 +1477,9 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                 {renderSchoolProfilePage('print_bulk_2')}
                 {renderConfidentialityStatementPage('print_bulk_3')}
                 {ADMIN_DOCUMENTS.slice(3).map((d) =>
-                  renderPlaceholderDocPage(d, `print_bulk_${d.number}`)
+                  d.id === 'assessment_schedule'
+                    ? renderAssessmentSchedulePage(`print_bulk_${d.number}`)
+                    : renderPlaceholderDocPage(d, `print_bulk_${d.number}`)
                 )}
               </>
             ) : (
@@ -1120,9 +1488,12 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                 {activeDoc === 'school_profile' && renderSchoolProfilePage('print_single_school_profile')}
                 {activeDoc === 'confidentiality_statement' &&
                   renderConfidentialityStatementPage('print_single_confidentiality')}
+                {activeDoc === 'assessment_schedule' &&
+                  renderAssessmentSchedulePage('print_single_schedule')}
                 {activeDoc !== 'cover' &&
                   activeDoc !== 'school_profile' &&
                   activeDoc !== 'confidentiality_statement' &&
+                  activeDoc !== 'assessment_schedule' &&
                   docInfo &&
                   renderPlaceholderDocPage(docInfo, 'print_single_placeholder')}
               </>
