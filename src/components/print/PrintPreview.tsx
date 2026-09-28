@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings } from '../../types';
+import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings } from '../../types';
+import { DEFAULT_POSTER_DESIGN } from '../../data/mockData';
 import { ExamCard } from '../card/ExamCard';
 import { DeskCardPrint } from './DeskCardPrint';
 import { ProctorGuestPreview } from './ProctorGuestPreview';
@@ -55,9 +56,11 @@ interface PrintPreviewProps {
   onToggleStudentSelect: (id: string) => void;
   onSelectAllStudents: (selected: boolean) => void;
   design: CardDesignSettings;
+  posterDesign?: PosterDesignSettings;
   printSettings: PrintSettings;
   onUpdatePrintSettings: (newSettings: PrintSettings) => void;
   onBackToDesigner: () => void;
+  onNavigateToPosterDesigner?: () => void;
 }
 
 export const PrintPreview: React.FC<PrintPreviewProps> = ({
@@ -71,9 +74,11 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
   onToggleStudentSelect,
   onSelectAllStudents,
   design,
+  posterDesign,
   printSettings,
   onUpdatePrintSettings,
   onBackToDesigner,
+  onNavigateToPosterDesigner,
 }) => {
   // Main view state: default to 'menu' so user selects what card to print first
   const [activeCategory, setActiveCategory] = useState<PrintCardCategory>('menu');
@@ -862,7 +867,9 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
         school={school}
         exam={exam}
         students={students}
+        posterDesign={posterDesign || DEFAULT_POSTER_DESIGN}
         onBackToMenu={() => setActiveCategory('menu')}
+        onNavigateToDesigner={onNavigateToPosterDesigner}
       />
     );
   }

@@ -54,6 +54,7 @@ var SHEET_NAMES = {
   DATA_GURU: "DATA_GURU",
   DATA_ASESMEN: "DATA_ASESMEN",
   DESAIN_KARTU: "DESAIN_KARTU",
+  DATA_POSTER: "data_poster",
   LOG_PENGGUNA: "LOG_PENGGUNA"
 };
 
@@ -158,6 +159,16 @@ function initSheets() {
       "School ID", "Username", "Design JSON", "Print Settings JSON", "Updated At"
     ]);
     sheetDesain.getRange("A1:E1").setFontWeight("bold").setBackground("#FF4365").setFontColor("#FFFFFF");
+  }
+
+  // 4b. Sheet DATA_POSTER (Pengaturan Gaya Desain & Orientasi Poster A4)
+  var sheetPoster = ss.getSheetByName(SHEET_NAMES.DATA_POSTER);
+  if (!sheetPoster) {
+    sheetPoster = ss.insertSheet(SHEET_NAMES.DATA_POSTER);
+    sheetPoster.appendRow([
+      "School ID", "Username", "Style ID", "Orientation", "Watermark Opacity", "Show Address", "Settings JSON", "Updated At"
+    ]);
+    sheetPoster.getRange("A1:H1").setFontWeight("bold").setBackground("#9333EA").setFontColor("#FFFFFF");
   }
 
   // 5. Sheet LOG_PENGGUNA (Catatan Sesi Masuk & Foto Kamera Pengguna)
@@ -490,6 +501,12 @@ function doPost(e) {
     if (action === "SAVE_CARD_DESIGN") {
       var designSetResult = handleSaveCardDesign(contents);
       return createJsonResponse(designSetResult);
+    }
+
+    // 11b. SIMPAN DESAIN POSTER (Sheet data_poster)
+    if (action === "SAVE_POSTER_DESIGN") {
+      var posterDesignResult = handleSavePosterDesign(contents);
+      return createJsonResponse(posterDesignResult);
     }
 
     // 12. BATCH DATA SISWA (ATOMIC & TIDAK BERTUMPUK)
@@ -1639,6 +1656,59 @@ function handleSaveCardDesign(contents) {
 }
 
 /**
+ * 12b. Simpan khusus pengaturan desain poster ke Sheet data_poster
+ */
+function handleSavePosterDesign(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = contents.username || "Nagata";
+  var posterDesign = contents.posterDesign || {};
+  var now = new Date().toISOString();
+
+  var sheetName = SHEET_NAMES.DATA_POSTER || "data_poster";
+  var sheetPoster = ss.getSheetByName(sheetName);
+  if (!sheetPoster) {
+    sheetPoster = ss.insertSheet(sheetName);
+    sheetPoster.appendRow([
+      "School ID", "Username", "Style ID", "Orientation", "Watermark Opacity", "Show Address", "Settings JSON", "Updated At"
+    ]);
+    sheetPoster.getRange("A1:H1").setFontWeight("bold").setBackground("#9333EA").setFontColor("#FFFFFF");
+  }
+
+  var rows = sheetPoster.getDataRange().getValues();
+  var rowIdx = -1;
+
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]).toLowerCase() === username.toLowerCase()) {
+      rowIdx = i + 1;
+      break;
+    }
+  }
+
+  var posterData = [
+    "pos_" + username,
+    username,
+    posterDesign.styleId || "neobrutal",
+    posterDesign.orientation || "portrait",
+    posterDesign.watermarkOpacity !== undefined ? posterDesign.watermarkOpacity : 14,
+    posterDesign.showSchoolAddressInFooter !== false ? "YA" : "TIDAK",
+    JSON.stringify(posterDesign),
+    now
+  ];
+
+  if (rowIdx > 0) {
+    sheetPoster.getRange(rowIdx, 1, 1, posterData.length).setValues([posterData]);
+  } else {
+    sheetPoster.appendRow(posterData);
+  }
+
+  return {
+    status: "success",
+    message: "Pengaturan desain poster berhasil disimpan ke sheet data_poster!",
+    timestamp: now
+  };
+}
+
+/**
  * 13. Tambah 1 data siswa secara atomic & efisien (C-R-U-D)
  */
 function handleAddStudent(contents) {
@@ -2674,6 +2744,20 @@ function loadAllDataForUser(username) {
     }
   }
 
+  var sheetPoster = ss.getSheetByName(SHEET_NAMES.DATA_POSTER || "data_poster");
+  var rowsPoster = sheetPoster ? sheetPoster.getDataRange().getValues() : [];
+  var posterDesign = null;
+
+  for (var kp = 1; kp < rowsPoster.length; kp++) {
+    var dp = rowsPoster[kp];
+    if (String(dp[1]).toLowerCase() === cleanUser) {
+      try {
+        posterDesign = JSON.parse(dp[6]);
+      } catch (e) {}
+      break;
+    }
+  }
+
   return {
     school: schoolData,
     exam: examData,
@@ -2681,6 +2765,7 @@ function loadAllDataForUser(username) {
     students: studentsList,
     teachers: teachersList,
     cardDesign: cardDesign,
+    posterDesign: posterDesign,
     printSettings: printSettings
   };
 }

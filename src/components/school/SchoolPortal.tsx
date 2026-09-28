@@ -7,19 +7,23 @@ import {
   Teacher,
   CardDesignSettings,
   PrintSettings,
+  PosterDesignSettings,
   GoogleSheetsConfig,
   LoginLogEntry,
 } from '../../types';
+import { DEFAULT_POSTER_DESIGN } from '../../data/mockData';
 import { SchoolLogo } from '../common/SchoolLogo';
 import { Dashboard } from '../dashboard/Dashboard';
 import { SchoolDataHub } from './SchoolDataHub';
 import { CardDesigner } from '../card/CardDesigner';
+import { PosterDesigner } from '../poster/PosterDesigner';
 import { PrintPreview } from '../print/PrintPreview';
 import { SchoolSettings } from '../settings/SchoolSettings';
 import {
   LayoutDashboard,
   Database,
   Palette,
+  Sparkles,
   Printer,
   Settings,
   Building2,
@@ -27,7 +31,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-export type SchoolTabId = 'dashboard' | 'students' | 'designer' | 'print' | 'settings';
+export type SchoolTabId = 'dashboard' | 'students' | 'designer' | 'poster_designer' | 'print' | 'settings';
 
 interface SchoolPortalProps {
   currentUser: UserAccount;
@@ -36,6 +40,7 @@ interface SchoolPortalProps {
   students: Student[];
   teachers?: Teacher[];
   cardDesign: CardDesignSettings;
+  posterDesign?: PosterDesignSettings;
   printSettings: PrintSettings;
   selectedStudentIds: string[];
   selectedTeacherIds?: string[];
@@ -60,6 +65,8 @@ interface SchoolPortalProps {
   onUpdateAccount?: (updated: UserAccount) => Promise<{ success: boolean; message?: string }>;
   onResetPassword?: (username: string, newPass: string) => Promise<{ success: boolean; message?: string }>;
   onUpdateCardDesign: (design: CardDesignSettings) => void;
+  onUpdatePosterDesign?: (design: PosterDesignSettings) => void;
+  onSavePosterDesignToCloud?: (design: PosterDesignSettings) => Promise<void>;
   onUpdatePrintSettings: (settings: PrintSettings) => void;
   onUpdateSchool: (school: School) => void;
   onUpdateExam: (exam: Exam) => void;
@@ -97,6 +104,7 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
   students,
   teachers = [],
   cardDesign,
+  posterDesign,
   printSettings,
   selectedStudentIds,
   selectedTeacherIds = [],
@@ -121,6 +129,8 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
   onUpdateAccount,
   onResetPassword,
   onUpdateCardDesign,
+  onUpdatePosterDesign,
+  onSavePosterDesignToCloud,
   onUpdatePrintSettings,
   onUpdateSchool,
   onUpdateExam,
@@ -158,8 +168,14 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
     {
       id: 'designer',
       label: 'Desain Kartu',
-      mobileLabel: 'Desain',
+      mobileLabel: 'Kartu',
       icon: Palette,
+    },
+    {
+      id: 'poster_designer',
+      label: 'Desain Poster',
+      mobileLabel: 'Poster',
+      icon: Sparkles,
     },
     {
       id: 'print',
@@ -365,6 +381,18 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
           />
         )}
 
+        {activeTab === 'poster_designer' && (
+          <PosterDesigner
+            school={school}
+            exam={exam}
+            students={students}
+            posterDesign={posterDesign || DEFAULT_POSTER_DESIGN}
+            onUpdatePosterDesign={onUpdatePosterDesign || (() => {})}
+            onSaveToCloud={onSavePosterDesignToCloud}
+            onNavigateToPrint={() => onNavigate('print')}
+          />
+        )}
+
         {activeTab === 'print' && (
           <PrintPreview
             school={school}
@@ -377,9 +405,11 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
             onToggleStudentSelect={onToggleStudentSelect}
             onSelectAllStudents={onSelectAllStudents}
             design={cardDesign}
+            posterDesign={posterDesign || DEFAULT_POSTER_DESIGN}
             printSettings={printSettings}
             onUpdatePrintSettings={onUpdatePrintSettings}
             onBackToDesigner={() => onNavigate('designer')}
+            onNavigateToPosterDesigner={() => onNavigate('poster_designer')}
           />
         )}
 

@@ -216,6 +216,23 @@ export interface UserAccount {
   createdAt: string;
 }
 
+export interface PosterDesignSettings {
+  styleId: PosterStyleId;
+  orientation: PosterOrientation;
+  watermarkOpacity: number; // 10 - 30 %
+  showSchoolAddressInFooter: boolean;
+  updatedAt?: string;
+}
+
+export type PosterStyleId =
+  | 'neobrutal'
+  | 'modern'
+  | 'hazard'
+  | 'classic_academic'
+  | 'playful_friendly';
+
+export type PosterOrientation = 'portrait' | 'landscape';
+
 export interface UserSchoolData {
   school: School;
   exam: Exam;
@@ -223,6 +240,7 @@ export interface UserSchoolData {
   students: Student[];
   teachers?: Teacher[];
   cardDesign: CardDesignSettings;
+  posterDesign?: PosterDesignSettings;
   printSettings: PrintSettings;
   selectedStudentIds: string[];
 }

@@ -5,6 +5,7 @@ import {
   Student,
   Teacher,
   CardDesignSettings,
+  PosterDesignSettings,
   PrintSettings,
   UserAccount,
   GoogleSheetsConfig,
@@ -39,6 +40,7 @@ import {
   DEFAULT_SCHOOL,
   DEFAULT_EXAM,
   DEFAULT_CARD_DESIGN,
+  DEFAULT_POSTER_DESIGN,
   DEFAULT_PRINT_SETTINGS,
   DEFAULT_TEACHERS,
 } from './data/mockData';
@@ -53,6 +55,7 @@ import {
   gasDeleteAccount,
   gasSaveSchoolSettings,
   gasSaveCardDesign,
+  gasSavePosterDesign,
   gasAddStudent,
   gasUpdateStudent,
   gasDeleteStudent,
@@ -94,7 +97,7 @@ import {
   Cloud,
 } from 'lucide-react';
 
-type NavTab = 'dashboard' | 'students' | 'designer' | 'print' | 'settings';
+type NavTab = 'dashboard' | 'students' | 'designer' | 'poster_designer' | 'print' | 'settings';
 type PortalMode = 'school' | 'admin';
 
 export default function App() {
@@ -1224,6 +1227,32 @@ export default function App() {
     }, 1200);
   };
 
+  const handleUpdatePosterDesign = (posterDesign: PosterDesignSettings) => {
+    updateLocalSchoolData((prev) => ({ ...prev, posterDesign }));
+
+    if (debouncedSaveTimer.current) clearTimeout(debouncedSaveTimer.current);
+    debouncedSaveTimer.current = setTimeout(async () => {
+      if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+        try {
+          await gasSavePosterDesign(activeGasUrl, {
+            username: activeUsername,
+            posterDesign: posterDesign,
+          });
+        } catch {}
+      }
+    }, 1200);
+  };
+
+  const handleSavePosterDesignToCloud = async (posterDesign: PosterDesignSettings) => {
+    updateLocalSchoolData((prev) => ({ ...prev, posterDesign }));
+    if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+      await gasSavePosterDesign(activeGasUrl, {
+        username: activeUsername,
+        posterDesign: posterDesign,
+      });
+    }
+  };
+
   const handleUpdatePrintSettings = (printSettings: PrintSettings) => {
     updateLocalSchoolData((prev) => ({ ...prev, printSettings }));
 
@@ -1536,7 +1565,8 @@ export default function App() {
     switch (tab) {
       case 'dashboard': return 'Beranda';
       case 'students': return 'Data';
-      case 'designer': return 'Desain';
+      case 'designer': return 'Desain Kartu';
+      case 'poster_designer': return 'Desain Poster';
       case 'print': return 'Cetak';
       case 'settings': return 'Pengaturan';
       default: return 'Beranda';
@@ -1819,6 +1849,7 @@ export default function App() {
             students={state.students || []}
             teachers={state.teachers || []}
             cardDesign={state.cardDesign || DEFAULT_CARD_DESIGN}
+            posterDesign={state.posterDesign || DEFAULT_POSTER_DESIGN}
             printSettings={state.printSettings || DEFAULT_PRINT_SETTINGS}
             selectedStudentIds={state.selectedStudentIds || []}
             selectedTeacherIds={state.selectedTeacherIds || []}
@@ -1843,6 +1874,8 @@ export default function App() {
             onUpdateAccount={handleUpdateAccount}
             onResetPassword={handleResetPassword}
             onUpdateCardDesign={handleUpdateCardDesign}
+            onUpdatePosterDesign={handleUpdatePosterDesign}
+            onSavePosterDesignToCloud={handleSavePosterDesignToCloud}
             onUpdatePrintSettings={handleUpdatePrintSettings}
             onUpdateSchool={handleUpdateSchool}
             onUpdateExam={handleUpdateExam}

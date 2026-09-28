@@ -1,10 +1,11 @@
-import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, UserAccount, GoogleSheetsConfig, UserSchoolData, LoginLogEntry } from '../types';
+import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, UserAccount, GoogleSheetsConfig, UserSchoolData, LoginLogEntry } from '../types';
 import {
   DEFAULT_SCHOOL,
   DEFAULT_EXAM,
   DEFAULT_EXAMS,
   DEFAULT_CARD_DESIGN,
   DEFAULT_PRINT_SETTINGS,
+  DEFAULT_POSTER_DESIGN,
   DEFAULT_TEACHERS,
   MOCK_STUDENTS,
 } from '../data/mockData';
@@ -40,6 +41,7 @@ export interface AppState {
   students: Student[];
   teachers: Teacher[];
   cardDesign: CardDesignSettings;
+  posterDesign: PosterDesignSettings;
   printSettings: PrintSettings;
   selectedStudentIds: string[];
   selectedTeacherIds: string[];
@@ -150,6 +152,7 @@ export const loadStoredState = (): AppState => {
         students: cleanStudents,
         teachers: cleanTeachers,
         cardDesign: { ...DEFAULT_CARD_DESIGN, ...(parsed.cardDesign || {}) },
+        posterDesign: { ...DEFAULT_POSTER_DESIGN, ...(parsed.posterDesign || {}) },
         printSettings: { ...DEFAULT_PRINT_SETTINGS, ...(parsed.printSettings || {}) },
         selectedStudentIds: Array.isArray(parsed.selectedStudentIds)
           ? Array.from(new Set(parsed.selectedStudentIds.filter((id: string) => cleanStudents.some((s) => s.id === id))))
@@ -181,6 +184,7 @@ export const loadStoredState = (): AppState => {
     students: [],
     teachers: DEFAULT_TEACHERS,
     cardDesign: DEFAULT_CARD_DESIGN,
+    posterDesign: DEFAULT_POSTER_DESIGN,
     printSettings: DEFAULT_PRINT_SETTINGS,
     selectedStudentIds: [],
     selectedTeacherIds: DEFAULT_TEACHERS.map((t) => t.id),
@@ -221,6 +225,7 @@ export const resetStoredState = (): AppState => {
     students: [],
     teachers: DEFAULT_TEACHERS,
     cardDesign: DEFAULT_CARD_DESIGN,
+    posterDesign: DEFAULT_POSTER_DESIGN,
     printSettings: DEFAULT_PRINT_SETTINGS,
     selectedStudentIds: [],
     selectedTeacherIds: DEFAULT_TEACHERS.map((t) => t.id),

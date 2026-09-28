@@ -1,4 +1,4 @@
-import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings } from '../types';
+import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings } from '../types';
 
 export const DEFAULT_SCHOOL: School = {
   id: '',
@@ -252,6 +252,13 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   spacingMm: 5,
   showCropMarks: true,
   showCutLines: true,
+};
+
+export const DEFAULT_POSTER_DESIGN: PosterDesignSettings = {
+  styleId: 'neobrutal',
+  orientation: 'portrait',
+  watermarkOpacity: 14,
+  showSchoolAddressInFooter: true,
 };
 
 // Tanpa data dummy - seluruh data guru diambil langsung dari spreadsheet

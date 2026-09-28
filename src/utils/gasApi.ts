@@ -1,4 +1,4 @@
-import { UserAccount, School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, LoginLogEntry } from '../types';
+import { UserAccount, School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, LoginLogEntry } from '../types';
 
 export interface SpreadsheetCapacity {
   totalAllocatedCells: number;
@@ -399,6 +399,22 @@ export const gasSaveCardDesign = async (
 ): Promise<{ status: 'success' | 'error'; message: string }> => {
   return postToGas(webAppUrl, {
     action: 'SAVE_CARD_DESIGN',
+    ...payload,
+  });
+};
+
+/**
+ * Simpan khusus pengaturan desain poster ke Google Spreadsheet (Sheet data_poster)
+ */
+export const gasSavePosterDesign = async (
+  webAppUrl: string,
+  payload: {
+    username: string;
+    posterDesign: PosterDesignSettings;
+  }
+): Promise<{ status: 'success' | 'error'; message: string }> => {
+  return postToGas(webAppUrl, {
+    action: 'SAVE_POSTER_DESIGN',
     ...payload,
   });
 };
