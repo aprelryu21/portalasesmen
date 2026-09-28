@@ -199,8 +199,8 @@ export const SchoolDataHub: React.FC<SchoolDataHubProps> = ({
           </div>
         </div>
 
-        {/* 4 Kotak Menu Data (Data Siswa, Data Guru, Data Asesmen, Data Sekolah) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {/* 4 Kotak Menu Data (Data Siswa, Data Guru, Data Asesmen, Data Sekolah) - 2 Menu per Baris */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           {/* Kotak 1: Data Siswa */}
           <div
             onClick={() => setActiveSection('students')}

@@ -1637,8 +1637,8 @@ export default function App() {
   return (
     <div className="h-screen h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#FFFDF8] text-neutral-900 flex flex-col font-sans">
       {/* 1. TOP NAVIGATION HEADER (NO-PRINT) - BENAR-BENAR MELAYANG TANPA LATAR BELAKANG */}
-      <header className="no-print sticky top-0 z-50 shrink-0 px-2.5 sm:px-4 pt-2 sm:pt-3 pb-1 bg-transparent pointer-events-none">
-        <div className="max-w-7xl mx-auto bg-white/95 backdrop-blur-md border-3 border-black shadow-[4px_4px_0px_#000] rounded-2xl px-3 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between pointer-events-auto">
+      <header className="no-print sticky top-0 z-50 shrink-0 px-2 sm:px-4 lg:px-6 pt-2 sm:pt-3 pb-1 bg-transparent pointer-events-none">
+        <div className="w-full bg-white/95 backdrop-blur-md border-3 border-black shadow-[4px_4px_0px_#000] rounded-2xl px-3 sm:px-5 lg:px-6 py-2 sm:py-2.5 flex items-center justify-between pointer-events-auto">
           {/* Logo Brand Aplikasi (HANYA LOGO APLIKASI DI SEBELAH KIRI) */}
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <button
@@ -1873,7 +1873,7 @@ export default function App() {
       </header>
 
       {/* 2. MAIN APP CONTENT CONTAINER (Ukuran Fix & Scroll Mandiri untuk Desktop Admin & Sekolah) */}
-      <main className="flex-1 min-h-0 w-full max-w-7xl mx-auto p-2 sm:p-4 lg:p-6 overflow-hidden flex flex-col">
+      <main className="flex-1 min-h-0 w-full px-2 sm:px-4 lg:px-6 py-2 sm:py-3 overflow-hidden flex flex-col">
         {/* MODE A: PORTAL ADMIN (KHUSUS ADMINISTRATOR - BUKAN SEKOLAH) */}
         {isAdmin ? (
           <AdminPortal

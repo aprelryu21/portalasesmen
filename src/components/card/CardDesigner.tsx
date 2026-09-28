@@ -252,8 +252,8 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
           </div>
         </div>
 
-        {/* 6 Kotak Menu Desain */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-5">
+        {/* 6 Kotak Menu Desain - 2 Menu per Baris */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           {/* Menu 1: Desain ID Siswa */}
           <div
             onClick={() => setActiveMenu('student')}
@@ -614,9 +614,9 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
       {/* 2. SUB-MENU 1: DESAIN ID SISWA                            */}
       {/* ========================================================= */}
       {activeMenu === 'student' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Controls Column (6 Cols) */}
-          <div className="lg:col-span-6 bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-4">
+        <div className="space-y-5">
+          {/* Top Controls Box */}
+          <div className="w-full bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-4">
             <div>
               <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-yellow-500" />
@@ -1184,8 +1184,8 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
             )}
           </div>
 
-          {/* Right Live Preview Column (6 Cols) */}
-          <div className="lg:col-span-6 bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-3">
+          {/* Bottom Live Preview Box */}
+          <div className="w-full bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between border-b-2 border-black pb-2">
               <span className="text-xs font-black uppercase flex items-center gap-1.5">
                 <Eye className="w-4 h-4" />
@@ -1255,9 +1255,9 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
       {/* 3. SUB-MENU 2: DESAIN ID BANGKU (10 PILIHAN TEMA)         */}
       {/* ========================================================= */}
       {activeMenu === 'desk' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Controls (6 Cols) */}
-          <div className="lg:col-span-6 bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-4">
+        <div className="space-y-5">
+          {/* Top Controls */}
+          <div className="w-full bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-4">
             <div>
               <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
                 <Armchair className="w-5 h-5 text-amber-500" />
@@ -1340,8 +1340,8 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
             </div>
           </div>
 
-          {/* Right Live Preview (6 Cols) */}
-          <div className="lg:col-span-6 bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-3">
+          {/* Bottom Live Preview */}
+          <div className="w-full bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between border-b-2 border-black pb-2">
               <span className="text-xs font-black uppercase flex items-center gap-1.5">
                 <Eye className="w-4 h-4" />
@@ -1375,9 +1375,9 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
       {/* 4. SUB-MENU 3: DESAIN ID PENGAWAS (10 PILIHAN TEMA)       */}
       {/* ========================================================= */}
       {activeMenu === 'proctor' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Controls (6 Cols) */}
-          <div className="lg:col-span-6 bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-4">
+        <div className="space-y-5">
+          {/* Top Controls */}
+          <div className="w-full bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-4">
             <div>
               <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-indigo-600" />
@@ -1456,8 +1456,8 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
             </label>
           </div>
 
-          {/* Right Live Preview (6 Cols) */}
-          <div className="lg:col-span-6 bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-3">
+          {/* Bottom Live Preview */}
+          <div className="w-full bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between border-b-2 border-black pb-2">
               <span className="text-xs font-black uppercase flex items-center gap-1.5">
                 <Eye className="w-4 h-4" />
@@ -1502,9 +1502,9 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
       {/* 5. SUB-MENU 4: DESAIN ID TAMU (10 PILIHAN TEMA)           */}
       {/* ========================================================= */}
       {activeMenu === 'guest' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Controls (6 Cols) */}
-          <div className="lg:col-span-6 bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-4">
+        <div className="space-y-5">
+          {/* Top Controls */}
+          <div className="w-full bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-4">
             <div>
               <h3 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
                 <UserCheck className="w-5 h-5 text-emerald-600" />
@@ -1583,8 +1583,8 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
             </label>
           </div>
 
-          {/* Right Live Preview (6 Cols) */}
-          <div className="lg:col-span-6 bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-3">
+          {/* Bottom Live Preview */}
+          <div className="w-full bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between border-b-2 border-black pb-2">
               <span className="text-xs font-black uppercase flex items-center gap-1.5">
                 <Eye className="w-4 h-4" />
