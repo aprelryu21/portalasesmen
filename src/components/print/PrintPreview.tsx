@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings } from '../../types';
-import { DEFAULT_POSTER_DESIGN } from '../../data/mockData';
+import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, AnswerSheetDesignSettings } from '../../types';
+import { DEFAULT_POSTER_DESIGN, DEFAULT_ANSWER_SHEET_DESIGN } from '../../data/mockData';
 import { ExamCard } from '../card/ExamCard';
 import { DeskCardPrint } from './DeskCardPrint';
 import { ProctorGuestPreview } from './ProctorGuestPreview';
@@ -8,6 +8,7 @@ import { PinchZoomCardContainer } from '../card/PinchZoomCardContainer';
 import { A4SheetContainer } from './A4SheetContainer';
 import { PrintConfirmationModal } from './PrintConfirmationModal';
 import { ExamPosterPrint } from './ExamPosterPrint';
+import { AnswerSheetPrint } from './AnswerSheetPrint';
 import {
   Printer,
   Settings2,
@@ -43,7 +44,8 @@ export type PrintCardCategory =
   | 'proctor_id'
   | 'guest_id'
   | 'exam_admin'
-  | 'exam_poster';
+  | 'exam_poster'
+  | 'answer_sheet';
 
 interface PrintPreviewProps {
   school: School;
@@ -57,10 +59,12 @@ interface PrintPreviewProps {
   onSelectAllStudents: (selected: boolean) => void;
   design: CardDesignSettings;
   posterDesign?: PosterDesignSettings;
+  answerSheetDesign?: AnswerSheetDesignSettings;
   printSettings: PrintSettings;
   onUpdatePrintSettings: (newSettings: PrintSettings) => void;
   onBackToDesigner: () => void;
   onNavigateToPosterDesigner?: () => void;
+  onNavigateToAnswerSheetDesigner?: () => void;
   initialCategory?: PrintCardCategory;
 }
 
@@ -76,10 +80,12 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
   onSelectAllStudents,
   design,
   posterDesign,
+  answerSheetDesign,
   printSettings,
   onUpdatePrintSettings,
   onBackToDesigner,
   onNavigateToPosterDesigner,
+  onNavigateToAnswerSheetDesigner,
   initialCategory,
 }) => {
   // Main view state: default to 'menu' or initialCategory
@@ -299,6 +305,19 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
       >
         <Megaphone className="w-3.5 h-3.5" />
         <span>Poster Ujian</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setActiveCategory('answer_sheet')}
+        className={`px-3 py-1.5 rounded-lg border-2 border-black shadow-[1px_1px_0px_#000] flex items-center gap-1.5 shrink-0 transition-transform active:translate-y-0.5 cursor-pointer ${
+          activeCategory === 'answer_sheet'
+            ? 'bg-teal-300 text-black'
+            : 'bg-white hover:bg-teal-50 text-neutral-700'
+        }`}
+      >
+        <FileText className="w-3.5 h-3.5" />
+        <span>Lembar Jawaban</span>
       </button>
     </div>
   );
@@ -699,6 +718,60 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
               </button>
             </div>
           </div>
+
+          {/* MENU 7: CETAK LEMBAR JAWABAN */}
+          <div
+            onClick={() => setActiveCategory('answer_sheet')}
+            className="group relative bg-white hover:bg-teal-50/50 border-3 border-black shadow-[6px_6px_0px_#000] hover:shadow-[8px_8px_0px_#000] rounded-2xl p-6 flex flex-col justify-between transition-all duration-150 cursor-pointer active:translate-x-0.5 active:translate-y-0.5"
+          >
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="w-14 h-14 bg-teal-200 border-2 border-black rounded-2xl flex items-center justify-center shadow-[3px_3px_0px_#000] text-teal-900 group-hover:scale-105 transition-transform">
+                  <FileText className="w-7 h-7" />
+                </div>
+                <span className="px-2.5 py-1 bg-teal-300 text-teal-950 border border-black rounded-md text-[10px] font-black uppercase tracking-wider shadow-[1px_1px_0px_#000]">
+                  Format Resmi A4
+                </span>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tight text-neutral-900 group-hover:text-teal-700 transition-colors flex items-center gap-2">
+                  Cetak Lembar Jawaban
+                </h3>
+                <p className="text-xs font-bold text-neutral-500 uppercase mt-0.5">
+                  Lembar Jawaban Asesmen / Ujian Sekolah (LJK / LJ)
+                </p>
+                <p className="text-xs text-neutral-700 leading-relaxed mt-2.5">
+                  Fungsi untuk mencetak lembar jawaban siswa ukuran A4 lengkap dengan kop sekolah resmi, tabel identitas &amp; nilai, pilihan ganda (A B C D), isian singkat, dan uraian.
+                </p>
+              </div>
+
+              <div className="space-y-1.5 pt-2 border-t border-neutral-200 text-xs font-semibold text-neutral-700">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                  <span>Kop sekolah resmi &amp; tabel identitas siswa terintegrasi</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                  <span>Opsi PG (10–50 butir), Isian (5–20), &amp; Uraian (5–10)</span>
+                </div>
+                <div className="flex items-center gap-2 text-teal-800 font-bold">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  <span>Cetak massal siap pakai per kelas atau per mata pelajaran</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-5 mt-4">
+              <button
+                type="button"
+                className="w-full py-2.5 px-4 bg-teal-300 group-hover:bg-teal-200 text-teal-950 border-2 border-black rounded-xl text-xs font-black uppercase shadow-[3px_3px_0px_#000] flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <span>Buka Percetakan Lembar Jawaban</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -878,6 +951,20 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
         posterDesign={posterDesign || DEFAULT_POSTER_DESIGN}
         onBackToMenu={() => setActiveCategory('menu')}
         onNavigateToDesigner={onNavigateToPosterDesigner}
+      />
+    );
+  }
+
+  // 7. SUB-GENERATOR 7: CETAK LEMBAR JAWABAN SISWA (A4)
+  if (activeCategory === 'answer_sheet') {
+    return (
+      <AnswerSheetPrint
+        school={school}
+        exam={exam}
+        exams={exams}
+        answerSheetDesign={answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN}
+        onBackToMenu={() => setActiveCategory('menu')}
+        onNavigateToDesigner={onNavigateToAnswerSheetDesigner}
       />
     );
   }

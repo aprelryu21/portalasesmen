@@ -55,6 +55,7 @@ var SHEET_NAMES = {
   DATA_ASESMEN: "DATA_ASESMEN",
   DESAIN_KARTU: "DESAIN_KARTU",
   DATA_POSTER: "data_poster",
+  DATA_LJ: "Data_LJ",
   LOG_PENGGUNA: "LOG_PENGGUNA"
 };
 
@@ -169,6 +170,16 @@ function initSheets() {
       "School ID", "Username", "Style ID", "Orientation", "Watermark Opacity", "Show Address", "Settings JSON", "Updated At"
     ]);
     sheetPoster.getRange("A1:H1").setFontWeight("bold").setBackground("#9333EA").setFontColor("#FFFFFF");
+  }
+
+  // 4c. Sheet Data_LJ (Pengaturan Desain Lembar Jawaban Siswa A4)
+  var sheetLJ = ss.getSheetByName(SHEET_NAMES.DATA_LJ);
+  if (!sheetLJ) {
+    sheetLJ = ss.insertSheet(SHEET_NAMES.DATA_LJ);
+    sheetLJ.appendRow([
+      "School ID", "Username", "PG Count", "Isian Count", "Uraian Count", "Kop Line 1", "Kop Line 3 (Sekolah)", "Settings JSON", "Updated At"
+    ]);
+    sheetLJ.getRange("A1:I1").setFontWeight("bold").setBackground("#0D9488").setFontColor("#FFFFFF");
   }
 
   // 5. Sheet LOG_PENGGUNA (Catatan Sesi Masuk & Foto Kamera Pengguna)
@@ -507,6 +518,12 @@ function doPost(e) {
     if (action === "SAVE_POSTER_DESIGN") {
       var posterDesignResult = handleSavePosterDesign(contents);
       return createJsonResponse(posterDesignResult);
+    }
+
+    // 11c. SIMPAN DESAIN LEMBAR JAWABAN (Sheet Data_LJ)
+    if (action === "SAVE_ANSWER_SHEET_DESIGN" || action === "SAVE_LJ_DESIGN") {
+      var ljDesignResult = handleSaveAnswerSheetDesign(contents);
+      return createJsonResponse(ljDesignResult);
     }
 
     // 12. BATCH DATA SISWA (ATOMIC & TIDAK BERTUMPUK)
@@ -1709,6 +1726,63 @@ function handleSavePosterDesign(contents) {
 }
 
 /**
+ * 12c. Simpan khusus pengaturan desain lembar jawaban ke Sheet Data_LJ
+ */
+function handleSaveAnswerSheetDesign(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var username = contents.username || "Nagata";
+  var ljDesign = contents.answerSheetDesign || contents.ljDesign || {};
+  var now = new Date().toISOString();
+
+  var sheetName = SHEET_NAMES.DATA_LJ || "Data_LJ";
+  var sheetLJ = ss.getSheetByName(sheetName);
+  if (!sheetLJ) {
+    sheetLJ = ss.insertSheet(sheetName);
+    sheetLJ.appendRow([
+      "School ID", "Username", "PG Count", "Isian Count", "Uraian Count", "Kop Line 1", "Kop Line 3 (Sekolah)", "Settings JSON", "Updated At"
+    ]);
+    sheetLJ.getRange("A1:I1").setFontWeight("bold").setBackground("#0D9488").setFontColor("#FFFFFF");
+  }
+
+  var rows = sheetLJ.getDataRange().getValues();
+  var rowIdx = -1;
+
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]).toLowerCase() === username.toLowerCase()) {
+      rowIdx = i + 1;
+      break;
+    }
+  }
+
+  var kop = ljDesign.kop || {};
+  var questions = ljDesign.questions || {};
+
+  var ljData = [
+    "lj_" + username,
+    username,
+    questions.enablePg !== false ? (questions.pgCount || 25) : 0,
+    questions.enableIsian !== false ? (questions.isianCount || 10) : 0,
+    questions.enableUraian !== false ? (questions.uraianCount || 5) : 0,
+    kop.line1 || "",
+    kop.line3 || "",
+    JSON.stringify(ljDesign),
+    now
+  ];
+
+  if (rowIdx > 0) {
+    sheetLJ.getRange(rowIdx, 1, 1, ljData.length).setValues([ljData]);
+  } else {
+    sheetLJ.appendRow(ljData);
+  }
+
+  return {
+    status: "success",
+    message: "Pengaturan desain lembar jawaban berhasil disimpan ke sheet Data_LJ!",
+    timestamp: now
+  };
+}
+
+/**
  * 13. Tambah 1 data siswa secara atomic & efisien (C-R-U-D)
  */
 function handleAddStudent(contents) {
@@ -2758,6 +2832,20 @@ function loadAllDataForUser(username) {
     }
   }
 
+  var sheetLJ = ss.getSheetByName(SHEET_NAMES.DATA_LJ || "Data_LJ");
+  var rowsLJ = sheetLJ ? sheetLJ.getDataRange().getValues() : [];
+  var answerSheetDesign = null;
+
+  for (var kl = 1; kl < rowsLJ.length; kl++) {
+    var dl = rowsLJ[kl];
+    if (String(dl[1]).toLowerCase() === cleanUser) {
+      try {
+        answerSheetDesign = JSON.parse(dl[7]);
+      } catch (e) {}
+      break;
+    }
+  }
+
   return {
     school: schoolData,
     exam: examData,
@@ -2766,6 +2854,7 @@ function loadAllDataForUser(username) {
     teachers: teachersList,
     cardDesign: cardDesign,
     posterDesign: posterDesign,
+    answerSheetDesign: answerSheetDesign,
     printSettings: printSettings
   };
 }

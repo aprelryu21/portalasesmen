@@ -1,4 +1,4 @@
-import { UserAccount, School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, LoginLogEntry } from '../types';
+import { UserAccount, School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, AnswerSheetDesignSettings, LoginLogEntry } from '../types';
 
 export interface SpreadsheetCapacity {
   totalAllocatedCells: number;
@@ -415,6 +415,22 @@ export const gasSavePosterDesign = async (
 ): Promise<{ status: 'success' | 'error'; message: string }> => {
   return postToGas(webAppUrl, {
     action: 'SAVE_POSTER_DESIGN',
+    ...payload,
+  });
+};
+
+/**
+ * Simpan khusus pengaturan desain lembar jawaban ke Google Spreadsheet (Sheet Data_LJ)
+ */
+export const gasSaveAnswerSheetDesign = async (
+  webAppUrl: string,
+  payload: {
+    username: string;
+    answerSheetDesign: AnswerSheetDesignSettings;
+  }
+): Promise<{ status: 'success' | 'error'; message: string }> => {
+  return postToGas(webAppUrl, {
+    action: 'SAVE_ANSWER_SHEET_DESIGN',
     ...payload,
   });
 };

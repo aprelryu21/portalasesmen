@@ -6,6 +6,7 @@ import {
   Teacher,
   CardDesignSettings,
   PosterDesignSettings,
+  AnswerSheetDesignSettings,
   PrintSettings,
   UserAccount,
   GoogleSheetsConfig,
@@ -41,6 +42,7 @@ import {
   DEFAULT_EXAM,
   DEFAULT_CARD_DESIGN,
   DEFAULT_POSTER_DESIGN,
+  DEFAULT_ANSWER_SHEET_DESIGN,
   DEFAULT_PRINT_SETTINGS,
   DEFAULT_TEACHERS,
 } from './data/mockData';
@@ -56,6 +58,7 @@ import {
   gasSaveSchoolSettings,
   gasSaveCardDesign,
   gasSavePosterDesign,
+  gasSaveAnswerSheetDesign,
   gasAddStudent,
   gasUpdateStudent,
   gasDeleteStudent,
@@ -262,7 +265,7 @@ export default function App() {
             ? rawExams
             : (schInfo?.exam ? [schInfo.exam] : [DEFAULT_EXAM]);
           const activeExam = userExams.find((e) => e.isActive) || schInfo?.exam || userExams[0] || DEFAULT_EXAM;
-          const des = designsMap[u] || designsMap[rawU];
+          const existingSchoolData = state.schoolDataMap?.[u] || state.schoolDataMap?.[rawU];
 
           const userSchoolData: UserSchoolData = {
             school: schInfo?.school || {
@@ -276,9 +279,12 @@ export default function App() {
             students: studs,
             teachers: teachs,
             cardDesign: des?.cardDesign || DEFAULT_CARD_DESIGN,
+            posterDesign: existingSchoolData?.posterDesign || DEFAULT_POSTER_DESIGN,
+            answerSheetDesign: existingSchoolData?.answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN,
             printSettings: des?.printSettings || DEFAULT_PRINT_SETTINGS,
             selectedStudentIds: studs.map((s) => s.id),
           };
+
 
           newSchoolDataMap[rawU] = userSchoolData;
           newSchoolDataMap[u] = userSchoolData;
@@ -292,6 +298,8 @@ export default function App() {
           let currentStudents = prev.students || [];
           let currentTeachers = prev.teachers || DEFAULT_TEACHERS;
           let currentDesign = prev.cardDesign || DEFAULT_CARD_DESIGN;
+          let currentPosterDesign = prev.posterDesign || DEFAULT_POSTER_DESIGN;
+          let currentAnswerSheetDesign = prev.answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN;
           let currentPrint = prev.printSettings || DEFAULT_PRINT_SETTINGS;
           let currentSelected = prev.selectedStudentIds || [];
 
@@ -314,6 +322,8 @@ export default function App() {
               currentStudents = userSchool.students || [];
               currentTeachers = userSchool.teachers && userSchool.teachers.length > 0 ? userSchool.teachers : currentTeachers;
               currentDesign = userSchool.cardDesign || currentDesign;
+              currentPosterDesign = userSchool.posterDesign || currentPosterDesign;
+              currentAnswerSheetDesign = userSchool.answerSheetDesign || currentAnswerSheetDesign;
               currentPrint = userSchool.printSettings || currentPrint;
               currentSelected = userSchool.selectedStudentIds || [];
             }
@@ -329,6 +339,8 @@ export default function App() {
             students: currentStudents,
             teachers: currentTeachers,
             cardDesign: currentDesign,
+            posterDesign: currentPosterDesign,
+            answerSheetDesign: currentAnswerSheetDesign,
             printSettings: currentPrint,
             selectedStudentIds: currentSelected,
             loginLogs:
@@ -1253,6 +1265,32 @@ export default function App() {
     }
   };
 
+  const handleUpdateAnswerSheetDesign = (answerSheetDesign: AnswerSheetDesignSettings) => {
+    updateLocalSchoolData((prev) => ({ ...prev, answerSheetDesign }));
+
+    if (debouncedSaveTimer.current) clearTimeout(debouncedSaveTimer.current);
+    debouncedSaveTimer.current = setTimeout(async () => {
+      if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+        try {
+          await gasSaveAnswerSheetDesign(activeGasUrl, {
+            username: activeUsername,
+            answerSheetDesign: answerSheetDesign,
+          });
+        } catch {}
+      }
+    }, 1200);
+  };
+
+  const handleSaveAnswerSheetDesignToCloud = async (answerSheetDesign: AnswerSheetDesignSettings) => {
+    updateLocalSchoolData((prev) => ({ ...prev, answerSheetDesign }));
+    if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+      await gasSaveAnswerSheetDesign(activeGasUrl, {
+        username: activeUsername,
+        answerSheetDesign: answerSheetDesign,
+      });
+    }
+  };
+
   const handleUpdatePrintSettings = (printSettings: PrintSettings) => {
     updateLocalSchoolData((prev) => ({ ...prev, printSettings }));
 
@@ -1849,6 +1887,7 @@ export default function App() {
             teachers={state.teachers || []}
             cardDesign={state.cardDesign || DEFAULT_CARD_DESIGN}
             posterDesign={state.posterDesign || DEFAULT_POSTER_DESIGN}
+            answerSheetDesign={state.answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN}
             printSettings={state.printSettings || DEFAULT_PRINT_SETTINGS}
             selectedStudentIds={state.selectedStudentIds || []}
             selectedTeacherIds={state.selectedTeacherIds || []}
@@ -1875,6 +1914,8 @@ export default function App() {
             onUpdateCardDesign={handleUpdateCardDesign}
             onUpdatePosterDesign={handleUpdatePosterDesign}
             onSavePosterDesignToCloud={handleSavePosterDesignToCloud}
+            onUpdateAnswerSheetDesign={handleUpdateAnswerSheetDesign}
+            onSaveAnswerSheetDesignToCloud={handleSaveAnswerSheetDesignToCloud}
             onUpdatePrintSettings={handleUpdatePrintSettings}
             onUpdateSchool={handleUpdateSchool}
             onUpdateExam={handleUpdateExam}

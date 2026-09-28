@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { School, Exam, Student, Teacher, CardDesignSettings, TemplatePreset, GuestCardData, PosterDesignSettings } from '../../types';
+import { School, Exam, Student, Teacher, CardDesignSettings, TemplatePreset, GuestCardData, PosterDesignSettings, AnswerSheetDesignSettings } from '../../types';
 import { ExamCard } from './ExamCard';
 import { DeskCard, DESK_THEMES } from './DeskCard';
 import { ProctorGuestCard, PROCTOR_GUEST_THEMES, CardThemeId } from './ProctorGuestCard';
@@ -9,8 +9,9 @@ import { getThemeById } from '../../config/cardThemes';
 import { SchoolLogo } from '../common/SchoolLogo';
 import { GenderAvatar } from '../common/GenderAvatar';
 import { QrCodeImage } from '../common/QrCodeImage';
-import { PRESET_TEMPLATES, DEFAULT_POSTER_DESIGN } from '../../data/mockData';
+import { PRESET_TEMPLATES, DEFAULT_POSTER_DESIGN, DEFAULT_ANSWER_SHEET_DESIGN } from '../../data/mockData';
 import { PosterDesigner } from '../poster/PosterDesigner';
+import { AnswerSheetDesigner } from '../answersheet/AnswerSheetDesigner';
 import {
   Palette,
   Maximize2,
@@ -43,9 +44,10 @@ import {
   FileCheck,
   PenTool,
   CheckCircle2,
+  FileText,
 } from 'lucide-react';
 
-export type DesignerMenuId = 'menu' | 'student' | 'desk' | 'proctor' | 'guest' | 'poster';
+export type DesignerMenuId = 'menu' | 'student' | 'desk' | 'proctor' | 'guest' | 'poster' | 'answersheet';
 
 interface CardDesignerProps {
   school: School;
@@ -54,9 +56,12 @@ interface CardDesignerProps {
   teachers?: Teacher[];
   design: CardDesignSettings;
   posterDesign?: PosterDesignSettings;
+  answerSheetDesign?: AnswerSheetDesignSettings;
   onUpdateDesign: (newDesign: CardDesignSettings) => void;
   onUpdatePosterDesign?: (newDesign: PosterDesignSettings) => void;
   onSavePosterDesignToCloud?: (design: PosterDesignSettings) => Promise<void>;
+  onUpdateAnswerSheetDesign?: (newDesign: AnswerSheetDesignSettings) => void;
+  onSaveAnswerSheetDesignToCloud?: (design: AnswerSheetDesignSettings) => Promise<void>;
   onNavigateToPrint: (category?: string) => void;
   initialMenu?: DesignerMenuId;
 }
@@ -101,9 +106,12 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
   teachers = [],
   design,
   posterDesign,
+  answerSheetDesign,
   onUpdateDesign,
   onUpdatePosterDesign,
   onSavePosterDesignToCloud,
+  onUpdateAnswerSheetDesign,
+  onSaveAnswerSheetDesignToCloud,
   onNavigateToPrint,
   initialMenu,
 }) => {
@@ -244,8 +252,8 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
           </div>
         </div>
 
-        {/* 5 Kotak Menu Desain */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5">
+        {/* 6 Kotak Menu Desain */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-5">
           {/* Menu 1: Desain ID Siswa */}
           <div
             onClick={() => setActiveMenu('student')}
@@ -445,6 +453,46 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Menu 6: Desain Lembar Jawaban */}
+          <div
+            onClick={() => setActiveMenu('answersheet')}
+            className="group relative bg-white border-2 sm:border-3 border-black rounded-xl sm:rounded-2xl p-5 shadow-[4px_4px_0px_#000] sm:shadow-[6px_6px_0px_#000] hover:shadow-[8px_8px_0px_#000] hover:-translate-y-1 transition-all cursor-pointer flex flex-col justify-between"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-teal-500 border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_#000] group-hover:scale-105 transition-transform text-white">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight group-hover:text-teal-800 transition-colors">
+                  Desain Lembar Jawaban
+                </h3>
+                <p className="text-xs text-neutral-600 mt-1 leading-relaxed">
+                  Lembar Jawaban A4 (LJK / LJ). Kustomisasi Kop Surat resmi, tabel nama/kelas/nilai, serta butir PG (10–50), Isian (5–20), &amp; Uraian (5–10).
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-1 pt-1">
+                <span className="px-1.5 py-0.5 bg-teal-100 text-teal-900 rounded text-[9px] font-bold border border-teal-300">
+                  Kop Surat Resmi
+                </span>
+                <span className="px-1.5 py-0.5 bg-neutral-100 text-neutral-700 rounded text-[9px] font-bold border border-neutral-300">
+                  PG, Isian &amp; Uraian
+                </span>
+                <span className="px-1.5 py-0.5 bg-neutral-100 text-neutral-700 rounded text-[9px] font-bold border border-neutral-300">
+                  Standar A4
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-4 mt-3 border-t-2 border-neutral-100 flex items-center justify-between text-xs font-black text-black">
+              <span>Buka Editor Lembar Jawaban</span>
+              <div className="w-7 h-7 rounded-lg bg-teal-500 border border-black flex items-center justify-center group-hover:translate-x-1 transition-transform text-white">
+                <ArrowRight className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -531,6 +579,19 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
         >
           <Sparkles className="w-3.5 h-3.5" />
           <span>Poster Asesmen</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveMenu('answersheet')}
+          className={`px-3 py-1.5 rounded-lg border-2 border-black text-xs font-black flex items-center gap-1.5 transition-transform active:translate-y-0.5 cursor-pointer ${
+            activeMenu === 'answersheet'
+              ? 'bg-teal-600 text-white shadow-[2px_2px_0px_#000]'
+              : 'bg-white hover:bg-teal-50 text-neutral-700'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>Lembar Jawaban</span>
         </button>
       </div>
 
@@ -1572,6 +1633,19 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
           onUpdatePosterDesign={onUpdatePosterDesign || (() => {})}
           onSaveToCloud={onSavePosterDesignToCloud}
           onNavigateToPrint={() => onNavigateToPrint('exam_poster')}
+          onBackToMenu={() => setActiveMenu('menu')}
+        />
+      )}
+
+      {/* 6. SUB-VIEW: DESAIN LEMBAR JAWABAN */}
+      {activeMenu === 'answersheet' && (
+        <AnswerSheetDesigner
+          school={school}
+          exam={exam}
+          design={answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN}
+          onUpdateDesign={onUpdateAnswerSheetDesign || (() => {})}
+          onSaveToCloud={onSaveAnswerSheetDesignToCloud}
+          onNavigateToPrint={() => onNavigateToPrint('answer_sheet')}
           onBackToMenu={() => setActiveMenu('menu')}
         />
       )}

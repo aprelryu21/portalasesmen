@@ -8,10 +8,11 @@ import {
   CardDesignSettings,
   PrintSettings,
   PosterDesignSettings,
+  AnswerSheetDesignSettings,
   GoogleSheetsConfig,
   LoginLogEntry,
 } from '../../types';
-import { DEFAULT_POSTER_DESIGN } from '../../data/mockData';
+import { DEFAULT_POSTER_DESIGN, DEFAULT_ANSWER_SHEET_DESIGN } from '../../data/mockData';
 import { SchoolLogo } from '../common/SchoolLogo';
 import { Dashboard } from '../dashboard/Dashboard';
 import { SchoolDataHub } from './SchoolDataHub';
@@ -40,6 +41,7 @@ interface SchoolPortalProps {
   teachers?: Teacher[];
   cardDesign: CardDesignSettings;
   posterDesign?: PosterDesignSettings;
+  answerSheetDesign?: AnswerSheetDesignSettings;
   printSettings: PrintSettings;
   selectedStudentIds: string[];
   selectedTeacherIds?: string[];
@@ -66,6 +68,8 @@ interface SchoolPortalProps {
   onUpdateCardDesign: (design: CardDesignSettings) => void;
   onUpdatePosterDesign?: (design: PosterDesignSettings) => void;
   onSavePosterDesignToCloud?: (design: PosterDesignSettings) => Promise<void>;
+  onUpdateAnswerSheetDesign?: (design: AnswerSheetDesignSettings) => void;
+  onSaveAnswerSheetDesignToCloud?: (design: AnswerSheetDesignSettings) => Promise<void>;
   onUpdatePrintSettings: (settings: PrintSettings) => void;
   onUpdateSchool: (school: School) => void;
   onUpdateExam: (exam: Exam) => void;
@@ -104,6 +108,7 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
   teachers = [],
   cardDesign,
   posterDesign,
+  answerSheetDesign,
   printSettings,
   selectedStudentIds,
   selectedTeacherIds = [],
@@ -130,6 +135,8 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
   onUpdateCardDesign,
   onUpdatePosterDesign,
   onSavePosterDesignToCloud,
+  onUpdateAnswerSheetDesign,
+  onSaveAnswerSheetDesignToCloud,
   onUpdatePrintSettings,
   onUpdateSchool,
   onUpdateExam,
@@ -384,12 +391,17 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
             teachers={teachers}
             design={cardDesign}
             posterDesign={posterDesign || DEFAULT_POSTER_DESIGN}
+            answerSheetDesign={answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN}
             onUpdateDesign={onUpdateCardDesign}
             onUpdatePosterDesign={onUpdatePosterDesign}
             onSavePosterDesignToCloud={onSavePosterDesignToCloud}
+            onUpdateAnswerSheetDesign={onUpdateAnswerSheetDesign}
+            onSaveAnswerSheetDesignToCloud={onSaveAnswerSheetDesignToCloud}
             onNavigateToPrint={(category) => {
               if (category === 'exam_poster') {
                 setPrintInitialCategory('exam_poster');
+              } else if (category === 'answer_sheet') {
+                setPrintInitialCategory('answer_sheet');
               } else {
                 setPrintInitialCategory('menu');
               }
@@ -412,6 +424,7 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
             onSelectAllStudents={onSelectAllStudents}
             design={cardDesign}
             posterDesign={posterDesign || DEFAULT_POSTER_DESIGN}
+            answerSheetDesign={answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN}
             printSettings={printSettings}
             onUpdatePrintSettings={onUpdatePrintSettings}
             initialCategory={printInitialCategory}
@@ -421,6 +434,10 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
             }}
             onNavigateToPosterDesigner={() => {
               setDesignerInitialMenu('poster');
+              onNavigate('designer');
+            }}
+            onNavigateToAnswerSheetDesigner={() => {
+              setDesignerInitialMenu('answersheet');
               onNavigate('designer');
             }}
           />

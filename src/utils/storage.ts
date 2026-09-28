@@ -1,4 +1,4 @@
-import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, UserAccount, GoogleSheetsConfig, UserSchoolData, LoginLogEntry } from '../types';
+import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, AnswerSheetDesignSettings, UserAccount, GoogleSheetsConfig, UserSchoolData, LoginLogEntry } from '../types';
 import {
   DEFAULT_SCHOOL,
   DEFAULT_EXAM,
@@ -6,6 +6,7 @@ import {
   DEFAULT_CARD_DESIGN,
   DEFAULT_PRINT_SETTINGS,
   DEFAULT_POSTER_DESIGN,
+  DEFAULT_ANSWER_SHEET_DESIGN,
   DEFAULT_TEACHERS,
   MOCK_STUDENTS,
 } from '../data/mockData';
@@ -42,6 +43,7 @@ export interface AppState {
   teachers: Teacher[];
   cardDesign: CardDesignSettings;
   posterDesign: PosterDesignSettings;
+  answerSheetDesign: AnswerSheetDesignSettings;
   printSettings: PrintSettings;
   selectedStudentIds: string[];
   selectedTeacherIds: string[];
@@ -157,6 +159,7 @@ export const loadStoredState = (): AppState => {
         teachers: cleanTeachers,
         cardDesign: { ...DEFAULT_CARD_DESIGN, ...(parsed.cardDesign || {}) },
         posterDesign: { ...DEFAULT_POSTER_DESIGN, ...(parsed.posterDesign || {}) },
+        answerSheetDesign: { ...DEFAULT_ANSWER_SHEET_DESIGN, ...(parsed.answerSheetDesign || {}) },
         printSettings: { ...DEFAULT_PRINT_SETTINGS, ...(parsed.printSettings || {}) },
         selectedStudentIds: Array.isArray(parsed.selectedStudentIds)
           ? Array.from(new Set(parsed.selectedStudentIds.filter((id: string) => cleanStudents.some((s) => s.id === id))))
@@ -189,6 +192,7 @@ export const loadStoredState = (): AppState => {
     teachers: DEFAULT_TEACHERS,
     cardDesign: DEFAULT_CARD_DESIGN,
     posterDesign: DEFAULT_POSTER_DESIGN,
+    answerSheetDesign: DEFAULT_ANSWER_SHEET_DESIGN,
     printSettings: DEFAULT_PRINT_SETTINGS,
     selectedStudentIds: [],
     selectedTeacherIds: DEFAULT_TEACHERS.map((t) => t.id),
@@ -230,6 +234,7 @@ export const resetStoredState = (): AppState => {
     teachers: DEFAULT_TEACHERS,
     cardDesign: DEFAULT_CARD_DESIGN,
     posterDesign: DEFAULT_POSTER_DESIGN,
+    answerSheetDesign: DEFAULT_ANSWER_SHEET_DESIGN,
     printSettings: DEFAULT_PRINT_SETTINGS,
     selectedStudentIds: [],
     selectedTeacherIds: DEFAULT_TEACHERS.map((t) => t.id),

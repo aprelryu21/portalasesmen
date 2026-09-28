@@ -233,6 +233,51 @@ export type PosterStyleId =
 
 export type PosterOrientation = 'portrait' | 'landscape';
 
+export interface AnswerSheetKopSettings {
+  showLogo: boolean;
+  logoUrl?: string;
+  line1: string;
+  line2: string;
+  line3: string;
+  line4: string;
+  line5: string;
+}
+
+export interface AnswerSheetIdentitySettings {
+  title: string;
+  examTitle: string;
+  yearTitle: string;
+  scoreLabel: string;
+  nameLabel: string;
+  classLabel: string;
+  subjectLabel: string;
+  dateLabel: string;
+}
+
+export type AnswerSheetPgCount = 10 | 15 | 20 | 25 | 50;
+export type AnswerSheetIsianCount = 5 | 10 | 15 | 20;
+export type AnswerSheetUraianCount = 5 | 10;
+
+export interface AnswerSheetQuestionsSettings {
+  enablePg: boolean;
+  pgCount: AnswerSheetPgCount;
+  pgOptions: 'ABCD' | 'ABCDE';
+  pgLayout?: '5_rows' | '10_rows';
+  enableIsian: boolean;
+  isianCount: AnswerSheetIsianCount;
+  enableUraian: boolean;
+  uraianCount: AnswerSheetUraianCount;
+  uraianRowsPerNumber: number;
+}
+
+export interface AnswerSheetDesignSettings {
+  kop: AnswerSheetKopSettings;
+  identity: AnswerSheetIdentitySettings;
+  questions: AnswerSheetQuestionsSettings;
+  fontFamily: 'serif' | 'sans';
+  updatedAt?: string;
+}
+
 export interface UserSchoolData {
   school: School;
   exam: Exam;
@@ -241,6 +286,7 @@ export interface UserSchoolData {
   teachers?: Teacher[];
   cardDesign: CardDesignSettings;
   posterDesign?: PosterDesignSettings;
+  answerSheetDesign?: AnswerSheetDesignSettings;
   printSettings: PrintSettings;
   selectedStudentIds: string[];
 }
@@ -252,5 +298,6 @@ export interface GoogleSheetsConfig {
   lastSyncedAt?: string;
   isConnected: boolean;
 }
+
 
 

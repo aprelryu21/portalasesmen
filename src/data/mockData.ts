@@ -1,4 +1,4 @@
-import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings } from '../types';
+import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, AnswerSheetDesignSettings } from '../types';
 
 export const DEFAULT_SCHOOL: School = {
   id: '',
@@ -259,6 +259,40 @@ export const DEFAULT_POSTER_DESIGN: PosterDesignSettings = {
   orientation: 'portrait',
   watermarkOpacity: 10,
   showSchoolAddressInFooter: true,
+};
+
+export const DEFAULT_ANSWER_SHEET_DESIGN: AnswerSheetDesignSettings = {
+  kop: {
+    showLogo: true,
+    logoUrl: '',
+    line1: 'PEMERINTAH KABUPATEN KEDIRI',
+    line2: 'DINAS PENDIDIKAN',
+    line3: 'SD NEGERI MEDOWO 1',
+    line4: 'Jl Raya Medowo Ds. Medowo, Kec. Kandangan, Kab. Kediri 64294',
+    line5: 'Telepon : - , Pos-el : sdnmedowosatu@gmail.com',
+  },
+  identity: {
+    title: 'LEMBAR JAWABAN',
+    examTitle: 'ASESMEN SUMATIF AKHIR SEMESTER 1',
+    yearTitle: 'TAHUN PELAJARAN 2024 – 2025',
+    scoreLabel: 'Nilai:',
+    nameLabel: 'Nama / No',
+    classLabel: 'Kelas',
+    subjectLabel: 'Mata Pelajaran',
+    dateLabel: 'Hari / Tanggal',
+  },
+  questions: {
+    enablePg: true,
+    pgCount: 25,
+    pgOptions: 'ABCD',
+    pgLayout: '5_rows',
+    enableIsian: true,
+    isianCount: 10,
+    enableUraian: true,
+    uraianCount: 5,
+    uraianRowsPerNumber: 3,
+  },
+  fontFamily: 'sans',
 };
 
 // Tanpa data dummy - seluruh data guru diambil langsung dari spreadsheet
