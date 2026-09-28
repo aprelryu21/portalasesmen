@@ -266,6 +266,7 @@ export default function App() {
             : (schInfo?.exam ? [schInfo.exam] : [DEFAULT_EXAM]);
           const activeExam = userExams.find((e) => e.isActive) || schInfo?.exam || userExams[0] || DEFAULT_EXAM;
           const existingSchoolData = state.schoolDataMap?.[u] || state.schoolDataMap?.[rawU];
+          const des = designsMap[u] || designsMap[rawU];
 
           const userSchoolData: UserSchoolData = {
             school: schInfo?.school || {

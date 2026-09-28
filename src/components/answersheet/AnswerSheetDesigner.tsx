@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   School,
   Exam,
@@ -118,7 +118,7 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
         line2: 'DINAS PENDIDIKAN',
         line3: school.name ? school.name.toUpperCase() : 'SD NEGERI CONTOH',
         line4: school.address || 'Jl. Pendidikan No. 123',
-        line5: `Telepon: ${school.phone || '-'} | Pos-el: ${school.email || '-'}`,
+        line5: 'Telepon : - , Pos-el : -',
       },
       identity: {
         ...localDesign.identity,
