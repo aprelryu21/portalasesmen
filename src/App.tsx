@@ -236,6 +236,8 @@ export default function App() {
         const teachersMap = res.data?.teachersMap || {};
         const examsMap = res.data?.examsMap || {};
         const designsMap = res.data?.designsMap || {};
+        const posterDesignsMap = res.data?.posterDesignsMap || {};
+        const answerSheetsMap = res.data?.answerSheetsMap || {};
 
         // Pastikan akun admin Nagata selalu ada
         let mergedAccounts = [...rawAccounts];
@@ -251,6 +253,8 @@ export default function App() {
         Object.keys(teachersMap).forEach((k) => allUsernames.add(k));
         Object.keys(examsMap).forEach((k) => allUsernames.add(k));
         Object.keys(designsMap).forEach((k) => allUsernames.add(k));
+        Object.keys(posterDesignsMap).forEach((k) => allUsernames.add(k));
+        Object.keys(answerSheetsMap).forEach((k) => allUsernames.add(k));
 
         // Susun schoolDataMap lengkap dari seluruh data spreadsheet
         const newSchoolDataMap: Record<string, UserSchoolData> = {};
@@ -280,8 +284,8 @@ export default function App() {
             students: studs,
             teachers: teachs,
             cardDesign: des?.cardDesign || DEFAULT_CARD_DESIGN,
-            posterDesign: existingSchoolData?.posterDesign || DEFAULT_POSTER_DESIGN,
-            answerSheetDesign: existingSchoolData?.answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN,
+            posterDesign: posterDesignsMap[u] || posterDesignsMap[rawU] || existingSchoolData?.posterDesign || DEFAULT_POSTER_DESIGN,
+            answerSheetDesign: answerSheetsMap[u] || answerSheetsMap[rawU] || existingSchoolData?.answerSheetDesign || DEFAULT_ANSWER_SHEET_DESIGN,
             printSettings: des?.printSettings || DEFAULT_PRINT_SETTINGS,
             selectedStudentIds: studs.map((s) => s.id),
           };

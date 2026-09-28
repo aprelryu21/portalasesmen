@@ -6,6 +6,7 @@ import {
   AnswerSheetPgCount,
   AnswerSheetIsianCount,
   AnswerSheetUraianCount,
+  AnswerSheetTemplateStyle,
 } from '../../types';
 import {
   FileText,
@@ -20,6 +21,7 @@ import {
   Settings2,
   Check,
   RotateCcw,
+  Palette,
 } from 'lucide-react';
 
 interface AnswerSheetDesignerProps {
@@ -41,7 +43,7 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
   onNavigateToPrint,
   onBackToMenu,
 }) => {
-  const [activeTab, setActiveTab] = useState<'kop' | 'identity' | 'questions'>('kop');
+  const [activeTab, setActiveTab] = useState<'kop' | 'identity' | 'questions' | 'style'>('kop');
   const [isControlsMinimized, setIsControlsMinimized] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
@@ -111,6 +113,7 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
   const handleResetToSchoolDefault = () => {
     const nextDesign: AnswerSheetDesignSettings = {
       ...localDesign,
+      templateStyle: 'classic',
       kop: {
         showLogo: true,
         logoUrl: school.logoUrl || '',
@@ -130,7 +133,7 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
     onUpdateDesign(nextDesign);
   };
 
-  const { kop, identity, questions, fontFamily } = localDesign;
+  const { kop, identity, questions, fontFamily, templateStyle = 'classic' } = localDesign;
 
   // Calculate question summary & estimated pages
   const totalQuestions =
@@ -326,6 +329,15 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
               >
                 3. Butir Soal (PG, Isian, Uraian)
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('style')}
+                className={`px-3 py-1.5 rounded-lg border-2 border-black text-xs font-black uppercase shadow-[2px_2px_0px_#000] transition-all cursor-pointer ${
+                  activeTab === 'style' ? 'bg-emerald-300 text-black' : 'bg-white hover:bg-neutral-50 text-neutral-700'
+                }`}
+              >
+                4. Gaya Template
+              </button>
             </div>
 
             {/* TAB 1: KOP SEKOLAH & LOGO */}
@@ -477,28 +489,12 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
                     />
                   </div>
 
-                  {/* Nama Asesmen / Ujian */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-800">Nama Asesmen / Kegiatan</label>
-                    <input
-                      type="text"
-                      value={identity.examTitle}
-                      onChange={(e) => updateIdentity('examTitle', e.target.value)}
-                      placeholder="ASESMEN SUMATIF AKHIR SEMESTER 1"
-                      className="w-full px-3 py-1.5 text-xs border-2 border-black rounded-lg font-black uppercase"
-                    />
-                  </div>
-
-                  {/* Tahun Pelajaran */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-800">Tahun Pelajaran</label>
-                    <input
-                      type="text"
-                      value={identity.yearTitle}
-                      onChange={(e) => updateIdentity('yearTitle', e.target.value)}
-                      placeholder="TAHUN PELAJARAN 2024 – 2025"
-                      className="w-full px-3 py-1.5 text-xs border-2 border-black rounded-lg font-bold uppercase"
-                    />
+                  {/* Info Box Pengisian Otomatis Nama Asesmen & Tahun Pelajaran */}
+                  <div className="md:col-span-2 p-3 bg-amber-50 border-2 border-amber-300 rounded-xl flex items-start gap-2.5">
+                    <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-900 leading-relaxed">
+                      <span className="font-bold">Info Pengisian Otomatis:</span> Teks <strong>Nama Asesmen</strong> dan <strong>Tahun Pelajaran</strong> tidak perlu diatur di form ini. Keduanya otomatis disesuaikan berdasarkan data asesmen yang dipilih pada halaman <strong>CETAK LEMBAR JAWABAN</strong> (pada preview ditampilkan sebagai placeholder <em>XXX</em>).
+                    </div>
                   </div>
 
                   {/* Label Nama / No */}
@@ -758,6 +754,90 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
                 </div>
               </div>
             )}
+
+            {/* TAB 4: GAYA TEMPLATE */}
+            {activeTab === 'style' && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div>
+                  <h4 className="text-xs font-black uppercase text-neutral-900">
+                    Pilih Gaya Template Lembar Jawaban (5 Tema Tersedia)
+                  </h4>
+                  <p className="text-xs text-neutral-600 mt-0.5">
+                    Pilih desain visual lembar jawaban yang Anda inginkan. Seluruh gaya disesuaikan dengan standar pencetakan kertas A4 dan otomatis tersimpan saat Anda menekan tombol Simpan Desain.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[
+                    {
+                      id: 'classic' as const,
+                      name: '1. Klasik Formal (Kedinasan)',
+                      tag: 'Standar Resmi Dinas',
+                      desc: 'Desain format baku ujian dinas dengan garis ganda tebal pada kop, tabel identitas tegas, dan bulatan jawaban solid.',
+                      badgeBg: 'bg-neutral-800 text-white',
+                    },
+                    {
+                      id: 'modern' as const,
+                      name: '2. Modern Minimalis',
+                      tag: 'Sudut Halus & Bersih',
+                      desc: 'Garis batas bersih, tabel identitas dengan sudut rounded halus, badge judul sesi modern, dan opsi rapi.',
+                      badgeBg: 'bg-emerald-700 text-white',
+                    },
+                    {
+                      id: 'geometric' as const,
+                      name: '3. Kotak Geometris (Grid)',
+                      tag: 'Bingkai Tegas & Kontras',
+                      desc: 'Bingkai luar-dalam bergaris tebal kokoh, judul sesi blok hitam kontras, dan garis kisi-kisi terstruktur jelas.',
+                      badgeBg: 'bg-indigo-700 text-white',
+                    },
+                    {
+                      id: 'elegant' as const,
+                      name: '4. Aksen Elegan & Bergaris',
+                      tag: 'Klasik Dekoratif',
+                      desc: 'Kop beraksen garis ganda klasik, kotak nilai dobel berbobot, dan tipografi seimbang.',
+                      badgeBg: 'bg-purple-700 text-white',
+                    },
+                    {
+                      id: 'compact' as const,
+                      name: '5. Compact & Clean Pro',
+                      tag: 'Hemat Ruang (1 Lembar A4)',
+                      desc: 'Layout efisien ruang maksimal, padding presisi, dan garis pemisah rapi dioptimalkan untuk 1 lembar A4 penuh.',
+                      badgeBg: 'bg-blue-700 text-white',
+                    },
+                  ].map((tpl) => {
+                    const isSelected = (templateStyle || 'classic') === tpl.id;
+                    return (
+                      <div
+                        key={tpl.id}
+                        onClick={() => {
+                          const next = { ...localDesign, templateStyle: tpl.id };
+                          setLocalDesign(next);
+                          onUpdateDesign(next);
+                        }}
+                        className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                          isSelected
+                            ? 'border-black bg-emerald-50/80 shadow-[3px_3px_0px_#000] ring-2 ring-emerald-500'
+                            : 'border-neutral-200 bg-white hover:border-black hover:bg-neutral-50 shadow-xs'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${tpl.badgeBg}`}>
+                            {tpl.tag}
+                          </span>
+                          {isSelected && (
+                            <span className="flex items-center gap-1 text-[11px] font-black text-emerald-800">
+                              <Check className="w-3.5 h-3.5" /> Terpilih
+                            </span>
+                          )}
+                        </div>
+                        <h5 className="text-xs font-black text-neutral-900">{tpl.name}</h5>
+                        <p className="text-[11px] text-neutral-600 mt-1 leading-snug">{tpl.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -839,28 +919,31 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
               </div>
             </div>
 
-            {/* GARIS GANDA KOP SURAT (DOUBLE HORIZONTAL RULE) */}
-            <div className="border-b-[3px] border-black pb-[1.5px]">
-              <div className="border-b border-black"></div>
-            </div>
+            {/* GARIS PEMBATAS KOP SURAT */}
+            {renderKopDivider(templateStyle)}
 
             {/* TABEL IDENTITAS & NILAI (BOXED TABLE SESUAI FOTO) */}
-            <div className="border-2 border-black text-black">
+            <div className={getTableClassName(templateStyle)}>
               {/* Row Atas: Judul Asesmen (Kiri/Tengah) & Kotak Nilai (Kanan) */}
               <div className="grid grid-cols-4 border-b border-black">
                 <div className="col-span-3 p-2 text-center border-r border-black flex flex-col justify-center">
                   <div className="text-xs sm:text-sm font-black uppercase tracking-wider">
                     {identity.title || 'LEMBAR JAWABAN'}
                   </div>
-                  <div className="text-xs sm:text-sm font-black uppercase tracking-wide">
-                    {identity.examTitle || 'ASESMEN SUMATIF'}
+                  <div className="text-xs sm:text-sm font-black uppercase tracking-wide text-neutral-800">
+                    ASESMEN SUMATIF XXXXXXXXXX
                   </div>
-                  <div className="text-[11px] sm:text-xs font-bold uppercase tracking-wide">
-                    {identity.yearTitle || 'TAHUN PELAJARAN 2024 – 2025'}
+                  <div className="text-[11px] sm:text-xs font-bold uppercase tracking-wide text-neutral-700">
+                    TAHUN PELAJARAN 20XX / 20XX
                   </div>
                 </div>
 
-                <div className="col-span-1 p-1.5 flex flex-col justify-between" style={{ minHeight: '68px' }}>
+                <div
+                  className={`col-span-1 p-1.5 flex flex-col justify-between ${
+                    templateStyle === 'modern' ? 'bg-neutral-50/50' : ''
+                  }`}
+                  style={{ minHeight: '68px' }}
+                >
                   <div className="text-[11px] font-bold text-neutral-800">
                     {identity.scoreLabel || 'Nilai:'}
                   </div>
@@ -911,26 +994,30 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
 
             {/* BAGIAN I: PILIHAN GANDA */}
             {questions.enablePg && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between text-xs font-black uppercase border-b border-black pb-0.5">
+              <div
+                className="space-y-1.5 pt-1 break-inside-avoid"
+                style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+              >
+                <div className={getSectionHeaderClassName(templateStyle)}>
                   <span>I. PILIHAN GANDA</span>
                   <span className="text-[10px] font-normal normal-case text-neutral-600">
                     Berikan tanda silang (X) atau hitamkan salah satu huruf pilihan jawaban yang benar!
                   </span>
                 </div>
 
-                {/* Render Grid Soal PG (5 sampai 10 nomor ke bawah) */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[11px] pt-1">
-                  {renderPgColumns(questions.pgCount, questions.pgOptions)}
-                </div>
+                {/* Render Grid Soal PG dengan pembagian kolom proporsional */}
+                {renderPgSection(questions.pgCount, questions.pgOptions, templateStyle)}
               </div>
             )}
 
             {/* BAGIAN II: ISIAN SINGKAT */}
             {questions.enableIsian && (
-              <div className="space-y-1.5 pt-2">
-                <div className="text-xs font-black uppercase border-b border-black pb-0.5">
-                  II. ISIAN SINGKAT
+              <div
+                className="space-y-1.5 pt-1.5 break-inside-avoid"
+                style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+              >
+                <div className={getSectionHeaderClassName(templateStyle)}>
+                  <span>II. ISIAN SINGKAT</span>
                 </div>
 
                 {renderIsianColumns(questions.isianCount)}
@@ -939,12 +1026,15 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
 
             {/* BAGIAN III: URAIAN */}
             {questions.enableUraian && (
-              <div className="space-y-2 pt-2">
-                <div className="text-xs font-black uppercase border-b border-black pb-0.5">
-                  III. URAIAN
+              <div
+                className="space-y-1.5 pt-1.5 break-inside-avoid"
+                style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+              >
+                <div className={getSectionHeaderClassName(templateStyle)}>
+                  <span>III. URAIAN</span>
                 </div>
 
-                <div className="space-y-2.5 text-[11px] pt-0.5">
+                <div className="space-y-2 text-[11px] pt-0.5">
                   {Array.from({ length: questions.uraianCount }).map((_, idx) => (
                     <div key={idx} className="space-y-1">
                       <div className="flex items-center gap-1 font-bold">
@@ -961,16 +1051,19 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
             )}
 
             {/* Tanda Tangan Orang Tua / Peserta */}
-            <div className="pt-4 flex items-center justify-between text-[10px] text-neutral-700">
+            <div
+              className="pt-3 flex items-center justify-between text-[10px] text-neutral-700 break-inside-avoid"
+              style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+            >
               <div className="text-center w-36">
                 <div>Tanda Tangan Peserta</div>
-                <div className="h-10"></div>
+                <div className="h-9"></div>
                 <div className="border-b border-dotted border-black"></div>
               </div>
 
               <div className="text-center w-36">
                 <div>Paraf Pengawas</div>
-                <div className="h-10"></div>
+                <div className="h-9"></div>
                 <div className="border-b border-dotted border-black"></div>
               </div>
             </div>
@@ -982,30 +1075,48 @@ export const AnswerSheetDesigner: React.FC<AnswerSheetDesignerProps> = ({
 };
 
 /**
- * Helper untuk menyusun butir PG menjadi kolom-kolom rapi (5 sampai 10 nomor ke bawah)
- * Jarak antara nomor dan opsi pilihan (A) (B) (C) (D) dirapatkan
+ * Helper untuk menyusun butir PG menjadi kolom-kolom rapi:
+ * - 10 soal -> 2 kolom (1-5, 6-10), berjarak tengah proporsional
+ * - 15 soal -> 3 kolom (1-5, 6-10, 11-15)
+ * - 20 soal -> 4 kolom (1-5, 6-10, 11-15, 16-20)
+ * - 25 soal -> 5 kolom (1-5, 6-10, 11-15, 16-20, 21-25)
+ * - 50 soal -> 5 kolom (1-10, 11-20, 21-30, 31-40, 41-50)
  */
-function renderPgColumns(count: number, options: 'ABCD' | 'ABCDE') {
+function renderPgSection(
+  count: number,
+  options: 'ABCD' | 'ABCDE',
+  templateStyle: AnswerSheetTemplateStyle = 'classic'
+) {
   const letters = options === 'ABCDE' ? ['A', 'B', 'C', 'D', 'E'] : ['A', 'B', 'C', 'D'];
-
-  const rowsPerCol = count <= 15 ? 5 : count === 25 ? 5 : 10;
+  const rowsPerCol = count === 50 ? 10 : 5;
   const numColumns = Math.ceil(count / rowsPerCol);
 
   const columns = [];
   for (let col = 0; col < numColumns; col++) {
-    const colItems = [];
     const startNum = col * rowsPerCol + 1;
     const endNum = Math.min((col + 1) * rowsPerCol, count);
+    const colItems = [];
 
     for (let num = startNum; num <= endNum; num++) {
       colItems.push(
-        <div key={num} className="flex items-center gap-1.5 py-0.5 border-b border-neutral-200/60">
-          <span className="w-5 font-bold text-neutral-900 shrink-0 text-[10px] sm:text-[11px] text-right">{num}.</span>
+        <div
+          key={num}
+          className={`flex items-center gap-1.5 py-0.5 border-b ${
+            templateStyle === 'geometric'
+              ? 'border-neutral-300'
+              : templateStyle === 'modern'
+              ? 'border-neutral-100'
+              : 'border-neutral-200/60'
+          }`}
+        >
+          <span className="w-5 font-bold text-neutral-900 shrink-0 text-[10px] sm:text-[11px] text-right">
+            {num}.
+          </span>
           <div className="flex items-center gap-1">
             {letters.map((letter) => (
               <span
                 key={letter}
-                className="w-4 h-4 rounded-full border border-black flex items-center justify-center text-[9px] font-bold text-neutral-900 select-none hover:bg-neutral-100 cursor-pointer"
+                className={getBubbleClassName(templateStyle)}
               >
                 {letter}
               </span>
@@ -1016,13 +1127,25 @@ function renderPgColumns(count: number, options: 'ABCD' | 'ABCDE') {
     }
 
     columns.push(
-      <div key={col} className="bg-neutral-50/70 p-1.5 rounded border border-neutral-200 space-y-0.5">
+      <div key={col} className="space-y-0.5 flex-1 min-w-[100px]">
         {colItems}
       </div>
     );
   }
 
-  return columns;
+  // Atur grid agar berjarak proporsional dan tidak meninggalkan space kosong lebar di kanan
+  let gridClass = 'grid gap-y-2 text-[11px] pt-1 w-full';
+  if (numColumns === 2) {
+    gridClass += ' grid-cols-2 gap-x-12 sm:gap-x-20 max-w-xl mx-auto';
+  } else if (numColumns === 3) {
+    gridClass += ' grid-cols-3 gap-x-8 max-w-2xl mx-auto';
+  } else if (numColumns === 4) {
+    gridClass += ' grid-cols-2 sm:grid-cols-4 gap-x-6';
+  } else {
+    gridClass += ' grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-3.5';
+  }
+
+  return <div className={gridClass}>{columns}</div>;
 }
 
 /**
@@ -1054,19 +1177,90 @@ function renderIsianColumns(count: number) {
     );
   }
 
+  const gridClass =
+    numColumns === 1
+      ? 'grid grid-cols-1 max-w-md'
+      : numColumns === 2
+      ? 'grid grid-cols-2 gap-x-12 sm:gap-x-16 max-w-xl mx-auto'
+      : numColumns === 3
+      ? 'grid grid-cols-3 gap-x-8'
+      : 'grid grid-cols-4 gap-x-6';
+
   return (
-    <div
-      className={`grid gap-x-6 gap-y-2 text-[11px] pt-1 ${
-        numColumns === 1
-          ? 'grid-cols-1'
-          : numColumns === 2
-          ? 'grid-cols-2'
-          : numColumns === 3
-          ? 'grid-cols-3'
-          : 'grid-cols-4'
-      }`}
-    >
+    <div className={`${gridClass} gap-y-2 text-[11px] pt-1 w-full`}>
       {columns}
     </div>
   );
+}
+
+function renderKopDivider(style: AnswerSheetTemplateStyle = 'classic') {
+  switch (style) {
+    case 'modern':
+      return <div className="border-b-2 border-neutral-900 pb-0.5"></div>;
+    case 'geometric':
+      return <div className="border-b-[3.5px] border-black pb-0.5"></div>;
+    case 'elegant':
+      return (
+        <div className="border-b-[3px] border-black pb-[1.5px]">
+          <div className="border-b border-black"></div>
+        </div>
+      );
+    case 'compact':
+      return <div className="border-b-[1.5px] border-black pb-0.5"></div>;
+    case 'classic':
+    default:
+      return (
+        <div className="border-b-[3px] border-black pb-[1.5px]">
+          <div className="border-b border-black"></div>
+        </div>
+      );
+  }
+}
+
+function getTableClassName(style: AnswerSheetTemplateStyle = 'classic') {
+  switch (style) {
+    case 'modern':
+      return 'border-2 border-neutral-900 rounded-lg overflow-hidden text-black bg-white shadow-xs';
+    case 'geometric':
+      return 'border-2 border-black text-black font-semibold bg-white';
+    case 'elegant':
+      return 'border-2 border-black text-black bg-white shadow-xs';
+    case 'compact':
+      return 'border-[1.5px] border-black text-black text-[10.5px]';
+    case 'classic':
+    default:
+      return 'border-2 border-black text-black bg-white';
+  }
+}
+
+function getSectionHeaderClassName(style: AnswerSheetTemplateStyle = 'classic') {
+  switch (style) {
+    case 'modern':
+      return 'flex items-center justify-between text-xs font-black uppercase pb-1 border-b-2 border-neutral-900';
+    case 'geometric':
+      return 'flex items-center justify-between text-xs font-black uppercase bg-black text-white px-2 py-1 mb-1';
+    case 'elegant':
+      return 'flex items-center justify-between text-xs font-black uppercase border-b-2 border-black border-double pb-1 tracking-wider';
+    case 'compact':
+      return 'flex items-center justify-between text-[11px] font-black uppercase border-b border-black/80 pb-0.5';
+    case 'classic':
+    default:
+      return 'flex items-center justify-between text-xs font-black uppercase border-b border-black pb-0.5';
+  }
+}
+
+function getBubbleClassName(style: AnswerSheetTemplateStyle = 'classic') {
+  switch (style) {
+    case 'modern':
+      return 'w-4 h-4 rounded-full border-2 border-neutral-800 flex items-center justify-center text-[9px] font-black text-neutral-900 select-none hover:bg-neutral-100 cursor-pointer';
+    case 'geometric':
+      return 'w-4 h-4 rounded-full border-2 border-black flex items-center justify-center text-[9px] font-black text-black bg-white select-none hover:bg-neutral-200 cursor-pointer';
+    case 'elegant':
+      return 'w-4 h-4 rounded-full border border-black shadow-[0.5px_0.5px_0px_#000] flex items-center justify-center text-[9px] font-bold text-neutral-900 select-none hover:bg-neutral-100 cursor-pointer';
+    case 'compact':
+      return 'w-3.5 h-3.5 rounded-full border border-black flex items-center justify-center text-[8.5px] font-black text-neutral-900 select-none hover:bg-neutral-100 cursor-pointer';
+    case 'classic':
+    default:
+      return 'w-4 h-4 rounded-full border border-black flex items-center justify-center text-[9px] font-bold text-neutral-900 select-none hover:bg-neutral-100 cursor-pointer';
+  }
 }

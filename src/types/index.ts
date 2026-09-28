@@ -270,11 +270,14 @@ export interface AnswerSheetQuestionsSettings {
   uraianRowsPerNumber: number;
 }
 
+export type AnswerSheetTemplateStyle = 'classic' | 'modern' | 'geometric' | 'elegant' | 'compact';
+
 export interface AnswerSheetDesignSettings {
   kop: AnswerSheetKopSettings;
   identity: AnswerSheetIdentitySettings;
   questions: AnswerSheetQuestionsSettings;
   fontFamily: 'serif' | 'sans';
+  templateStyle?: AnswerSheetTemplateStyle;
   updatedAt?: string;
 }
 

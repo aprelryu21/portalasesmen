@@ -83,6 +83,8 @@ export interface GasAllDataResponse {
     teachersMap?: Record<string, Teacher[]>;
     examsMap?: Record<string, Exam[]>;
     designsMap?: Record<string, { cardDesign: CardDesignSettings; printSettings: PrintSettings }>;
+    posterDesignsMap?: Record<string, PosterDesignSettings>;
+    answerSheetsMap?: Record<string, AnswerSheetDesignSettings>;
     loginLogs?: LoginLogEntry[];
   };
 }

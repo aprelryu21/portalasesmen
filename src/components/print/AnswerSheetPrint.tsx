@@ -3,6 +3,7 @@ import {
   School,
   Exam,
   AnswerSheetDesignSettings,
+  AnswerSheetTemplateStyle,
 } from '../../types';
 import {
   Printer,
@@ -91,9 +92,11 @@ export const AnswerSheetPrint: React.FC<AnswerSheetPrintProps> = ({
               size: A4 portrait;
               margin: 10mm;
             }
-            body {
+            html, body {
               background: white !important;
               color: black !important;
+              height: auto !important;
+              min-height: auto !important;
             }
             .no-print {
               display: none !important;
@@ -103,14 +106,23 @@ export const AnswerSheetPrint: React.FC<AnswerSheetPrintProps> = ({
               width: 100% !important;
             }
             .a4-print-sheet {
-              page-break-after: always;
-              break-after: page;
               box-shadow: none !important;
               border: none !important;
               padding: 0 !important;
               margin: 0 !important;
               width: 100% !important;
-              min-height: 100% !important;
+              min-height: auto !important;
+              height: auto !important;
+              page-break-after: always;
+              break-after: page;
+            }
+            .a4-print-sheet:last-child {
+              page-break-after: auto;
+              break-after: auto;
+            }
+            .break-inside-avoid {
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
             }
           }
           @media screen {
@@ -410,6 +422,7 @@ const RenderAnswerSheetDocument: React.FC<RenderDocProps> = ({
   isPrintMode = false,
 }) => {
   const { kop, identity, questions, fontFamily } = design;
+  const templateStyle: AnswerSheetTemplateStyle = design.templateStyle || 'classic';
 
   return (
     <div
@@ -468,13 +481,11 @@ const RenderAnswerSheetDocument: React.FC<RenderDocProps> = ({
         </div>
       </div>
 
-      {/* GARIS GANDA KOP SURAT */}
-      <div className="border-b-[3px] border-black pb-[1.5px]">
-        <div className="border-b border-black"></div>
-      </div>
+      {/* GARIS PEMBATAS KOP SURAT */}
+      {renderKopDivider(templateStyle)}
 
       {/* TABEL IDENTITAS & NILAI (BOXED TABLE SESUAI FOTO) */}
-      <div className="border-2 border-black text-black">
+      <div className={getTableClassName(templateStyle)}>
         {/* Row Atas: Judul Asesmen & Kotak Nilai */}
         <div className="grid grid-cols-4 border-b border-black">
           <div className="col-span-3 p-2 text-center border-r border-black flex flex-col justify-center">
@@ -489,7 +500,12 @@ const RenderAnswerSheetDocument: React.FC<RenderDocProps> = ({
             </div>
           </div>
 
-          <div className="col-span-1 p-1.5 flex flex-col justify-between" style={{ minHeight: '68px' }}>
+          <div
+            className={`col-span-1 p-1.5 flex flex-col justify-between ${
+              templateStyle === 'modern' ? 'bg-neutral-50/50' : ''
+            }`}
+            style={{ minHeight: '68px' }}
+          >
             <div className="text-[11px] font-bold text-neutral-800">
               {identity.scoreLabel || 'Nilai:'}
             </div>
@@ -539,25 +555,29 @@ const RenderAnswerSheetDocument: React.FC<RenderDocProps> = ({
 
       {/* BAGIAN I: PILIHAN GANDA */}
       {questions.enablePg && (
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between text-xs font-black uppercase border-b border-black pb-0.5">
+        <div
+          className="space-y-1.5 pt-1 break-inside-avoid"
+          style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+        >
+          <div className={getSectionHeaderClassName(templateStyle)}>
             <span>I. PILIHAN GANDA</span>
             <span className="text-[10px] font-normal normal-case text-neutral-600">
               Berikan tanda silang (X) atau hitamkan salah satu huruf pilihan jawaban yang benar!
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[11px] pt-0.5">
-            {renderPrintPgColumns(questions.pgCount, questions.pgOptions)}
-          </div>
+          {renderPrintPgSection(questions.pgCount, questions.pgOptions, templateStyle)}
         </div>
       )}
 
       {/* BAGIAN II: ISIAN SINGKAT */}
       {questions.enableIsian && (
-        <div className="space-y-1.5 pt-1.5">
-          <div className="text-xs font-black uppercase border-b border-black pb-0.5">
-            II. ISIAN SINGKAT
+        <div
+          className="space-y-1.5 pt-1.5 break-inside-avoid"
+          style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+        >
+          <div className={getSectionHeaderClassName(templateStyle)}>
+            <span>II. ISIAN SINGKAT</span>
           </div>
 
           {renderPrintIsianColumns(questions.isianCount)}
@@ -566,9 +586,12 @@ const RenderAnswerSheetDocument: React.FC<RenderDocProps> = ({
 
       {/* BAGIAN III: URAIAN */}
       {questions.enableUraian && (
-        <div className="space-y-1.5 pt-1.5">
-          <div className="text-xs font-black uppercase border-b border-black pb-0.5">
-            III. URAIAN
+        <div
+          className="space-y-1.5 pt-1.5 break-inside-avoid"
+          style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+        >
+          <div className={getSectionHeaderClassName(templateStyle)}>
+            <span>III. URAIAN</span>
           </div>
 
           <div className="space-y-2 text-[11px] pt-0.5">
@@ -588,7 +611,10 @@ const RenderAnswerSheetDocument: React.FC<RenderDocProps> = ({
       )}
 
       {/* Tanda Tangan Orang Tua / Peserta */}
-      <div className="pt-3 flex items-center justify-between text-[10px] text-neutral-700">
+      <div
+        className="pt-3 flex items-center justify-between text-[10px] text-neutral-700 break-inside-avoid"
+        style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+      >
         <div className="text-center w-36">
           <div>Tanda Tangan Peserta</div>
           <div className="h-9"></div>
@@ -605,26 +631,41 @@ const RenderAnswerSheetDocument: React.FC<RenderDocProps> = ({
   );
 };
 
-function renderPrintPgColumns(count: number, options: 'ABCD' | 'ABCDE') {
+function renderPrintPgSection(
+  count: number,
+  options: 'ABCD' | 'ABCDE',
+  templateStyle: AnswerSheetTemplateStyle = 'classic'
+) {
   const letters = options === 'ABCDE' ? ['A', 'B', 'C', 'D', 'E'] : ['A', 'B', 'C', 'D'];
-  const rowsPerCol = count <= 15 ? 5 : count === 25 ? 5 : 10;
+  const rowsPerCol = count === 50 ? 10 : 5;
   const numColumns = Math.ceil(count / rowsPerCol);
 
   const columns = [];
   for (let col = 0; col < numColumns; col++) {
-    const colItems = [];
     const startNum = col * rowsPerCol + 1;
     const endNum = Math.min((col + 1) * rowsPerCol, count);
+    const colItems = [];
 
     for (let num = startNum; num <= endNum; num++) {
       colItems.push(
-        <div key={num} className="flex items-center gap-1.5 py-0.5 border-b border-neutral-200/60">
-          <span className="w-5 font-bold text-neutral-900 shrink-0 text-[10px] sm:text-[11px] text-right">{num}.</span>
+        <div
+          key={num}
+          className={`flex items-center gap-1.5 py-0.5 border-b ${
+            templateStyle === 'geometric'
+              ? 'border-neutral-300'
+              : templateStyle === 'modern'
+              ? 'border-neutral-100'
+              : 'border-neutral-200/60'
+          }`}
+        >
+          <span className="w-5 font-bold text-neutral-900 shrink-0 text-[10px] sm:text-[11px] text-right">
+            {num}.
+          </span>
           <div className="flex items-center gap-1">
             {letters.map((letter) => (
               <span
                 key={letter}
-                className="w-4 h-4 rounded-full border border-black flex items-center justify-center text-[9px] font-bold text-neutral-800 select-none"
+                className={getBubbleClassName(templateStyle)}
               >
                 {letter}
               </span>
@@ -635,13 +676,25 @@ function renderPrintPgColumns(count: number, options: 'ABCD' | 'ABCDE') {
     }
 
     columns.push(
-      <div key={col} className="bg-neutral-50/70 p-1.5 rounded border border-neutral-200 space-y-0.5">
+      <div key={col} className="space-y-0.5 flex-1 min-w-[100px]">
         {colItems}
       </div>
     );
   }
 
-  return columns;
+  // Atur grid agar berjarak proporsional dan tidak meninggalkan space kosong lebar di kanan
+  let gridClass = 'grid gap-y-2 text-[11px] pt-1 w-full';
+  if (numColumns === 2) {
+    gridClass += ' grid-cols-2 gap-x-12 sm:gap-x-20 max-w-xl mx-auto';
+  } else if (numColumns === 3) {
+    gridClass += ' grid-cols-3 gap-x-8 max-w-2xl mx-auto';
+  } else if (numColumns === 4) {
+    gridClass += ' grid-cols-2 sm:grid-cols-4 gap-x-6';
+  } else {
+    gridClass += ' grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-3.5';
+  }
+
+  return <div className={gridClass}>{columns}</div>;
 }
 
 function renderPrintIsianColumns(count: number) {
@@ -670,19 +723,90 @@ function renderPrintIsianColumns(count: number) {
     );
   }
 
+  const gridClass =
+    numColumns === 1
+      ? 'grid grid-cols-1 max-w-md'
+      : numColumns === 2
+      ? 'grid grid-cols-2 gap-x-12 sm:gap-x-16 max-w-xl mx-auto'
+      : numColumns === 3
+      ? 'grid grid-cols-3 gap-x-8'
+      : 'grid grid-cols-4 gap-x-6';
+
   return (
-    <div
-      className={`grid gap-x-6 gap-y-2 text-[11px] pt-1 ${
-        numColumns === 1
-          ? 'grid-cols-1'
-          : numColumns === 2
-          ? 'grid-cols-2'
-          : numColumns === 3
-          ? 'grid-cols-3'
-          : 'grid-cols-4'
-      }`}
-    >
+    <div className={`${gridClass} gap-y-2 text-[11px] pt-1 w-full`}>
       {columns}
     </div>
   );
+}
+
+function renderKopDivider(style: AnswerSheetTemplateStyle = 'classic') {
+  switch (style) {
+    case 'modern':
+      return <div className="border-b-2 border-neutral-900 pb-0.5"></div>;
+    case 'geometric':
+      return <div className="border-b-[3.5px] border-black pb-0.5"></div>;
+    case 'elegant':
+      return (
+        <div className="border-b-[3px] border-black pb-[1.5px]">
+          <div className="border-b border-black"></div>
+        </div>
+      );
+    case 'compact':
+      return <div className="border-b-[1.5px] border-black pb-0.5"></div>;
+    case 'classic':
+    default:
+      return (
+        <div className="border-b-[3px] border-black pb-[1.5px]">
+          <div className="border-b border-black"></div>
+        </div>
+      );
+  }
+}
+
+function getTableClassName(style: AnswerSheetTemplateStyle = 'classic') {
+  switch (style) {
+    case 'modern':
+      return 'border-2 border-neutral-900 rounded-lg overflow-hidden text-black bg-white shadow-xs';
+    case 'geometric':
+      return 'border-2 border-black text-black font-semibold bg-white';
+    case 'elegant':
+      return 'border-2 border-black text-black bg-white shadow-xs';
+    case 'compact':
+      return 'border-[1.5px] border-black text-black text-[10.5px]';
+    case 'classic':
+    default:
+      return 'border-2 border-black text-black bg-white';
+  }
+}
+
+function getSectionHeaderClassName(style: AnswerSheetTemplateStyle = 'classic') {
+  switch (style) {
+    case 'modern':
+      return 'flex items-center justify-between text-xs font-black uppercase pb-1 border-b-2 border-neutral-900';
+    case 'geometric':
+      return 'flex items-center justify-between text-xs font-black uppercase bg-black text-white px-2 py-1 mb-1';
+    case 'elegant':
+      return 'flex items-center justify-between text-xs font-black uppercase border-b-2 border-black border-double pb-1 tracking-wider';
+    case 'compact':
+      return 'flex items-center justify-between text-[11px] font-black uppercase border-b border-black/80 pb-0.5';
+    case 'classic':
+    default:
+      return 'flex items-center justify-between text-xs font-black uppercase border-b border-black pb-0.5';
+  }
+}
+
+function getBubbleClassName(style: AnswerSheetTemplateStyle = 'classic') {
+  switch (style) {
+    case 'modern':
+      return 'w-4 h-4 rounded-full border-2 border-neutral-800 flex items-center justify-center text-[9px] font-black text-neutral-900 select-none';
+    case 'geometric':
+      return 'w-4 h-4 rounded-full border-2 border-black flex items-center justify-center text-[9px] font-black text-black bg-white select-none';
+    case 'elegant':
+      return 'w-4 h-4 rounded-full border border-black shadow-[0.5px_0.5px_0px_#000] flex items-center justify-center text-[9px] font-bold text-neutral-900 select-none';
+    case 'compact':
+      return 'w-3.5 h-3.5 rounded-full border border-black flex items-center justify-center text-[8.5px] font-black text-neutral-900 select-none';
+    case 'classic':
+    default:
+      return 'w-4 h-4 rounded-full border border-black flex items-center justify-center text-[9px] font-bold text-neutral-900 select-none';
+  }
 }

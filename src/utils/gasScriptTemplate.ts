@@ -1166,6 +1166,32 @@ function handleGetAllDatabaseData() {
     } catch (e) {}
   }
 
+  // 4b. Desain Poster (Sheet data_poster)
+  var sheetPoster = ss.getSheetByName(SHEET_NAMES.DATA_POSTER || "data_poster");
+  var rowsPoster = sheetPoster ? sheetPoster.getDataRange().getValues() : [];
+  var posterDesignsMap = {};
+  for (var p = 1; p < rowsPoster.length; p++) {
+    var pr = rowsPoster[p];
+    var pu = String(pr[1] || "").toLowerCase();
+    if (!pu) continue;
+    try {
+      posterDesignsMap[pu] = JSON.parse(pr[6] || "{}");
+    } catch(e) {}
+  }
+
+  // 4c. Desain Lembar Jawaban (Sheet Data_LJ)
+  var sheetLJ = ss.getSheetByName(SHEET_NAMES.DATA_LJ || "Data_LJ");
+  var rowsLJ = sheetLJ ? sheetLJ.getDataRange().getValues() : [];
+  var answerSheetsMap = {};
+  for (var l = 1; l < rowsLJ.length; l++) {
+    var lr = rowsLJ[l];
+    var lu = String(lr[1] || "").toLowerCase();
+    if (!lu) continue;
+    try {
+      answerSheetsMap[lu] = JSON.parse(lr[7] || "{}");
+    } catch(e) {}
+  }
+
   // 5. Data Guru (Sheet DATA_GURU)
   var sheetGuru = ss.getSheetByName(SHEET_NAMES.DATA_GURU);
   var rowsGuru = sheetGuru ? sheetGuru.getDataRange().getValues() : [];
@@ -1239,6 +1265,8 @@ function handleGetAllDatabaseData() {
     teachersMap: teachersMap,
     examsMap: examsMap,
     designsMap: designsMap,
+    posterDesignsMap: posterDesignsMap,
+    answerSheetsMap: answerSheetsMap,
     loginLogs: handleGetLoginLogs()
   };
 }

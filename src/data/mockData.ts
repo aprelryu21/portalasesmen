@@ -293,6 +293,7 @@ export const DEFAULT_ANSWER_SHEET_DESIGN: AnswerSheetDesignSettings = {
     uraianRowsPerNumber: 3,
   },
   fontFamily: 'sans',
+  templateStyle: 'classic',
 };
 
 // Tanpa data dummy - seluruh data guru diambil langsung dari spreadsheet
