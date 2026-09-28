@@ -267,41 +267,42 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       className="a4-admin-page bg-white text-black relative"
       style={{
         width: '210mm',
-        height: '297mm',
-        minHeight: '297mm',
-        maxHeight: '297mm',
-        paddingTop: '3cm',
-        paddingLeft: '4cm',
-        paddingRight: '3cm',
-        paddingBottom: '3cm',
-        fontFamily: '"Times New Roman", Times, serif',
+        height: '296.5mm',
+        minHeight: '296.5mm',
+        maxHeight: '296.5mm',
+        paddingTop: '30mm',
+        paddingLeft: '40mm',
+        paddingRight: '30mm',
+        paddingBottom: '30mm',
+        fontFamily: '"Times New Roman", Times, "Liberation Serif", serif',
         lineHeight: 1.5,
         boxSizing: 'border-box',
         borderRadius: '0px',
         border: 'none',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
       }}
     >
       {/* 
         Frame Garis Mengikuti Batas Margin Dokumen dari Kertas (Pas 3cm atas, 4cm kiri, 3cm kanan, 3cm bawah)
-        Ukuran: Lebar 140mm (210-40-30), Tinggi 237mm (297-30-30)
+        Ukuran: Lebar 140mm (210-40-30), Tinggi 236.5mm (296.5-30-30)
         Isi Cover Dibuat Pas di Tengah Secara Vertikal & Horizontal
       */}
       <div
-        className="cover-border-frame border-[2.5px] border-black w-full flex flex-col justify-center items-center text-center p-6 sm:p-8 relative"
+        className="cover-border-frame border-[2.5px] border-black w-full flex flex-col justify-center items-center text-center p-6 relative"
         style={{
           boxSizing: 'border-box',
           width: '100%',
-          height: 'calc(297mm - 6cm)',
-          minHeight: 'calc(297mm - 6cm)',
-          maxHeight: 'calc(297mm - 6cm)',
+          height: '100%',
+          minHeight: '100%',
+          maxHeight: '100%',
         }}
       >
         {/* Garis Dalam Tipis Resmi Portofolio */}
         <div className="absolute inset-[3.5mm] border border-black pointer-events-none" />
 
         {/* Konten Terpusat di Tengah */}
-        <div className="flex flex-col justify-center items-center text-center w-full my-auto space-y-7 sm:space-y-9">
+        <div className="flex flex-col justify-center items-center text-center w-full my-auto space-y-7">
           {/* Teks Atas: Ukuran 20pt Bold Huruf Besar */}
           <div className="space-y-2 w-full">
             <h1
@@ -319,12 +320,12 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           </div>
 
           {/* Logo Sekolah di Tengah dengan Jarak Cukup */}
-          <div className="py-2 sm:py-4 flex flex-col items-center justify-center">
+          <div className="py-2 flex flex-col items-center justify-center">
             {school?.logoUrl ? (
               <img
                 src={school.logoUrl}
                 alt={`Logo ${school.name}`}
-                className="w-36 h-36 sm:w-44 sm:h-44 object-contain"
+                className="w-36 h-36 object-contain"
               />
             ) : (
               <div className="w-36 h-36 border-2 border-dashed border-neutral-400 flex flex-col items-center justify-center p-4 text-neutral-400">
@@ -382,20 +383,21 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       className="a4-admin-page bg-white text-black flex flex-col justify-between"
       style={{
         width: '210mm',
-        height: '297mm',
-        minHeight: '297mm',
-        maxHeight: '297mm',
-        paddingTop: '3cm',
-        paddingLeft: '4cm',
-        paddingRight: '3cm',
-        paddingBottom: '3cm',
-        fontFamily: '"Times New Roman", Times, serif',
+        height: '296.5mm',
+        minHeight: '296.5mm',
+        maxHeight: '296.5mm',
+        paddingTop: '30mm',
+        paddingLeft: '40mm',
+        paddingRight: '30mm',
+        paddingBottom: '30mm',
+        fontFamily: '"Times New Roman", Times, "Liberation Serif", serif',
         fontSize: '12pt',
         lineHeight: 1.5,
         boxSizing: 'border-box',
         borderRadius: '0px',
         border: 'none',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
       }}
     >
       <div>
@@ -521,20 +523,21 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       className="a4-admin-page bg-white text-black flex flex-col justify-between"
       style={{
         width: '210mm',
-        height: '297mm',
-        minHeight: '297mm',
-        maxHeight: '297mm',
-        paddingTop: '3cm',
-        paddingLeft: '4cm',
-        paddingRight: '3cm',
-        paddingBottom: '3cm',
-        fontFamily: '"Times New Roman", Times, serif',
+        height: '296.5mm',
+        minHeight: '296.5mm',
+        maxHeight: '296.5mm',
+        paddingTop: '30mm',
+        paddingLeft: '40mm',
+        paddingRight: '30mm',
+        paddingBottom: '30mm',
+        fontFamily: '"Times New Roman", Times, "Liberation Serif", serif',
         fontSize: '12pt',
         lineHeight: 1.5,
         boxSizing: 'border-box',
         borderRadius: '0px',
         border: 'none',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
       }}
     >
       <div>
@@ -679,20 +682,21 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       className="a4-admin-page bg-white text-black flex flex-col justify-between"
       style={{
         width: '210mm',
-        height: '297mm',
-        minHeight: '297mm',
-        maxHeight: '297mm',
-        paddingTop: '3cm',
-        paddingLeft: '4cm',
-        paddingRight: '3cm',
-        paddingBottom: '3cm',
-        fontFamily: '"Times New Roman", Times, serif',
+        height: '296.5mm',
+        minHeight: '296.5mm',
+        maxHeight: '296.5mm',
+        paddingTop: '30mm',
+        paddingLeft: '40mm',
+        paddingRight: '30mm',
+        paddingBottom: '30mm',
+        fontFamily: '"Times New Roman", Times, "Liberation Serif", serif',
         fontSize: '12pt',
         lineHeight: 1.5,
         boxSizing: 'border-box',
         borderRadius: '0px',
         border: 'none',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
       }}
     >
       <div>
@@ -808,7 +812,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
   return (
     <div className="space-y-5 animate-in fade-in duration-150">
-      {/* Dynamic CSS untuk Print A4 Presisi */}
+      {/* Dynamic CSS untuk Print A4 Presisi (100% WYSIWYG) */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -822,29 +826,45 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               color: black !important;
               margin: 0 !important;
               padding: 0 !important;
+              width: 210mm !important;
+              height: auto !important;
+              min-height: 0 !important;
+              overflow: visible !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
             .no-print {
               display: none !important;
+            }
+            .print-only-container {
+              display: block !important;
+              width: 210mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: transparent !important;
             }
             .a4-admin-page {
               box-shadow: none !important;
               border: none !important;
               border-radius: 0 !important;
-              padding-top: 3cm !important;
-              padding-left: 4cm !important;
-              padding-right: 3cm !important;
-              padding-bottom: 3cm !important;
+              padding-top: 30mm !important;
+              padding-left: 40mm !important;
+              padding-right: 30mm !important;
+              padding-bottom: 30mm !important;
               box-sizing: border-box !important;
               width: 210mm !important;
-              height: 297mm !important;
-              min-height: 297mm !important;
-              max-height: 297mm !important;
-              margin: 0 auto !important;
+              height: 296.5mm !important;
+              min-height: 296.5mm !important;
+              max-height: 296.5mm !important;
+              margin: 0 !important;
               page-break-after: always !important;
               break-after: page !important;
-              font-family: "Times New Roman", Times, serif !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              font-family: "Times New Roman", Times, "Liberation Serif", serif !important;
               line-height: 1.5 !important;
               overflow: hidden !important;
+              background: white !important;
             }
             .a4-admin-page:last-child {
               page-break-after: auto !important;
@@ -852,9 +872,9 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             }
             .cover-border-frame {
               width: 100% !important;
-              height: calc(297mm - 6cm) !important;
-              min-height: calc(297mm - 6cm) !important;
-              max-height: calc(297mm - 6cm) !important;
+              height: 100% !important;
+              min-height: 100% !important;
+              max-height: 100% !important;
               box-sizing: border-box !important;
             }
           }
@@ -1010,64 +1030,101 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           </div>
 
           {/* ========================================================
-              AREA KONTEN DOKUMEN CETAK A4 RESMI
-              Margin: Atas 3cm, Kiri 4cm, Kanan 3cm, Bawah 3cm
-              Font: Times New Roman, Line-Height: 1.5
+              1. TAMPILAN PREVIEW DI LAYAR (NO-PRINT)
+              Dilengkapi pembungkus responsif, info halaman, dan tips cetak
              ======================================================== */}
-          <div className="flex flex-col items-center justify-center py-6 px-2 sm:px-4 space-y-8 overflow-x-auto bg-neutral-100/70 rounded-2xl border border-neutral-200">
-            {/* JIKA MODE CETAK MASAL: RENDER SELURUH 11 DOKUMEN SECARA BERURUTAN */}
+          <div className="no-print flex flex-col items-center justify-center py-6 px-2 sm:px-4 space-y-6 overflow-x-auto bg-neutral-100/70 rounded-2xl border border-neutral-200">
+            {/* Tips Cetak Presisi WYSIWYG */}
+            <div className="w-full max-w-[210mm] bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-900 flex items-center gap-2.5 shadow-xs">
+              <Printer className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>
+                <strong>Panduan Cetak Presisi (WYSIWYG):</strong> Pada jendela cetak browser/PDF, pastikan pilih <strong>Ukuran: A4</strong>, <strong>Margin: None / Minimum</strong>, dan centang <strong>Grafik Latar Belakang (Background graphics)</strong> agar tampilan cetak sama persis dengan preview.
+              </span>
+            </div>
+
+            {/* JIKA MODE CETAK MASAL: RENDER SELURUH 11 DOKUMEN SECARA BERURUTAN DI SCREEN */}
             {activeDoc === 'bulk_all' ? (
               <div className="w-full flex flex-col items-center space-y-8">
                 {/* 1. Cover */}
                 <div className="w-full flex flex-col items-center">
-                  <div className="no-print mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
+                  <div className="mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
                     <span>Halaman 1:</span>
                     <strong className="text-black">COVER</strong>
                   </div>
-                  {renderCoverPage('bulk_1')}
+                  {renderCoverPage('screen_bulk_1')}
                 </div>
 
                 {/* 2. Profil Sekolah */}
                 <div className="w-full flex flex-col items-center">
-                  <div className="no-print mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
+                  <div className="mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
                     <span>Halaman 2:</span>
                     <strong className="text-black">PROFIL SEKOLAH</strong>
                   </div>
-                  {renderSchoolProfilePage('bulk_2')}
+                  {renderSchoolProfilePage('screen_bulk_2')}
                 </div>
 
                 {/* 3. Surat Pernyataan Kerahasiaan */}
                 <div className="w-full flex flex-col items-center">
-                  <div className="no-print mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
+                  <div className="mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
                     <span>Halaman 3:</span>
                     <strong className="text-black">SURAT PERNYATAAN MENJAGA KERAHASIAAN</strong>
                   </div>
-                  {renderConfidentialityStatementPage('bulk_3')}
+                  {renderConfidentialityStatementPage('screen_bulk_3')}
                 </div>
 
                 {/* 4 - 11. Dokumen Lainnya */}
                 {ADMIN_DOCUMENTS.slice(3).map((d) => (
                   <div key={d.id} className="w-full flex flex-col items-center">
-                    <div className="no-print mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
+                    <div className="mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
                       <span>Halaman {d.number}:</span>
                       <strong className="text-black">{d.title}</strong>
                     </div>
-                    {renderPlaceholderDocPage(d, `bulk_${d.number}`)}
+                    {renderPlaceholderDocPage(d, `screen_bulk_${d.number}`)}
                   </div>
                 ))}
               </div>
             ) : (
-              /* JIKA MODE SINGLE DOKUMEN */
+              /* JIKA MODE SINGLE DOKUMEN DI SCREEN */
               <>
-                {activeDoc === 'cover' && renderCoverPage('single_cover')}
-                {activeDoc === 'school_profile' && renderSchoolProfilePage('single_school_profile')}
+                {activeDoc === 'cover' && renderCoverPage('screen_single_cover')}
+                {activeDoc === 'school_profile' && renderSchoolProfilePage('screen_single_school_profile')}
                 {activeDoc === 'confidentiality_statement' &&
-                  renderConfidentialityStatementPage('single_confidentiality')}
+                  renderConfidentialityStatementPage('screen_single_confidentiality')}
                 {activeDoc !== 'cover' &&
                   activeDoc !== 'school_profile' &&
                   activeDoc !== 'confidentiality_statement' &&
                   docInfo &&
-                  renderPlaceholderDocPage(docInfo, 'single_placeholder')}
+                  renderPlaceholderDocPage(docInfo, 'screen_single_placeholder')}
+              </>
+            )}
+          </div>
+
+          {/* ========================================================
+              2. WADAH KHUSUS CETAK RESMI (PRINT-ONLY CONTAINER)
+              Tersembunyi di layar, HANYA AKTIF saat dialog cetak / print dipanggil.
+              Bebas dari padding/margin/background pembungkus aplikasi (100% WYSIWYG)!
+             ======================================================== */}
+          <div className="hidden print:block print-only-container">
+            {activeDoc === 'bulk_all' ? (
+              <>
+                {renderCoverPage('print_bulk_1')}
+                {renderSchoolProfilePage('print_bulk_2')}
+                {renderConfidentialityStatementPage('print_bulk_3')}
+                {ADMIN_DOCUMENTS.slice(3).map((d) =>
+                  renderPlaceholderDocPage(d, `print_bulk_${d.number}`)
+                )}
+              </>
+            ) : (
+              <>
+                {activeDoc === 'cover' && renderCoverPage('print_single_cover')}
+                {activeDoc === 'school_profile' && renderSchoolProfilePage('print_single_school_profile')}
+                {activeDoc === 'confidentiality_statement' &&
+                  renderConfidentialityStatementPage('print_single_confidentiality')}
+                {activeDoc !== 'cover' &&
+                  activeDoc !== 'school_profile' &&
+                  activeDoc !== 'confidentiality_statement' &&
+                  docInfo &&
+                  renderPlaceholderDocPage(docInfo, 'print_single_placeholder')}
               </>
             )}
           </div>
