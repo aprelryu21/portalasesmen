@@ -25,10 +25,21 @@ export interface Exam {
   dateText: string; // e.g. "01 - 08 Desember 2026"
   location: string; // e.g. "Kediri"
   signatureDate?: string; // Tanggal titimangsa / tandatangan kartu (misal: "01 Desember 2026")
-  scheduleInfo?: string; // Jadwal pelaksanaan asesmen (Hari, Waktu, Mapel)
+  scheduleInfo?: string; // Jadwal pelaksanaan asesmen dalam format JSON string
   extraNote: string; // e.g. "Harap membawa kartu ini dan perlengkapan ujian setiap hari."
   isActive?: boolean;
 }
+
+export interface ExamScheduleItem {
+  id: string;
+  day: string; // e.g. "Senin"
+  date: string; // e.g. "2026-12-01" atau format teks
+  time?: string; // e.g. "07.30 - 09.30"
+  subject: string; // e.g. "Bahasa Indonesia"
+  time2?: string; // e.g. "10.00 - 11.30" (opsional)
+  subject2?: string; // e.g. "Pendidikan Agama & Budi Pekerti" (opsional)
+}
+
 
 export interface Student {
   id: string;

@@ -9,6 +9,7 @@ import { A4SheetContainer } from './A4SheetContainer';
 import { PrintConfirmationModal } from './PrintConfirmationModal';
 import { ExamPosterPrint } from './ExamPosterPrint';
 import { AnswerSheetPrint } from './AnswerSheetPrint';
+import { ExamAdminPrint } from './ExamAdminPrint';
 import {
   Printer,
   Settings2,
@@ -611,7 +612,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
             </div>
           </div>
 
-          {/* MENU 5: ADMINISTRASI UJIAN (MASIH DIKEMBANGKAN) */}
+          {/* MENU 5: ADMINISTRASI UJIAN (11 BERKAS RESMI) */}
           <div
             onClick={() => setActiveCategory('exam_admin')}
             className="group relative bg-white hover:bg-rose-50/50 border-3 border-black shadow-[6px_6px_0px_#000] hover:shadow-[8px_8px_0px_#000] rounded-2xl p-6 flex flex-col justify-between transition-all duration-150 cursor-pointer active:translate-x-0.5 active:translate-y-0.5"
@@ -621,8 +622,8 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
                 <div className="w-14 h-14 bg-rose-200 border-2 border-black rounded-2xl flex items-center justify-center shadow-[3px_3px_0px_#000] text-rose-900 group-hover:scale-105 transition-transform">
                   <FileText className="w-7 h-7" />
                 </div>
-                <span className="px-2.5 py-1 bg-amber-300 text-black border border-black rounded-md text-[10px] font-black uppercase tracking-wider shadow-[1px_1px_0px_#000] animate-pulse">
-                  Masih Dikembangkan
+                <span className="px-2.5 py-1 bg-rose-200 text-rose-950 border border-black rounded-md text-[10px] font-black uppercase tracking-wider shadow-[1px_1px_0px_#000]">
+                  11 Menu Berkas
                 </span>
               </div>
 
@@ -631,25 +632,25 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
                   Administrasi Ujian
                 </h3>
                 <p className="text-xs font-bold text-neutral-500 uppercase mt-0.5">
-                  Berkas &amp; Dokumen Operasional Ujian
+                  Paket Dokumen Portofolio Resmi
                 </p>
                 <p className="text-xs text-neutral-700 leading-relaxed mt-2.5">
-                  Paket dokumen kelengkapan ruang ujian seperti Daftar Hadir Peserta per Ruang, Berita Acara Pelaksanaan Ujian (BAPU), Denah Tempat Duduk, dan Rekapitulasi Presensi Pengawas.
+                  Paket lengkap dokumen portofolio administrasi ujian: Cover, Profil Sekolah, Surat Pernyataan Kerahasiaan, SK Panitia, Jumlah Peserta, Jadwal Asesmen, Pengawas Ruang, Daftar Hadir Panitia, Daftar Hadir Peserta, Tata Tertib Peserta, & Tata Tertib Pengawas.
                 </p>
               </div>
 
               <div className="space-y-1.5 pt-2 border-t border-neutral-200 text-xs font-semibold text-neutral-700">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>Daftar Hadir Peserta Ujian per Ruang &amp; Kolom TTD</span>
+                  <span>11 Dokumen resmi terstruktur standar dinas & madrasah</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>Berita Acara Pelaksanaan Ujian (BAPU) Resmi</span>
+                  <span>Format cetak A4 presisi siap jilid atau pasang map</span>
                 </div>
-                <div className="flex items-center gap-2 text-rose-800 font-bold">
-                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                  <span>Status: Menu masih dikembangkan</span>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>Terintegrasi data sekolah, jadwal & peserta asesmen</span>
                 </div>
               </div>
             </div>
@@ -659,7 +660,7 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
                 type="button"
                 className="w-full py-2.5 px-4 bg-rose-200 group-hover:bg-rose-300 text-rose-950 border-2 border-black rounded-xl text-xs font-black uppercase shadow-[3px_3px_0px_#000] flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
-                <span>Buka Menu Administrasi Ujian</span>
+                <span>Buka Administrasi Ujian (11 Menu)</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
@@ -825,118 +826,18 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
     );
   }
 
-  // 5. SUB-GENERATOR 5: ADMINISTRASI UJIAN (MASIH DIKEMBANGKAN)
+  // 5. SUB-GENERATOR 5: ADMINISTRASI UJIAN (11 BERKAS RESMI)
   if (activeCategory === 'exam_admin') {
     return (
       <div className="space-y-6">
         {renderCategorySwitcher()}
-
-        {/* Header Banner */}
-        <div className="bg-rose-100 border-3 border-black shadow-[6px_6px_0px_#000] rounded-2xl p-5 sm:p-6 space-y-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-500 text-white rounded text-[10px] font-black uppercase tracking-wider mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-white" />
-                Status: Masih Dikembangkan
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
-                <FileText className="w-6 h-6 text-rose-700" />
-                Administrasi Pelaksanaan Ujian
-              </h2>
-              <p className="text-xs sm:text-sm text-neutral-700 max-w-2xl font-medium mt-1">
-                Modul pencetakan berkas administrasi dan kelengkapan operasional ruang ujian untuk asesmen <strong>{exam?.name || 'Asesmen Ujian'}</strong> di <strong>{school?.name || 'Sekolah'}</strong>.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setActiveCategory('menu')}
-              className="px-4 py-2 bg-white hover:bg-neutral-100 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer shrink-0"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Kembali ke Menu</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Feature Cards Showcase */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-          <div className="bg-white border-2 sm:border-3 border-black rounded-2xl p-5 shadow-[4px_4px_0px_#000] space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="w-10 h-10 rounded-xl bg-rose-200 border-2 border-black flex items-center justify-center font-black">
-                1
-              </span>
-              <span className="px-2 py-0.5 bg-yellow-300 text-black text-[10px] font-black rounded border border-black uppercase">
-                Segera Hadir
-              </span>
-            </div>
-            <h3 className="text-base font-black uppercase">Daftar Hadir Peserta Ujian per Ruang</h3>
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              Format lembar presensi otomatis berisi daftar nama siswa di masing-masing ruang ujian, nomor meja, NISN, serta kolom tanda tangan sesi pagi dan siang.
-            </p>
-            <div className="pt-2 border-t border-neutral-200 flex items-center gap-2 text-xs font-bold text-neutral-500">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Format A4 Portrait • Siap Cetak per Ruang</span>
-            </div>
-          </div>
-
-          <div className="bg-white border-2 sm:border-3 border-black rounded-2xl p-5 shadow-[4px_4px_0px_#000] space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="w-10 h-10 rounded-xl bg-rose-200 border-2 border-black flex items-center justify-center font-black">
-                2
-              </span>
-              <span className="px-2 py-0.5 bg-yellow-300 text-black text-[10px] font-black rounded border border-black uppercase">
-                Segera Hadir
-              </span>
-            </div>
-            <h3 className="text-base font-black uppercase">Berita Acara Pelaksanaan Ujian (BAPU)</h3>
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              Formulir berita acara resmi berisi identitas mata pelajaran, jumlah peserta hadir/tidak hadir, catatan integritas dan insiden ruang, serta tanda tangan pengawas.
-            </p>
-            <div className="pt-2 border-t border-neutral-200 flex items-center gap-2 text-xs font-bold text-neutral-500">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Format Standar Kemdikbud &amp; Kemenag</span>
-            </div>
-          </div>
-
-          <div className="bg-white border-2 sm:border-3 border-black rounded-2xl p-5 shadow-[4px_4px_0px_#000] space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="w-10 h-10 rounded-xl bg-rose-200 border-2 border-black flex items-center justify-center font-black">
-                3
-              </span>
-              <span className="px-2 py-0.5 bg-yellow-300 text-black text-[10px] font-black rounded border border-black uppercase">
-                Segera Hadir
-              </span>
-            </div>
-            <h3 className="text-base font-black uppercase">Denah Ruang &amp; Denah Tempat Duduk</h3>
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              Diagram visual susunan meja dan nomor peserta per ruangan untuk ditempel di pintu masuk agar peserta ujian mudah menemukan posisinya.
-            </p>
-            <div className="pt-2 border-t border-neutral-200 flex items-center gap-2 text-xs font-bold text-neutral-500">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Layout Meja Otomatis (U / Baris Standar)</span>
-            </div>
-          </div>
-
-          <div className="bg-white border-2 sm:border-3 border-black rounded-2xl p-5 shadow-[4px_4px_0px_#000] space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="w-10 h-10 rounded-xl bg-rose-200 border-2 border-black flex items-center justify-center font-black">
-                4
-              </span>
-              <span className="px-2 py-0.5 bg-yellow-300 text-black text-[10px] font-black rounded border border-black uppercase">
-                Segera Hadir
-              </span>
-            </div>
-            <h3 className="text-base font-black uppercase">Rekapitulasi Presensi &amp; Honor Pengawas</h3>
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              Laporan ringkas kehadiran pengawas ruang, jadwal penugasan harian, dan lembar tanda terima berkas soal/jawaban.
-            </p>
-            <div className="pt-2 border-t border-neutral-200 flex items-center gap-2 text-xs font-bold text-neutral-500">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Terintegrasi Database Guru Pengawas</span>
-            </div>
-          </div>
-        </div>
+        <ExamAdminPrint
+          school={school}
+          exam={currentExam}
+          students={printableStudents}
+          teachers={teachers}
+          onBackToMenu={() => setActiveCategory('menu')}
+        />
       </div>
     );
   }

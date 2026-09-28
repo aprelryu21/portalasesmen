@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { Exam } from '../../types';
+import { Exam, ExamScheduleItem } from '../../types';
+import {
+  DAYS_OF_WEEK,
+  createDefaultScheduleDays,
+  parseExamSchedule,
+  serializeExamSchedule,
+  formatScheduleDateIndo,
+} from '../../utils/scheduleHelper';
 import {
   BookOpen,
   Plus,
@@ -53,6 +60,9 @@ export const AssessmentList: React.FC<AssessmentListProps> = ({
     extraNote: '',
   });
 
+  // Schedule Rows State (JSON serializable)
+  const [scheduleItems, setScheduleItems] = useState<ExamScheduleItem[]>([]);
+
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const filteredExams = exams.filter((e) => {
@@ -78,12 +88,14 @@ export const AssessmentList: React.FC<AssessmentListProps> = ({
       scheduleInfo: '',
       extraNote: '',
     });
+    setScheduleItems(createDefaultScheduleDays());
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (exam: Exam) => {
     setEditingExam(exam);
     setFormData({ ...exam });
+    setScheduleItems(parseExamSchedule(exam.scheduleInfo));
     setIsModalOpen(true);
   };
 
@@ -97,14 +109,80 @@ export const AssessmentList: React.FC<AssessmentListProps> = ({
     onAddExam(duplicated);
   };
 
+  const handleUpdateScheduleItem = (
+    index: number,
+    field: keyof ExamScheduleItem,
+    value: string
+  ) => {
+    setScheduleItems((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const handleAddScheduleItem = () => {
+    setScheduleItems((prev) => {
+      const nextIdx = prev.length;
+      const lastItem = prev[prev.length - 1];
+      let nextDay = 'Senin';
+      if (lastItem?.day) {
+        const lastDayIdx = DAYS_OF_WEEK.indexOf(lastItem.day);
+        if (lastDayIdx !== -1) {
+          nextDay = DAYS_OF_WEEK[(lastDayIdx + 1) % DAYS_OF_WEEK.length];
+        }
+      }
+
+      // Hitung tanggal berikutnya jika tanggal sebelumnya berformat YYYY-MM-DD
+      let nextDate = '';
+      if (lastItem?.date && lastItem.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        try {
+          const d = new Date(lastItem.date);
+          d.setDate(d.getDate() + 1);
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const dayNum = String(d.getDate()).padStart(2, '0');
+          nextDate = `${y}-${m}-${dayNum}`;
+        } catch {
+          nextDate = '';
+        }
+      }
+
+      return [
+        ...prev,
+        {
+          id: `day_${nextIdx + 1}_${Date.now()}`,
+          day: nextDay,
+          date: nextDate,
+          time: lastItem?.time || '07.30 - 09.30',
+          subject: '',
+          time2: '',
+          subject2: '',
+        },
+      ];
+    });
+  };
+
+  const handleDeleteScheduleItem = (index: number) => {
+    if (scheduleItems.length <= 1) return;
+    setScheduleItems((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
+    // Serialize schedule items to JSON string
+    const jsonSchedule = serializeExamSchedule(scheduleItems);
+    const updatedExam: Exam = {
+      ...formData,
+      scheduleInfo: jsonSchedule,
+    };
+
     if (editingExam) {
-      onUpdateExam(formData);
+      onUpdateExam(updatedExam);
     } else {
-      onAddExam(formData);
+      onAddExam(updatedExam);
     }
     setIsModalOpen(false);
   };
@@ -252,14 +330,60 @@ export const AssessmentList: React.FC<AssessmentListProps> = ({
                 </div>
 
                 {/* Schedule preview if present */}
-                {ex.scheduleInfo && (
-                  <div className="mt-2.5 p-2.5 bg-neutral-50 border border-neutral-300 rounded-lg text-[11px] text-neutral-700 whitespace-pre-line leading-relaxed font-mono">
-                    <strong className="block text-neutral-900 font-sans mb-0.5 text-[10px] uppercase font-bold">
-                      Jadwal Pelaksanaan:
-                    </strong>
-                    {ex.scheduleInfo}
-                  </div>
-                )}
+                {ex.scheduleInfo && (() => {
+                  const scheduleList = parseExamSchedule(ex.scheduleInfo);
+                  const activeList = scheduleList.filter(
+                    (s) => s.subject.trim() || s.date.trim() || (s.subject2 && s.subject2.trim())
+                  );
+
+                  if (activeList.length === 0) {
+                    return (
+                      <div className="mt-2.5 p-2 bg-neutral-50 border border-neutral-300 rounded-lg text-[11px] text-neutral-600 font-mono">
+                        <strong className="block text-neutral-800 font-sans mb-0.5 text-[10px] uppercase font-bold">
+                          Jadwal Pelaksanaan:
+                        </strong>
+                        {ex.scheduleInfo}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="mt-2.5 p-2.5 bg-neutral-50 border-2 border-neutral-300 rounded-xl space-y-1.5">
+                      <div className="flex items-center justify-between gap-2 border-b border-neutral-200 pb-1">
+                        <span className="text-neutral-900 font-sans text-[10px] uppercase font-black flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-neutral-700" />
+                          <span>Jadwal Pelaksanaan:</span>
+                        </span>
+                        <span className="px-1.5 py-0.2 bg-yellow-300 border border-black rounded text-[9.5px] font-black uppercase text-black">
+                          {activeList.length} Hari Asesmen
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                        {activeList.map((item, sIdx) => (
+                          <div
+                            key={item.id || sIdx}
+                            className="p-1.5 bg-white border border-neutral-200 rounded-lg flex flex-col justify-between"
+                          >
+                            <div className="flex items-center justify-between text-[10px] font-bold text-neutral-700">
+                              <span>
+                                {item.day}
+                                {item.date ? `, ${formatScheduleDateIndo(item.date)}` : ''}
+                              </span>
+                              {item.time && (
+                                <span className="font-mono text-neutral-500 text-[9.5px]">
+                                  {item.time}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-bold text-neutral-900 text-[11px] truncate mt-0.5">
+                              {item.subject || '-'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Extra Notes */}
                 {ex.extraNote && (
@@ -315,7 +439,7 @@ export const AssessmentList: React.FC<AssessmentListProps> = ({
       {/* MODAL TAMBAH / EDIT ASESMEN */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
-          <div className="bg-white border-3 border-black shadow-[8px_8px_0px_#000] rounded-2xl w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden">
+          <div className="bg-white border-3 border-black shadow-[8px_8px_0px_#000] rounded-2xl w-full max-w-2xl sm:max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
             <div className="p-4 bg-yellow-300 border-b-2 border-black flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-black" />
@@ -420,17 +544,144 @@ export const AssessmentList: React.FC<AssessmentListProps> = ({
                 </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-black uppercase text-neutral-700 mb-1">
-                  Jadwal Asesmen (Hari, Jam & Mata Pelajaran)
-                </label>
-                <textarea
-                  rows={4}
-                  value={formData.scheduleInfo || ''}
-                  onChange={(e) => setFormData({ ...formData, scheduleInfo: e.target.value })}
-                  placeholder="Contoh:&#10;Senin, 01 Des 2026: 07.30 - 09.30 (B. Indonesia), 10.00 - 11.30 (PAI)&#10;Selasa, 02 Des 2026: 07.30 - 09.30 (Matematika), 10.00 - 11.30 (PKn)"
-                  className="w-full px-3 py-2 text-xs font-mono font-medium border-2 border-black rounded-xl focus:bg-yellow-50 focus:outline-hidden"
-                />
+              {/* Dynamic Schedule Builder (JSON format in spreadsheet) */}
+              <div className="space-y-3 pt-3 border-t-2 border-neutral-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="block text-xs font-black uppercase text-neutral-800 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-black" />
+                      <span>Jadwal Pelaksanaan Asesmen</span>
+                      <span className="text-[10px] bg-yellow-300 text-black px-2 py-0.5 rounded font-black border border-black ml-1">
+                        Format Database JSON
+                      </span>
+                    </label>
+                    <p className="text-[11px] text-neutral-500 font-medium">
+                      Atur hari, tanggal, dan mata pelajaran untuk setiap hari asesmen. Jumlah baris hari dapat ditambah bebas (&gt; 6 hari).
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddScheduleItem}
+                    className="px-3 py-1.5 bg-yellow-300 hover:bg-yellow-200 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] flex items-center gap-1 cursor-pointer transition-transform active:translate-y-0.5 shrink-0 self-start sm:self-auto"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Hari (+ Hari ke-{scheduleItems.length + 1})</span>
+                  </button>
+                </div>
+
+                {/* List Baris Hari Asesmen */}
+                <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+                  {scheduleItems.map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      className="p-3 bg-neutral-50 hover:bg-yellow-50/40 border-2 border-black rounded-xl shadow-[2px_2px_0px_#000] space-y-2.5 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-black text-white font-black text-xs flex items-center justify-center">
+                            {idx + 1}
+                          </span>
+                          <span className="text-xs font-black uppercase text-neutral-800">
+                            Hari Asesmen ke-{idx + 1}
+                          </span>
+                        </div>
+
+                        {scheduleItems.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteScheduleItem(idx)}
+                            className="p-1 hover:bg-rose-100 text-neutral-400 hover:text-rose-600 rounded-lg cursor-pointer transition-colors"
+                            title="Hapus baris hari ini"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 text-xs">
+                        {/* Pilihan Hari: 3 cols */}
+                        <div className="sm:col-span-3">
+                          <label className="block text-[10px] font-black uppercase text-neutral-600 mb-0.5">
+                            Pilihan Hari <span className="text-rose-500">*</span>
+                          </label>
+                          <select
+                            value={item.day}
+                            onChange={(e) => handleUpdateScheduleItem(idx, 'day', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs font-bold border-2 border-black rounded-lg bg-white focus:bg-yellow-50 focus:outline-hidden"
+                          >
+                            {DAYS_OF_WEEK.map((d) => (
+                              <option key={d} value={d}>
+                                {d}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Tanggal: 4 cols */}
+                        <div className="sm:col-span-4">
+                          <label className="block text-[10px] font-black uppercase text-neutral-600 mb-0.5 flex items-center justify-between">
+                            <span>Tanggal</span>
+                            {item.date && (
+                              <span className="text-[9.5px] font-bold text-amber-700 font-mono">
+                                {formatScheduleDateIndo(item.date)}
+                              </span>
+                            )}
+                          </label>
+                          <input
+                            type="date"
+                            value={item.date}
+                            onChange={(e) => handleUpdateScheduleItem(idx, 'date', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs font-bold border-2 border-black rounded-lg bg-white focus:bg-yellow-50 focus:outline-hidden"
+                          />
+                        </div>
+
+                        {/* Waktu / Jam: 5 cols */}
+                        <div className="sm:col-span-5">
+                          <label className="block text-[10px] font-black uppercase text-neutral-600 mb-0.5">
+                            Waktu / Jam Pelaksanaan
+                          </label>
+                          <input
+                            type="text"
+                            value={item.time || ''}
+                            onChange={(e) => handleUpdateScheduleItem(idx, 'time', e.target.value)}
+                            placeholder="Contoh: 07.30 - 09.30"
+                            className="w-full px-2 py-1.5 text-xs font-bold border-2 border-black rounded-lg bg-white focus:bg-yellow-50 focus:outline-hidden"
+                          />
+                        </div>
+
+                        {/* Jadwal Pelajaran / Mata Pelajaran: 12 cols */}
+                        <div className="sm:col-span-12">
+                          <label className="block text-[10px] font-black uppercase text-neutral-600 mb-0.5">
+                            Jadwal Mata Pelajaran
+                          </label>
+                          <input
+                            type="text"
+                            value={item.subject || ''}
+                            onChange={(e) => handleUpdateScheduleItem(idx, 'subject', e.target.value)}
+                            placeholder="Contoh: Bahasa Indonesia atau Sesi 1: B. Indo (07.30 - 09.00), Sesi 2: PAI (09.30 - 11.00)"
+                            className="w-full px-2.5 py-1.5 text-xs font-bold border-2 border-black rounded-lg bg-white focus:bg-yellow-50 focus:outline-hidden"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={handleAddScheduleItem}
+                    className="px-3 py-1.5 bg-neutral-100 hover:bg-yellow-200 border-2 border-black rounded-xl text-xs font-black uppercase shadow-[1.5px_1.5px_0px_#000] flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Hari Asesmen (+ Hari ke-{scheduleItems.length + 1})</span>
+                  </button>
+
+                  <span className="text-[11px] font-mono font-bold text-neutral-600">
+                    Total: {scheduleItems.length} Hari Terkonfigurasi
+                  </span>
+                </div>
               </div>
 
               <div>
