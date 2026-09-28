@@ -1094,6 +1094,7 @@ function handleGetAllDatabaseData() {
         province: String(r[9]),
         logoUrl: (r[10] && String(r[10]).toLowerCase() !== "undefined" && String(r[10]).toLowerCase() !== "null") ? String(r[10]).trim() : "",
         principalName: String(r[11]),
+        principalNip: String(r[12]),
         headTitle: String(r[13]) || "Kepala Sekolah",
         email: r[22] ? String(r[22]) : ""
       },
