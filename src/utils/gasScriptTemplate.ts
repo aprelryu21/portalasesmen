@@ -1075,7 +1075,7 @@ function handleGetAllDatabaseData() {
         district: String(r[7]),
         regency: String(r[8]),
         province: String(r[9]),
-        logoUrl: String(r[10]),
+        logoUrl: (r[10] && String(r[10]).toLowerCase() !== "undefined" && String(r[10]).toLowerCase() !== "null") ? String(r[10]).trim() : "",
         principalName: String(r[11]),
         principalNip: String(r[12]),
         headTitle: String(r[13]) || "Kepala Sekolah"
@@ -2629,7 +2629,7 @@ function loadAllDataForUser(username) {
         district: String(r[7]),
         regency: String(r[8]),
         province: String(r[9]),
-        logoUrl: String(r[10]),
+        logoUrl: (r[10] && String(r[10]).toLowerCase() !== "undefined" && String(r[10]).toLowerCase() !== "null") ? String(r[10]).trim() : "",
         principalName: String(r[11]),
         principalNip: String(r[12]),
         headTitle: String(r[13]) || "Kepala Sekolah"

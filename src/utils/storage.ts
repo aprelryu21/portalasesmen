@@ -146,7 +146,11 @@ export const loadStoredState = (): AppState => {
         currentUser: (parsed.currentUser && parsed.currentUser.username) ? parsed.currentUser : null,
         accounts: Array.isArray(parsed.accounts) && parsed.accounts.length > 0 ? parsed.accounts : DEFAULT_ACCOUNTS,
         googleSheets: mergedGoogleSheets,
-        school: { ...DEFAULT_SCHOOL, ...(parsed.school || {}) },
+        school: {
+          ...DEFAULT_SCHOOL,
+          ...(parsed.school || {}),
+          logoUrl: (parsed.school?.logoUrl && parsed.school.logoUrl !== 'undefined' && parsed.school.logoUrl !== 'null') ? parsed.school.logoUrl.trim() : '',
+        },
         exam: cleanExam,
         exams: cleanExams,
         students: cleanStudents,

@@ -97,7 +97,7 @@ import {
   Cloud,
 } from 'lucide-react';
 
-type NavTab = 'dashboard' | 'students' | 'designer' | 'poster_designer' | 'print' | 'settings';
+type NavTab = 'dashboard' | 'students' | 'designer' | 'print' | 'settings';
 type PortalMode = 'school' | 'admin';
 
 export default function App() {
@@ -1565,8 +1565,7 @@ export default function App() {
     switch (tab) {
       case 'dashboard': return 'Beranda';
       case 'students': return 'Data';
-      case 'designer': return 'Desain Kartu';
-      case 'poster_designer': return 'Desain Poster';
+      case 'designer': return 'Desain';
       case 'print': return 'Cetak';
       case 'settings': return 'Pengaturan';
       default: return 'Beranda';

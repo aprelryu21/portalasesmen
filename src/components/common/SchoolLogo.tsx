@@ -10,17 +10,32 @@ interface SchoolLogoProps {
 export const normalizeImageUrl = (url?: string): string => {
   if (!url) return '';
   const trimmed = url.trim();
+  if (!trimmed || trimmed === 'undefined' || trimmed === 'null') return '';
   if (trimmed.startsWith('data:image/')) return trimmed;
 
-  // Convert Google Drive view/open links to direct high-res image thumbnail
+  // 1. Google User Content /d/ID
+  const lh3Match = trimmed.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+  if (lh3Match && lh3Match[1]) {
+    return `https://drive.google.com/thumbnail?id=${lh3Match[1]}&sz=w1000`;
+  }
+
+  // 2. Google Drive /file/d/ID
   const driveFileMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (driveFileMatch && driveFileMatch[1]) {
     return `https://drive.google.com/thumbnail?id=${driveFileMatch[1]}&sz=w1000`;
   }
+
+  // 3. Google Drive ?id=ID or &id=ID
   const driveIdMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (driveIdMatch && driveIdMatch[1] && trimmed.includes('drive.google.com')) {
+  if (driveIdMatch && driveIdMatch[1]) {
     return `https://drive.google.com/thumbnail?id=${driveIdMatch[1]}&sz=w1000`;
   }
+
+  // 4. Raw Google Drive file ID
+  if (/^[a-zA-Z0-9_-]{25,45}$/.test(trimmed)) {
+    return `https://drive.google.com/thumbnail?id=${trimmed}&sz=w1000`;
+  }
+
   return trimmed;
 };
 
@@ -31,19 +46,36 @@ export const SchoolLogo: React.FC<SchoolLogoProps> = ({
   className = '',
 }) => {
   const [imgError, setImgError] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
   const normalizedSrc = normalizeImageUrl(url);
 
-  // Reset error when URL changes
+  // Extract ID if Google Drive for fallback attempt
+  const driveIdMatch = url ? url.match(/([a-zA-Z0-9_-]{25,45})/) : null;
+  const driveId = driveIdMatch ? driveIdMatch[1] : null;
+
   useEffect(() => {
     setImgError(false);
+    setUseFallback(false);
   }, [url]);
 
-  if (normalizedSrc && !imgError) {
+  const handleImageError = () => {
+    if (!useFallback && driveId) {
+      setUseFallback(true);
+    } else {
+      setImgError(true);
+    }
+  };
+
+  const currentSrc = useFallback && driveId
+    ? `https://lh3.googleusercontent.com/d/${driveId}`
+    : normalizedSrc;
+
+  if (currentSrc && !imgError) {
     return (
       <img
-        src={normalizedSrc}
+        src={currentSrc}
         alt={`Logo ${name}`}
-        onError={() => setImgError(true)}
+        onError={handleImageError}
         style={{ width: `${sizeMm}mm`, height: `${sizeMm}mm` }}
         className={`object-contain ${className}`}
       />

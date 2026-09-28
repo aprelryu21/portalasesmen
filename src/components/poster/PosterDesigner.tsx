@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { School, Exam, Student, PosterDesignSettings, PosterStyleId, PosterOrientation } from '../../types';
 import { A4SheetContainer } from '../print/A4SheetContainer';
+import { SchoolLogo, normalizeImageUrl } from '../common/SchoolLogo';
 import {
   Palette,
   Sparkles,
@@ -13,11 +14,8 @@ import {
   Users,
   Award,
   Save,
-  RotateCcw,
-  Printer,
   Compass,
   ArrowRight,
-  ShieldCheck,
   AlertTriangle,
   GraduationCap,
   Ban,
@@ -37,7 +35,6 @@ interface PosterDesignerProps {
 export const PosterDesigner: React.FC<PosterDesignerProps> = ({
   school,
   exam,
-  students = [],
   posterDesign,
   onUpdatePosterDesign,
   onSaveToCloud,
@@ -194,47 +191,37 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
     }
   };
 
-  // Render poster preview
   const data = getPosterData(previewType);
   const schoolName = school?.name || 'SD NEGERI CONTOH';
-  const schoolLogo = school?.logoUrl;
   const examTitle = exam?.name || 'ASESMEN SUMATIF';
   const academicYear = exam?.academicYear || '2026/2027';
+  const normalizedLogo = normalizeImageUrl(school?.logoUrl);
 
-  // Common Watermark component
+  // Common Watermark component - HANYA LOGO (TANPA TEKS DI WATERMARK)
   const Watermark = () => (
     <div
-      className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center pointer-events-none select-none z-0"
+      className="absolute bottom-16 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none select-none z-0"
       style={{ opacity: watermarkOpacity / 100 }}
     >
-      {schoolLogo ? (
+      {normalizedLogo ? (
         <img
-          src={schoolLogo}
+          src={normalizedLogo}
           alt="Watermark Logo"
-          className="w-44 h-44 sm:w-52 sm:h-52 object-contain grayscale filter"
+          className="w-48 h-48 sm:w-56 sm:h-56 object-contain grayscale filter"
         />
       ) : (
-        <div className="w-44 h-44 rounded-full border-4 border-dashed border-neutral-600 flex items-center justify-center">
-          <GraduationCap className="w-24 h-24 text-neutral-600" />
+        <div className="w-48 h-48 rounded-full border-4 border-dashed border-neutral-600 flex items-center justify-center">
+          <GraduationCap className="w-28 h-28 text-neutral-600" />
         </div>
       )}
-      <div className="mt-2 text-center text-xs font-black uppercase tracking-widest text-neutral-800 max-w-sm">
-        {schoolName}
-      </div>
     </div>
   );
 
-  // Common Official Footer
+  // Common Official Footer (Menggunakan SchoolLogo yang sudah dinormalisasi)
   const Footer = ({ borderClass, textClass }: { borderClass: string; textClass: string }) => (
     <div className={`relative z-10 w-full pt-3 mt-auto border-t-2 ${borderClass} flex items-center justify-between gap-4 text-left`}>
       <div className="flex items-center gap-3">
-        {schoolLogo ? (
-          <img src={schoolLogo} alt="Logo" className="w-10 h-10 object-contain shrink-0" />
-        ) : (
-          <div className="w-10 h-10 rounded bg-neutral-100 border border-neutral-400 flex items-center justify-center shrink-0">
-            <GraduationCap className="w-6 h-6 text-neutral-700" />
-          </div>
-        )}
+        <SchoolLogo url={school?.logoUrl} name={schoolName} sizeMm={12} className="shrink-0" />
         <div>
           <h4 className="text-xs font-black uppercase text-neutral-900 leading-tight">
             {schoolName}
@@ -261,6 +248,29 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
       </div>
     </div>
   );
+
+  // Visual icon helper
+  const renderVisualIcon = (className: string) => {
+    switch (previewType) {
+      case 'quiet':
+        return activeStyle === 'hazard' ? <ShieldAlert className={className} /> : <VolumeX className={className} />;
+      case 'room_name':
+        return <DoorClosed className={className} />;
+      case 'communication':
+        return (
+          <div className="relative flex items-center justify-center">
+            <Smartphone className={className} />
+            <Ban className="w-16 h-16 sm:w-20 sm:h-20 text-red-600 absolute inset-0 m-auto" />
+          </div>
+        );
+      case 'committee':
+        return <Users className={className} />;
+      case 'principal':
+        return <Building2 className={className} />;
+      case 'guest_proctor':
+        return <Award className={className} />;
+    }
+  };
 
   // Render Content based on Orientation & Style
   const renderPosterContent = () => {
@@ -296,62 +306,48 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
 
           {/* Center Main Content */}
           {isLandscape ? (
-            /* Landscape 2-Column Responsive Layout */
-            <div className="relative z-10 grid grid-cols-12 gap-6 items-center my-auto py-4">
-              <div className="col-span-5 flex flex-col items-center text-center space-y-4">
-                <div className="w-24 h-24 sm:w-28 sm:h-28 bg-yellow-400 border-4 border-black rounded-2xl flex items-center justify-center shadow-[6px_6px_0px_#000]">
-                  {previewType === 'quiet' && <VolumeX className="w-14 h-14" />}
-                  {previewType === 'room_name' && <DoorClosed className="w-14 h-14" />}
-                  {previewType === 'communication' && (
-                    <div className="relative">
-                      <Smartphone className="w-14 h-14" />
-                      <Ban className="w-12 h-12 text-red-600 absolute inset-0 m-auto" />
-                    </div>
-                  )}
-                  {previewType === 'committee' && <Users className="w-14 h-14" />}
-                  {previewType === 'principal' && <Building2 className="w-14 h-14" />}
-                  {previewType === 'guest_proctor' && <Award className="w-14 h-14" />}
+            /* Landscape: ILUSTRASI DI KIRI, KESELURUHAN TEKS DI KANAN (LEBIH BESAR & PADAT) */
+            <div className="relative z-10 grid grid-cols-12 gap-8 items-center my-auto py-4">
+              {/* Kolom Kiri: Ilustrasi Proporsional */}
+              <div className="col-span-4 flex items-center justify-center">
+                <div className="w-40 h-40 sm:w-48 sm:h-48 bg-yellow-400 border-[4.5px] border-black rounded-3xl flex items-center justify-center shadow-[8px_8px_0px_#000] shrink-0">
+                  {renderVisualIcon('w-20 h-20 sm:w-24 sm:h-24 text-black')}
                 </div>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-black leading-tight">
-                  {data.mainHeadline}
-                </h1>
               </div>
 
-              <div className="col-span-7 space-y-4 text-left">
-                {data.subHeadline && (
-                  <div className="inline-block px-5 py-2.5 bg-black text-white border-3 border-black text-2xl sm:text-3xl font-black uppercase tracking-wide rounded-xl shadow-[4px_4px_0px_#FFE600]">
-                    {data.subHeadline}
-                  </div>
-                )}
+              {/* Kolom Kanan: Keseluruhan Teks Besar & Jelas */}
+              <div className="col-span-8 space-y-4 text-left">
+                <div>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-black leading-[1.02]">
+                    {data.mainHeadline}
+                  </h1>
+                  {data.subHeadline && (
+                    <div className="inline-block mt-3 px-5 py-2 bg-black text-white border-3 border-black text-2xl sm:text-3xl lg:text-4xl font-black uppercase tracking-wide rounded-xl shadow-[4px_4px_0px_#FFE600]">
+                      {data.subHeadline}
+                    </div>
+                  )}
+                </div>
+
                 {data.bodyNotice && (
-                  <div className="p-4 bg-white border-3 border-black rounded-xl shadow-[4px_4px_0px_#000]">
-                    <p className="text-base sm:text-lg font-extrabold uppercase text-neutral-900 leading-snug">
+                  <div className="p-4 sm:p-5 bg-white border-3 border-black rounded-xl shadow-[4px_4px_0px_#000]">
+                    <p className="text-lg sm:text-xl lg:text-2xl font-black uppercase text-neutral-900 leading-snug">
                       {data.bodyNotice}
                     </p>
                   </div>
                 )}
+
                 {data.rulesNote && (
-                  <p className="text-xs sm:text-sm font-bold text-neutral-700 leading-relaxed">
+                  <p className="text-xs sm:text-sm lg:text-base font-bold text-neutral-800 leading-relaxed">
                     {data.rulesNote}
                   </p>
                 )}
               </div>
             </div>
           ) : (
-            /* Portrait Vertical Stack Layout */
+            /* Portrait: Susunan Vertikal Seimbang */
             <div className="relative z-10 flex flex-col items-center justify-center text-center my-auto py-6 space-y-6">
               <div className="w-24 h-24 sm:w-28 sm:h-28 bg-yellow-400 border-4 border-black rounded-2xl flex items-center justify-center shadow-[6px_6px_0px_#000]">
-                {previewType === 'quiet' && <VolumeX className="w-14 h-14" />}
-                {previewType === 'room_name' && <DoorClosed className="w-14 h-14" />}
-                {previewType === 'communication' && (
-                  <div className="relative">
-                    <Smartphone className="w-14 h-14" />
-                    <Ban className="w-12 h-12 text-red-600 absolute inset-0 m-auto" />
-                  </div>
-                )}
-                {previewType === 'committee' && <Users className="w-14 h-14" />}
-                {previewType === 'principal' && <Building2 className="w-14 h-14" />}
-                {previewType === 'guest_proctor' && <Award className="w-14 h-14" />}
+                {renderVisualIcon('w-14 h-14 sm:w-16 sm:h-16 text-black')}
               </div>
 
               <div className="space-y-3 max-w-2xl">
@@ -400,7 +396,7 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
 
           <div className="relative z-10 border-b border-indigo-100 pb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
               <span className="text-xs font-black uppercase text-blue-900">{data.categoryTag}</span>
               <span className="text-xs text-slate-400">•</span>
               <span className="text-xs font-semibold text-slate-600 uppercase">{data.categorySub}</span>
@@ -411,36 +407,36 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
           </div>
 
           {isLandscape ? (
-            <div className="relative z-10 grid grid-cols-12 gap-6 items-center my-auto py-4">
-              <div className="col-span-5 flex flex-col items-center text-center space-y-4">
-                <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-                  {previewType === 'quiet' && <VolumeX className="w-14 h-14" />}
-                  {previewType === 'room_name' && <DoorClosed className="w-14 h-14" />}
-                  {previewType === 'communication' && <Smartphone className="w-14 h-14" />}
-                  {previewType === 'committee' && <Users className="w-14 h-14" />}
-                  {previewType === 'principal' && <Building2 className="w-14 h-14" />}
-                  {previewType === 'guest_proctor' && <Award className="w-14 h-14" />}
+            /* Landscape: ILUSTRASI DI KIRI, KESELURUHAN TEKS DI KANAN */
+            <div className="relative z-10 grid grid-cols-12 gap-8 items-center my-auto py-4">
+              <div className="col-span-4 flex items-center justify-center">
+                <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-xl shadow-blue-500/25 shrink-0">
+                  {renderVisualIcon('w-20 h-20 sm:w-24 sm:h-24')}
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-black uppercase text-slate-900 leading-tight">
-                  {data.mainHeadline}
-                </h1>
               </div>
 
-              <div className="col-span-7 space-y-4 text-left">
-                {data.subHeadline && (
-                  <div className="text-2xl sm:text-3xl font-extrabold text-blue-700 uppercase tracking-wide">
-                    {data.subHeadline}
-                  </div>
-                )}
+              <div className="col-span-8 space-y-4 text-left">
+                <div>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase text-slate-900 leading-tight">
+                    {data.mainHeadline}
+                  </h1>
+                  {data.subHeadline && (
+                    <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-blue-700 uppercase tracking-wide mt-2">
+                      {data.subHeadline}
+                    </div>
+                  )}
+                </div>
+
                 {data.bodyNotice && (
-                  <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                    <p className="text-base sm:text-lg font-bold uppercase text-slate-800 leading-snug">
+                  <div className="p-4 sm:p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                    <p className="text-base sm:text-lg lg:text-xl font-bold uppercase text-slate-800 leading-snug">
                       {data.bodyNotice}
                     </p>
                   </div>
                 )}
+
                 {data.rulesNote && (
-                  <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+                  <p className="text-xs sm:text-sm lg:text-base font-medium text-slate-500 leading-relaxed">
                     {data.rulesNote}
                   </p>
                 )}
@@ -449,12 +445,7 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
           ) : (
             <div className="relative z-10 flex flex-col items-center justify-center text-center my-auto py-6 space-y-6">
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-                {previewType === 'quiet' && <VolumeX className="w-14 h-14" />}
-                {previewType === 'room_name' && <DoorClosed className="w-14 h-14" />}
-                {previewType === 'communication' && <Smartphone className="w-14 h-14" />}
-                {previewType === 'committee' && <Users className="w-14 h-14" />}
-                {previewType === 'principal' && <Building2 className="w-14 h-14" />}
-                {previewType === 'guest_proctor' && <Award className="w-14 h-14" />}
+                {renderVisualIcon('w-14 h-14')}
               </div>
 
               <div className="space-y-3 max-w-2xl">
@@ -523,41 +514,36 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
 
           {/* Center Content */}
           {isLandscape ? (
-            <div className="relative z-10 grid grid-cols-12 gap-6 items-center my-auto py-3">
-              <div className="col-span-5 flex flex-col items-center text-center space-y-3">
-                <div className="w-24 h-24 bg-amber-400 border-4 border-black rounded-full flex items-center justify-center shadow-[4px_4px_0px_#000]">
-                  {previewType === 'quiet' && <ShieldAlert className="w-14 h-14" />}
-                  {previewType === 'room_name' && <DoorClosed className="w-14 h-14" />}
-                  {previewType === 'communication' && (
-                    <div className="relative">
-                      <Smartphone className="w-14 h-14" />
-                      <Ban className="w-12 h-12 text-red-600 absolute inset-0 m-auto" />
-                    </div>
-                  )}
-                  {previewType === 'committee' && <Users className="w-14 h-14" />}
-                  {previewType === 'principal' && <Building2 className="w-14 h-14" />}
-                  {previewType === 'guest_proctor' && <Award className="w-14 h-14" />}
+            /* Landscape: ILUSTRASI DI KIRI, KESELURUHAN TEKS DI KANAN */
+            <div className="relative z-10 grid grid-cols-12 gap-8 items-center my-auto py-3">
+              <div className="col-span-4 flex items-center justify-center">
+                <div className="w-40 h-40 sm:w-48 sm:h-48 bg-amber-400 border-[5px] border-black rounded-full flex items-center justify-center shadow-[6px_6px_0px_#000] shrink-0">
+                  {renderVisualIcon('w-20 h-20 sm:w-24 sm:h-24 text-black')}
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-black uppercase text-black leading-tight">
-                  {data.mainHeadline}
-                </h1>
               </div>
 
-              <div className="col-span-7 space-y-3 text-left">
-                {data.subHeadline && (
-                  <div className="inline-block px-4 py-2 bg-amber-400 text-black border-4 border-black text-2xl font-black uppercase rounded-md shadow-[4px_4px_0px_#000]">
-                    {data.subHeadline}
-                  </div>
-                )}
+              <div className="col-span-8 space-y-3.5 text-left">
+                <div>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase text-black leading-tight">
+                    {data.mainHeadline}
+                  </h1>
+                  {data.subHeadline && (
+                    <div className="inline-block mt-2 px-4 py-2 bg-amber-400 text-black border-4 border-black text-2xl sm:text-3xl font-black uppercase rounded-md shadow-[4px_4px_0px_#000]">
+                      {data.subHeadline}
+                    </div>
+                  )}
+                </div>
+
                 {data.bodyNotice && (
-                  <div className="p-3.5 bg-black text-amber-300 border-3 border-black rounded-lg shadow-[4px_4px_0px_#F59E0B]">
-                    <p className="text-base font-black uppercase leading-snug">
+                  <div className="p-4 bg-black text-amber-300 border-3 border-black rounded-lg shadow-[4px_4px_0px_#F59E0B]">
+                    <p className="text-base sm:text-lg lg:text-xl font-black uppercase leading-snug">
                       {data.bodyNotice}
                     </p>
                   </div>
                 )}
+
                 {data.rulesNote && (
-                  <p className="text-xs font-extrabold text-neutral-900 bg-amber-200/80 px-3 py-1 rounded border border-amber-400">
+                  <p className="text-xs sm:text-sm lg:text-base font-extrabold text-neutral-900 bg-amber-200/80 px-3.5 py-1.5 rounded border border-amber-400">
                     {data.rulesNote}
                   </p>
                 )}
@@ -566,17 +552,7 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
           ) : (
             <div className="relative z-10 flex flex-col items-center justify-center text-center my-auto py-4 space-y-5">
               <div className="w-24 h-24 sm:w-28 sm:h-28 bg-amber-400 border-4 border-black rounded-full flex items-center justify-center shadow-[4px_4px_0px_#000]">
-                {previewType === 'quiet' && <ShieldAlert className="w-14 h-14" />}
-                {previewType === 'room_name' && <DoorClosed className="w-14 h-14" />}
-                {previewType === 'communication' && (
-                  <div className="relative">
-                    <Smartphone className="w-14 h-14" />
-                    <Ban className="w-12 h-12 text-red-600 absolute inset-0 m-auto" />
-                  </div>
-                )}
-                {previewType === 'committee' && <Users className="w-14 h-14" />}
-                {previewType === 'principal' && <Building2 className="w-14 h-14" />}
-                {previewType === 'guest_proctor' && <Award className="w-14 h-14" />}
+                {renderVisualIcon('w-14 h-14 text-black')}
               </div>
 
               <div className="space-y-3 max-w-2xl">
@@ -645,36 +621,36 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
           </div>
 
           {isLandscape ? (
-            <div className="relative z-10 grid grid-cols-12 gap-6 items-center my-auto py-4">
-              <div className="col-span-5 flex flex-col items-center text-center space-y-3">
-                <div className="w-24 h-24 rounded-full border-4 border-[#B45309] bg-emerald-50 text-[#064E3B] flex items-center justify-center shadow-md">
-                  {previewType === 'quiet' && <VolumeX className="w-14 h-14" />}
-                  {previewType === 'room_name' && <DoorClosed className="w-14 h-14" />}
-                  {previewType === 'communication' && <Smartphone className="w-14 h-14" />}
-                  {previewType === 'committee' && <Users className="w-14 h-14" />}
-                  {previewType === 'principal' && <Building2 className="w-14 h-14" />}
-                  {previewType === 'guest_proctor' && <Award className="w-14 h-14" />}
+            /* Landscape: ILUSTRASI DI KIRI, KESELURUHAN TEKS DI KANAN */
+            <div className="relative z-10 grid grid-cols-12 gap-8 items-center my-auto py-4">
+              <div className="col-span-4 flex items-center justify-center">
+                <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-full border-4 border-[#B45309] bg-emerald-50 text-[#064E3B] flex items-center justify-center shadow-lg shrink-0">
+                  {renderVisualIcon('w-20 h-20 sm:w-24 sm:h-24')}
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-black uppercase text-[#064E3B] leading-tight font-serif">
-                  {data.mainHeadline}
-                </h1>
               </div>
 
-              <div className="col-span-7 space-y-3 text-left">
-                {data.subHeadline && (
-                  <div className="text-2xl sm:text-3xl font-black text-[#B45309] uppercase tracking-wide">
-                    {data.subHeadline}
-                  </div>
-                )}
+              <div className="col-span-8 space-y-3.5 text-left">
+                <div>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase text-[#064E3B] leading-tight font-serif">
+                    {data.mainHeadline}
+                  </h1>
+                  {data.subHeadline && (
+                    <div className="text-2xl sm:text-3xl font-black text-[#B45309] uppercase tracking-wide mt-2">
+                      {data.subHeadline}
+                    </div>
+                  )}
+                </div>
+
                 {data.bodyNotice && (
-                  <div className="p-3.5 bg-emerald-50/70 border-2 border-[#064E3B] rounded-lg">
-                    <p className="text-base font-bold uppercase text-[#064E3B] leading-snug">
+                  <div className="p-4 bg-emerald-50/70 border-2 border-[#064E3B] rounded-lg">
+                    <p className="text-base sm:text-lg lg:text-xl font-bold uppercase text-[#064E3B] leading-snug">
                       {data.bodyNotice}
                     </p>
                   </div>
                 )}
+
                 {data.rulesNote && (
-                  <p className="text-xs font-semibold text-neutral-600 italic">
+                  <p className="text-xs sm:text-sm lg:text-base font-semibold text-neutral-600 italic">
                     &ldquo;{data.rulesNote}&rdquo;
                   </p>
                 )}
@@ -683,12 +659,7 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
           ) : (
             <div className="relative z-10 flex flex-col items-center justify-center text-center my-auto py-5 space-y-5">
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-[#B45309] bg-emerald-50 text-[#064E3B] flex items-center justify-center shadow-md">
-                {previewType === 'quiet' && <VolumeX className="w-14 h-14" />}
-                {previewType === 'room_name' && <DoorClosed className="w-14 h-14" />}
-                {previewType === 'communication' && <Smartphone className="w-14 h-14" />}
-                {previewType === 'committee' && <Users className="w-14 h-14" />}
-                {previewType === 'principal' && <Building2 className="w-14 h-14" />}
-                {previewType === 'guest_proctor' && <Award className="w-14 h-14" />}
+                {renderVisualIcon('w-14 h-14')}
               </div>
 
               <div className="space-y-3 max-w-2xl">
@@ -747,36 +718,36 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
         </div>
 
         {isLandscape ? (
-          <div className="relative z-10 grid grid-cols-12 gap-6 items-center my-auto py-4">
-            <div className="col-span-5 flex flex-col items-center text-center space-y-3">
-              <div className="w-24 h-24 rounded-3xl bg-teal-600 text-white flex items-center justify-center shadow-lg transform rotate-[-2deg]">
-                {previewType === 'quiet' && <VolumeX className="w-14 h-14" />}
-                {previewType === 'room_name' && <DoorClosed className="w-14 h-14" />}
-                {previewType === 'communication' && <Smartphone className="w-14 h-14" />}
-                {previewType === 'committee' && <Users className="w-14 h-14" />}
-                {previewType === 'principal' && <Building2 className="w-14 h-14" />}
-                {previewType === 'guest_proctor' && <Award className="w-14 h-14" />}
+          /* Landscape: ILUSTRASI DI KIRI, KESELURUHAN TEKS DI KANAN */
+          <div className="relative z-10 grid grid-cols-12 gap-8 items-center my-auto py-4">
+            <div className="col-span-4 flex items-center justify-center">
+              <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-[32px] bg-teal-600 text-white flex items-center justify-center shadow-xl transform rotate-[-2deg] shrink-0">
+                {renderVisualIcon('w-20 h-20 sm:w-24 sm:h-24')}
               </div>
-              <h1 className="text-3xl sm:text-4xl font-black uppercase text-teal-950 leading-tight">
-                {data.mainHeadline}
-              </h1>
             </div>
 
-            <div className="col-span-7 space-y-3 text-left">
-              {data.subHeadline && (
-                <div className="inline-block px-5 py-2 bg-orange-500 text-white text-2xl font-black uppercase rounded-2xl shadow-md">
-                  {data.subHeadline}
-                </div>
-              )}
+            <div className="col-span-8 space-y-3.5 text-left">
+              <div>
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase text-teal-950 leading-tight">
+                  {data.mainHeadline}
+                </h1>
+                {data.subHeadline && (
+                  <div className="inline-block mt-2 px-5 py-2 bg-orange-500 text-white text-2xl sm:text-3xl font-black uppercase rounded-2xl shadow-md">
+                    {data.subHeadline}
+                  </div>
+                )}
+              </div>
+
               {data.bodyNotice && (
-                <div className="p-3.5 bg-white border-2 border-teal-600 rounded-2xl shadow-sm">
-                  <p className="text-base font-bold uppercase text-teal-900 leading-snug">
+                <div className="p-4 bg-white border-2 border-teal-600 rounded-2xl shadow-sm">
+                  <p className="text-base sm:text-lg lg:text-xl font-bold uppercase text-teal-900 leading-snug">
                     {data.bodyNotice}
                   </p>
                 </div>
               )}
+
               {data.rulesNote && (
-                <p className="text-xs font-semibold text-teal-800 leading-relaxed">
+                <p className="text-xs sm:text-sm lg:text-base font-semibold text-teal-800 leading-relaxed">
                   {data.rulesNote}
                 </p>
               )}
@@ -785,12 +756,7 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
         ) : (
           <div className="relative z-10 flex flex-col items-center justify-center text-center my-auto py-5 space-y-5">
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-teal-600 text-white flex items-center justify-center shadow-lg transform rotate-[-2deg]">
-              {previewType === 'quiet' && <VolumeX className="w-14 h-14" />}
-              {previewType === 'room_name' && <DoorClosed className="w-14 h-14" />}
-              {previewType === 'communication' && <Smartphone className="w-14 h-14" />}
-              {previewType === 'committee' && <Users className="w-14 h-14" />}
-              {previewType === 'principal' && <Building2 className="w-14 h-14" />}
-              {previewType === 'guest_proctor' && <Award className="w-14 h-14" />}
+              {renderVisualIcon('w-14 h-14')}
             </div>
 
             <div className="space-y-2 max-w-2xl">
@@ -929,7 +895,7 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
                 </div>
                 <div>
                   <div className="text-xs font-black uppercase">Landscape (Mendatar)</div>
-                  <div className="text-[10px] text-neutral-500 font-medium">Susunan 2-kolom responsif</div>
+                  <div className="text-[10px] text-neutral-500 font-medium">Teks kanan, ilustrasi kiri</div>
                 </div>
               </button>
             </div>
