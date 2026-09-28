@@ -257,7 +257,7 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
 export const DEFAULT_POSTER_DESIGN: PosterDesignSettings = {
   styleId: 'neobrutal',
   orientation: 'portrait',
-  watermarkOpacity: 14,
+  watermarkOpacity: 10,
   showSchoolAddressInFooter: true,
 };
 

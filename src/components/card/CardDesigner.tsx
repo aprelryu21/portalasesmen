@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { School, Exam, Student, Teacher, CardDesignSettings, TemplatePreset, GuestCardData } from '../../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { School, Exam, Student, Teacher, CardDesignSettings, TemplatePreset, GuestCardData, PosterDesignSettings } from '../../types';
 import { ExamCard } from './ExamCard';
 import { DeskCard, DESK_THEMES } from './DeskCard';
 import { ProctorGuestCard, PROCTOR_GUEST_THEMES, CardThemeId } from './ProctorGuestCard';
@@ -9,7 +9,8 @@ import { getThemeById } from '../../config/cardThemes';
 import { SchoolLogo } from '../common/SchoolLogo';
 import { GenderAvatar } from '../common/GenderAvatar';
 import { QrCodeImage } from '../common/QrCodeImage';
-import { PRESET_TEMPLATES } from '../../data/mockData';
+import { PRESET_TEMPLATES, DEFAULT_POSTER_DESIGN } from '../../data/mockData';
+import { PosterDesigner } from '../poster/PosterDesigner';
 import {
   Palette,
   Maximize2,
@@ -44,7 +45,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-export type DesignerMenuId = 'menu' | 'student' | 'desk' | 'proctor' | 'guest';
+export type DesignerMenuId = 'menu' | 'student' | 'desk' | 'proctor' | 'guest' | 'poster';
 
 interface CardDesignerProps {
   school: School;
@@ -52,8 +53,12 @@ interface CardDesignerProps {
   students: Student[];
   teachers?: Teacher[];
   design: CardDesignSettings;
+  posterDesign?: PosterDesignSettings;
   onUpdateDesign: (newDesign: CardDesignSettings) => void;
+  onUpdatePosterDesign?: (newDesign: PosterDesignSettings) => void;
+  onSavePosterDesignToCloud?: (design: PosterDesignSettings) => Promise<void>;
   onNavigateToPrint: (category?: string) => void;
+  initialMenu?: DesignerMenuId;
 }
 
 const THEME_PRESETS: {
@@ -95,11 +100,21 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
   students,
   teachers = [],
   design,
+  posterDesign,
   onUpdateDesign,
+  onUpdatePosterDesign,
+  onSavePosterDesignToCloud,
   onNavigateToPrint,
+  initialMenu,
 }) => {
-  // Default to 'menu' so user sees the menu cards first, matching SchoolDataHub!
-  const [activeMenu, setActiveMenu] = useState<DesignerMenuId>('menu');
+  // Default to 'menu' or initialMenu
+  const [activeMenu, setActiveMenu] = useState<DesignerMenuId>(initialMenu || 'menu');
+
+  useEffect(() => {
+    if (initialMenu) {
+      setActiveMenu(initialMenu);
+    }
+  }, [initialMenu]);
 
   // Sub-tabs for ID Siswa
   const [studentTab, setStudentTab] = useState<'dimension' | 'fields' | 'colors' | 'header' | 'footer'>('dimension');
@@ -229,8 +244,8 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
           </div>
         </div>
 
-        {/* 4 Kotak Menu Desain */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {/* 5 Kotak Menu Desain */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5">
           {/* Menu 1: Desain ID Siswa */}
           <div
             onClick={() => setActiveMenu('student')}
@@ -390,6 +405,46 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Menu 5: Desain Poster Asesmen */}
+          <div
+            onClick={() => setActiveMenu('poster')}
+            className="group relative bg-white border-2 sm:border-3 border-black rounded-xl sm:rounded-2xl p-5 shadow-[4px_4px_0px_#000] sm:shadow-[6px_6px_0px_#000] hover:shadow-[8px_8px_0px_#000] hover:-translate-y-1 transition-all cursor-pointer flex flex-col justify-between"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-purple-600 border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_#000] group-hover:scale-105 transition-transform text-white">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight group-hover:text-purple-800 transition-colors">
+                  Desain Poster Asesmen
+                </h3>
+                <p className="text-xs text-neutral-600 mt-1 leading-relaxed">
+                  Poster tata tertib, ruang ujian, dilarang bawa HP, panitia, & pengawas. Atur orientasi, 5 gaya visual, dan watermark logo tengah.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-1 pt-1">
+                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-900 rounded text-[9px] font-bold border border-purple-300">
+                  6 Format Poster
+                </span>
+                <span className="px-1.5 py-0.5 bg-neutral-100 text-neutral-700 rounded text-[9px] font-bold border border-neutral-300">
+                  5 Gaya Visual
+                </span>
+                <span className="px-1.5 py-0.5 bg-neutral-100 text-neutral-700 rounded text-[9px] font-bold border border-neutral-300">
+                  A4 Penuh
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-4 mt-3 border-t-2 border-neutral-100 flex items-center justify-between text-xs font-black text-black">
+              <span>Buka Editor Poster</span>
+              <div className="w-7 h-7 rounded-lg bg-purple-600 border border-black flex items-center justify-center group-hover:translate-x-1 transition-transform text-white">
+                <ArrowRight className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -463,6 +518,19 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
         >
           <UserCheck className="w-3.5 h-3.5" />
           <span>ID Tamu</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveMenu('poster')}
+          className={`px-3 py-1.5 rounded-lg border-2 border-black text-xs font-black flex items-center gap-1.5 transition-transform active:translate-y-0.5 cursor-pointer ${
+            activeMenu === 'poster'
+              ? 'bg-purple-600 text-white shadow-[2px_2px_0px_#000]'
+              : 'bg-white hover:bg-purple-50 text-neutral-700'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Poster Asesmen</span>
         </button>
       </div>
 
@@ -1492,6 +1560,20 @@ export const CardDesigner: React.FC<CardDesignerProps> = ({
             </PinchZoomCardContainer>
           </div>
         </div>
+      )}
+
+      {/* 5. SUB-VIEW: DESAIN POSTER ASESMEN */}
+      {activeMenu === 'poster' && (
+        <PosterDesigner
+          school={school}
+          exam={exam}
+          students={students}
+          posterDesign={posterDesign || DEFAULT_POSTER_DESIGN}
+          onUpdatePosterDesign={onUpdatePosterDesign || (() => {})}
+          onSaveToCloud={onSavePosterDesignToCloud}
+          onNavigateToPrint={() => onNavigateToPrint('exam_poster')}
+          onBackToMenu={() => setActiveMenu('menu')}
+        />
       )}
     </div>
   );

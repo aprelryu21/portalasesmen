@@ -61,6 +61,7 @@ interface PrintPreviewProps {
   onUpdatePrintSettings: (newSettings: PrintSettings) => void;
   onBackToDesigner: () => void;
   onNavigateToPosterDesigner?: () => void;
+  initialCategory?: PrintCardCategory;
 }
 
 export const PrintPreview: React.FC<PrintPreviewProps> = ({
@@ -79,9 +80,16 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
   onUpdatePrintSettings,
   onBackToDesigner,
   onNavigateToPosterDesigner,
+  initialCategory,
 }) => {
-  // Main view state: default to 'menu' so user selects what card to print first
-  const [activeCategory, setActiveCategory] = useState<PrintCardCategory>('menu');
+  // Main view state: default to 'menu' or initialCategory
+  const [activeCategory, setActiveCategory] = useState<PrintCardCategory>(initialCategory || 'menu');
+
+  useEffect(() => {
+    if (initialCategory) {
+      setActiveCategory(initialCategory);
+    }
+  }, [initialCategory]);
 
   // Selected assessment state
   const [selectedExamId, setSelectedExamId] = useState<string>(exam?.id || '');

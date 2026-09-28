@@ -314,21 +314,21 @@ export const ExamPosterPrint: React.FC<ExamPosterPrintProps> = ({
     const examTitle = exam?.name || 'ASESMEN SUMATIF';
     const isLandscape = orientation === 'landscape';
 
-    // Watermark component - HANYA LOGO (TANPA TEKS DI WATERMARK)
+    // Watermark component - TENGAH HALAMAN, UKURAN BESAR, TRANSPARANSI HALUS, PALING BELAKANG
     const WatermarkComponent = () => (
       <div
-        className="absolute bottom-16 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none select-none z-0"
-        style={{ opacity: watermarkOpacity / 100 }}
+        className="absolute inset-0 m-auto flex items-center justify-center pointer-events-none select-none z-0"
+        style={{ opacity: (watermarkOpacity || 10) / 100 }}
       >
         {normalizedLogo ? (
           <img
             src={normalizedLogo}
             alt="Watermark Logo Sekolah"
-            className="w-48 h-48 sm:w-56 sm:h-56 object-contain grayscale filter"
+            className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 max-w-[75%] max-h-[75%] object-contain grayscale filter"
           />
         ) : (
-          <div className="w-48 h-48 rounded-full border-4 border-dashed border-neutral-700 flex items-center justify-center">
-            <GraduationCap className="w-28 h-28 text-neutral-600" />
+          <div className="w-72 h-72 sm:w-80 sm:h-80 rounded-full border-4 border-dashed border-neutral-700 flex items-center justify-center">
+            <GraduationCap className="w-40 h-40 text-neutral-600" />
           </div>
         )}
       </div>
@@ -1214,6 +1214,8 @@ export const ExamPosterPrint: React.FC<ExamPosterPrintProps> = ({
               width: currentOrientation === 'landscape' ? '297mm' : '210mm',
               height: currentOrientation === 'landscape' ? '210mm' : '297mm',
               minHeight: currentOrientation === 'landscape' ? '210mm' : '297mm',
+              maxHeight: currentOrientation === 'landscape' ? '210mm' : '297mm',
+              overflow: 'hidden',
             }}
           >
             {renderSinglePosterA4(item.type, currentStyle, currentOrientation, item.roomItem, true)}

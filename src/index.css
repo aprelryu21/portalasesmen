@@ -110,7 +110,6 @@ html.dark .border-black {
 /* Print Specific Rules */
 @media print {
   @page {
-    size: A4 portrait;
     margin: 0;
   }
 

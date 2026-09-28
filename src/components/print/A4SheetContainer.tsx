@@ -60,7 +60,7 @@ export const A4SheetContainer: React.FC<A4SheetContainerProps> = ({
       className={`w-full flex flex-col items-center select-none ${className}`}
     >
       {/* Zoom and Scale Toolbar (Only on Screen, Hidden in Print) */}
-      <div className="no-print w-full max-w-[210mm] flex items-center justify-between mb-2 px-2 text-xs">
+      <div className={`no-print w-full ${isPortrait ? 'max-w-[210mm]' : 'max-w-[297mm]'} flex items-center justify-between mb-2 px-2 text-xs`}>
         <div className="flex items-center gap-2">
           {pageNumber && totalPages && (
             <span className="font-mono font-bold bg-neutral-900 text-white px-2.5 py-0.5 rounded text-[11px] shadow-xs">

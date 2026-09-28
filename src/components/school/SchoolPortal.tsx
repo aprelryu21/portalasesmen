@@ -15,9 +15,8 @@ import { DEFAULT_POSTER_DESIGN } from '../../data/mockData';
 import { SchoolLogo } from '../common/SchoolLogo';
 import { Dashboard } from '../dashboard/Dashboard';
 import { SchoolDataHub } from './SchoolDataHub';
-import { CardDesigner } from '../card/CardDesigner';
-import { PosterDesigner } from '../poster/PosterDesigner';
-import { PrintPreview } from '../print/PrintPreview';
+import { CardDesigner, DesignerMenuId } from '../card/CardDesigner';
+import { PrintPreview, PrintCardCategory } from '../print/PrintPreview';
 import { SchoolSettings } from '../settings/SchoolSettings';
 import {
   LayoutDashboard,
@@ -152,7 +151,18 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
   autoLogoutMinutes = 15,
   onChangeAutoLogoutMinutes,
 }) => {
-  const [designerSubTab, setDesignerSubTab] = useState<'card' | 'poster'>('card');
+  const [designerInitialMenu, setDesignerInitialMenu] = useState<DesignerMenuId>('menu');
+  const [printInitialCategory, setPrintInitialCategory] = useState<PrintCardCategory>('menu');
+
+  const handleNavTabClick = (tabId: SchoolTabId) => {
+    if (tabId === 'designer') {
+      setDesignerInitialMenu('menu');
+    }
+    if (tabId === 'print') {
+      setPrintInitialCategory('menu');
+    }
+    onNavigate(tabId);
+  };
 
   const navTabs: SchoolNavTab[] = [
     {
@@ -240,7 +250,7 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => onNavigate(tab.id)}
+                    onClick={() => handleNavTabClick(tab.id)}
                     className={`w-full px-3.5 py-3 rounded-xl border-2 flex items-center justify-between text-xs font-black uppercase transition-all cursor-pointer ${
                       isActive
                         ? 'bg-yellow-300 text-black border-black shadow-[3px_3px_0px_#000] translate-x-1'
@@ -289,7 +299,7 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
             <button
               key={tab.id}
               type="button"
-              onClick={() => onNavigate(tab.id)}
+              onClick={() => handleNavTabClick(tab.id)}
               className={`flex-1 py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-all relative cursor-pointer ${
                 isActive
                   ? 'bg-yellow-300 text-black border-2 border-black shadow-[2px_2px_0px_#000]'
@@ -367,67 +377,26 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
         )}
 
         {activeTab === 'designer' && (
-          <div className="space-y-6">
-            {/* Sub-tab Navigation: Kartu vs Poster */}
-            <div className="no-print bg-white border-3 border-black shadow-[4px_4px_0px_#000] rounded-2xl p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDesignerSubTab('card')}
-                  className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black uppercase tracking-tight flex items-center gap-2 border-2 transition-all cursor-pointer ${
-                    designerSubTab === 'card'
-                      ? 'bg-yellow-300 border-black shadow-[3px_3px_0px_#000] text-black'
-                      : 'bg-neutral-100 border-transparent hover:border-black text-neutral-700'
-                  }`}
-                >
-                  <Palette className="w-4 h-4" />
-                  <span>Desain Kartu Peserta</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setDesignerSubTab('poster')}
-                  className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black uppercase tracking-tight flex items-center gap-2 border-2 transition-all cursor-pointer ${
-                    designerSubTab === 'poster'
-                      ? 'bg-purple-600 border-black shadow-[3px_3px_0px_#000] text-white'
-                      : 'bg-neutral-100 border-transparent hover:border-black text-neutral-700'
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Desain Poster Asesmen</span>
-                </button>
-              </div>
-
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-neutral-100 border border-neutral-300 rounded-lg text-[11px] font-bold text-neutral-600">
-                <span>Pilih jenis desain yang ingin diatur</span>
-              </div>
-            </div>
-
-            {/* Sub-tab 1: Desain Kartu */}
-            {designerSubTab === 'card' && (
-              <CardDesigner
-                school={school}
-                exam={exam}
-                students={students}
-                design={cardDesign}
-                onUpdateDesign={onUpdateCardDesign}
-                onNavigateToPrint={() => onNavigate('print')}
-              />
-            )}
-
-            {/* Sub-tab 2: Desain Poster */}
-            {designerSubTab === 'poster' && (
-              <PosterDesigner
-                school={school}
-                exam={exam}
-                students={students}
-                posterDesign={posterDesign || DEFAULT_POSTER_DESIGN}
-                onUpdatePosterDesign={onUpdatePosterDesign || (() => {})}
-                onSaveToCloud={onSavePosterDesignToCloud}
-                onNavigateToPrint={() => onNavigate('print')}
-              />
-            )}
-          </div>
+          <CardDesigner
+            school={school}
+            exam={exam}
+            students={students}
+            teachers={teachers}
+            design={cardDesign}
+            posterDesign={posterDesign || DEFAULT_POSTER_DESIGN}
+            onUpdateDesign={onUpdateCardDesign}
+            onUpdatePosterDesign={onUpdatePosterDesign}
+            onSavePosterDesignToCloud={onSavePosterDesignToCloud}
+            onNavigateToPrint={(category) => {
+              if (category === 'exam_poster') {
+                setPrintInitialCategory('exam_poster');
+              } else {
+                setPrintInitialCategory('menu');
+              }
+              onNavigate('print');
+            }}
+            initialMenu={designerInitialMenu}
+          />
         )}
 
         {activeTab === 'print' && (
@@ -445,13 +414,14 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
             posterDesign={posterDesign || DEFAULT_POSTER_DESIGN}
             printSettings={printSettings}
             onUpdatePrintSettings={onUpdatePrintSettings}
+            initialCategory={printInitialCategory}
             onBackToDesigner={() => {
+              setDesignerInitialMenu('menu');
               onNavigate('designer');
-              setDesignerSubTab('card');
             }}
             onNavigateToPosterDesigner={() => {
+              setDesignerInitialMenu('poster');
               onNavigate('designer');
-              setDesignerSubTab('poster');
             }}
           />
         )}

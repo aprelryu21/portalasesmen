@@ -16,10 +16,15 @@ import {
   Save,
   Compass,
   ArrowRight,
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  Printer,
   AlertTriangle,
   GraduationCap,
   Ban,
   ShieldAlert,
+  Eye,
 } from 'lucide-react';
 
 interface PosterDesignerProps {
@@ -30,6 +35,7 @@ interface PosterDesignerProps {
   onUpdatePosterDesign: (design: PosterDesignSettings) => void;
   onSaveToCloud?: (design: PosterDesignSettings) => Promise<void>;
   onNavigateToPrint: () => void;
+  onBackToMenu?: () => void;
 }
 
 export const PosterDesigner: React.FC<PosterDesignerProps> = ({
@@ -39,16 +45,18 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
   onUpdatePosterDesign,
   onSaveToCloud,
   onNavigateToPrint,
+  onBackToMenu,
 }) => {
   // Local active settings
   const [activeStyle, setActiveStyle] = useState<PosterStyleId>(posterDesign.styleId || 'neobrutal');
   const [orientation, setOrientation] = useState<PosterOrientation>(posterDesign.orientation || 'portrait');
   const [watermarkOpacity, setWatermarkOpacity] = useState<number>(
-    posterDesign.watermarkOpacity !== undefined ? posterDesign.watermarkOpacity : 14
+    posterDesign.watermarkOpacity !== undefined ? posterDesign.watermarkOpacity : 10
   );
   const [showAddress, setShowAddress] = useState<boolean>(
     posterDesign.showSchoolAddressInFooter !== false
   );
+  const [isControlsMinimized, setIsControlsMinimized] = useState<boolean>(false);
 
   // Active poster type for live previewing
   const [previewType, setPreviewType] = useState<
@@ -197,21 +205,21 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
   const academicYear = exam?.academicYear || '2026/2027';
   const normalizedLogo = normalizeImageUrl(school?.logoUrl);
 
-  // Common Watermark component - HANYA LOGO (TANPA TEKS DI WATERMARK)
+  // Common Watermark component - TENGAH HALAMAN, UKURAN BESAR, TRANSPARANSI HALUS, PALING BELAKANG
   const Watermark = () => (
     <div
-      className="absolute bottom-16 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none select-none z-0"
-      style={{ opacity: watermarkOpacity / 100 }}
+      className="absolute inset-0 m-auto flex items-center justify-center pointer-events-none select-none z-0"
+      style={{ opacity: (watermarkOpacity || 10) / 100 }}
     >
       {normalizedLogo ? (
         <img
           src={normalizedLogo}
           alt="Watermark Logo"
-          className="w-48 h-48 sm:w-56 sm:h-56 object-contain grayscale filter"
+          className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 max-w-[75%] max-h-[75%] object-contain grayscale filter"
         />
       ) : (
-        <div className="w-48 h-48 rounded-full border-4 border-dashed border-neutral-600 flex items-center justify-center">
-          <GraduationCap className="w-28 h-28 text-neutral-600" />
+        <div className="w-72 h-72 sm:w-80 sm:h-80 rounded-full border-4 border-dashed border-neutral-400 flex items-center justify-center">
+          <GraduationCap className="w-40 h-40 text-neutral-400" />
         </div>
       )}
     </div>
@@ -793,38 +801,49 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* 1. TOP HEADER BANNER (NO PRINT BUTTON HERE) */}
-      <div className="bg-white border-3 border-black shadow-[6px_6px_0px_#000] rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+      {/* 1. TOP HEADER BANNER (PENGATURAN & DESAIN POSTER ASESMEN) */}
+      <div className="bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] sm:shadow-[6px_6px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1.5 w-full md:w-auto">
+          <div className="flex items-center gap-2 flex-wrap">
+            {onBackToMenu && (
+              <button
+                type="button"
+                onClick={onBackToMenu}
+                className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 border-2 border-black rounded-lg text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-[1px_1px_0px_#000]"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Menu Desain</span>
+              </button>
+            )}
             <span className="px-2.5 py-0.5 bg-purple-600 text-white text-[10px] font-black uppercase rounded shadow-xs">
               Studio Desain Poster
             </span>
-            <span className="text-xs font-bold text-neutral-500 uppercase">
-              Sinkronisasi Cloud • Sheet data_poster
+            <span className="text-[11px] font-bold text-neutral-600">
+              Gaya: {STYLES_LIST.find((s) => s.id === activeStyle)?.name} • A4 {orientation.toUpperCase()}
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
-            <Palette className="w-6 h-6 text-purple-700" />
+
+          <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
+            <Palette className="w-5 h-5 text-purple-700" />
             Pengaturan &amp; Desain Poster Asesmen
           </h2>
-          <p className="text-xs text-neutral-600 max-w-xl">
-            Pilih gaya visual, tentukan orientasi lembar (Portrait / Landscape), dan atur watermark logo sekolah. Pengaturan ini akan otomatis diterapkan ke seluruh cetak poster ujian.
+          <p className="text-xs text-neutral-600 max-w-xl leading-relaxed">
+            Atur orientasi (Portrait/Landscape), 5 tema visual eksklusif, dan kepekatan logo watermark tengah.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 shrink-0">
-          {/* Save Button */}
+        {/* Action Buttons: Responsive & Compact */}
+        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap shrink-0">
           <button
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="px-5 py-2.5 bg-yellow-300 hover:bg-yellow-400 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[3px_3px_0px_#000] flex items-center gap-2 cursor-pointer transition-transform active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50"
+            className="px-3.5 py-2 bg-yellow-300 hover:bg-yellow-400 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-transform active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50"
           >
             {saveSuccess ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-emerald-800" />
-                <span>Tersimpan ke Database!</span>
+                <span>Tersimpan!</span>
               </>
             ) : (
               <>
@@ -834,140 +853,168 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
             )}
           </button>
 
-          {/* Quick Jump to Print Page */}
           <button
             type="button"
             onClick={onNavigateToPrint}
-            className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white border-2 border-black rounded-xl text-xs font-black uppercase shadow-[3px_3px_0px_#000] flex items-center gap-2 cursor-pointer transition-transform active:translate-x-0.5 active:translate-y-0.5"
+            className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer transition-transform active:translate-x-0.5 active:translate-y-0.5"
           >
+            <Printer className="w-4 h-4" />
             <span>Buka Halaman Cetak</span>
-            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* 2. MAIN LAYOUT: CONTROLS & LIVE PREVIEW */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT COLUMN: CONTROLS (5 Cols) */}
-        <div className="lg:col-span-5 space-y-4">
-          {/* Card 1: Orientasi Lembar */}
-          <div className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] rounded-xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
-                <Compass className="w-4 h-4 text-purple-700" />
-                Orientasi Lembar Kertas A4
-              </h3>
-              <span className="text-[10px] font-bold text-neutral-500 uppercase">
-                {orientation === 'portrait' ? '210 x 297 mm' : '297 x 210 mm'}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setOrientation('portrait')}
-                className={`p-3 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center gap-2 ${
-                  orientation === 'portrait'
-                    ? 'bg-yellow-100 border-black shadow-[3px_3px_0px_#000] ring-2 ring-black'
-                    : 'bg-neutral-50 hover:bg-white border-neutral-300 hover:border-black'
-                }`}
-              >
-                <div className="w-7 h-10 border-2 border-black rounded-sm bg-white shadow-xs flex items-center justify-center text-[9px] font-black">
-                  A4
-                </div>
-                <div>
-                  <div className="text-xs font-black uppercase">Portrait (Tegak)</div>
-                  <div className="text-[10px] text-neutral-500 font-medium">Susunan vertikal seimbang</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setOrientation('landscape')}
-                className={`p-3 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center gap-2 ${
-                  orientation === 'landscape'
-                    ? 'bg-yellow-100 border-black shadow-[3px_3px_0px_#000] ring-2 ring-black'
-                    : 'bg-neutral-50 hover:bg-white border-neutral-300 hover:border-black'
-                }`}
-              >
-                <div className="w-10 h-7 border-2 border-black rounded-sm bg-white shadow-xs flex items-center justify-center text-[9px] font-black">
-                  A4
-                </div>
-                <div>
-                  <div className="text-xs font-black uppercase">Landscape (Mendatar)</div>
-                  <div className="text-[10px] text-neutral-500 font-medium">Teks kanan, ilustrasi kiri</div>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Card 2: Pilihan 5 Gaya Desain */}
-          <div className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] rounded-xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-yellow-500" />
-                Pilih Gaya Visual Poster (5 Gaya Unik)
-              </h3>
-            </div>
-
-            <div className="space-y-2.5">
-              {STYLES_LIST.map((st) => {
-                const isSelected = activeStyle === st.id;
-                return (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => setActiveStyle(st.id)}
-                    className={`w-full p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                      isSelected
-                        ? 'bg-yellow-50 border-black shadow-[3px_3px_0px_#000] ring-2 ring-black'
-                        : 'bg-neutral-50 hover:bg-white border-neutral-300 hover:border-black'
-                    }`}
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black uppercase text-neutral-900">
-                          {st.name}
-                        </span>
-                        {isSelected && <CheckCircle2 className="w-4 h-4 text-black shrink-0" />}
-                      </div>
-                      <p className="text-[10px] text-neutral-600 leading-tight">
-                        {st.desc}
-                      </p>
-                    </div>
-
-                    <span className={`px-2.5 py-1 rounded text-[9px] font-black uppercase shrink-0 ${st.badgeColor}`}>
-                      Contoh
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Card 3: Pengaturan Watermark & Footer */}
-          <div className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] rounded-xl p-4 space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
-              <Sliders className="w-4 h-4 text-neutral-700" />
-              Pengaturan Watermark &amp; Footer
+      {/* 2. COLLAPSIBLE CONTROLS: ORIENTASI, GAYA, WATERMARK, & UJI COBA */}
+      <div className="bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] sm:shadow-[6px_6px_0px_#000] rounded-xl sm:rounded-2xl overflow-hidden transition-all">
+        {/* Minimize / Expand Bar */}
+        <div
+          onClick={() => setIsControlsMinimized((prev) => !prev)}
+          className="p-3 sm:p-4 bg-neutral-50 hover:bg-purple-50/50 border-b-2 border-black flex items-center justify-between gap-3 cursor-pointer select-none"
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-purple-700" />
+              Pengaturan: Orientasi, Gaya, Watermark, &amp; Uji Coba
             </h3>
+            {isControlsMinimized && (
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-600 flex-wrap">
+                <span className="px-2 py-0.5 bg-yellow-200 text-black border border-black rounded font-black uppercase">
+                  {orientation}
+                </span>
+                <span className="px-2 py-0.5 bg-purple-100 text-purple-900 border border-purple-300 rounded font-black uppercase">
+                  {STYLES_LIST.find((s) => s.id === activeStyle)?.name}
+                </span>
+                <span className="px-2 py-0.5 bg-neutral-200 text-neutral-800 rounded font-black">
+                  Watermark {watermarkOpacity}%
+                </span>
+              </div>
+            )}
+          </div>
 
-            <div className="space-y-3">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsControlsMinimized((prev) => !prev);
+            }}
+            className="px-2.5 py-1 bg-white hover:bg-neutral-100 border-2 border-black rounded-lg text-xs font-black flex items-center gap-1 shadow-[1px_1px_0px_#000] cursor-pointer shrink-0"
+          >
+            {isControlsMinimized ? (
+              <>
+                <span>Tampilkan Pengaturan</span>
+                <ChevronDown className="w-4 h-4" />
+              </>
+            ) : (
+              <>
+                <span>Minimize Pengaturan</span>
+                <ChevronUp className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Panel Content (Visible when not minimized) */}
+        {!isControlsMinimized && (
+          <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-200">
+            {/* Card 1: Orientasi Lembar */}
+            <div className="bg-neutral-50 border-2 border-black rounded-xl p-3.5 flex flex-col justify-between space-y-3">
               <div>
-                <div className="flex justify-between items-center text-xs font-bold text-neutral-700 mb-1.5">
-                  <span>Kepekatan Watermark Logo (Tengah Bawah):</span>
-                  <span className="font-mono font-black text-black">{watermarkOpacity}%</span>
+                <div className="flex items-center justify-between mb-1.5">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-neutral-900 flex items-center gap-1.5">
+                    <Compass className="w-4 h-4 text-purple-700" />
+                    1. Orientasi Kertas
+                  </h4>
+                  <span className="text-[10px] font-bold text-neutral-500 uppercase">
+                    {orientation === 'portrait' ? '210x297 mm' : '297x210 mm'}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  {[10, 14, 20, 26].map((op) => (
+                <p className="text-[11px] text-neutral-600 mb-2">
+                  Sesuaikan arah cetak poster sesuai kebutuhan ruangan.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mt-auto">
+                <button
+                  type="button"
+                  onClick={() => setOrientation('portrait')}
+                  className={`p-2.5 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                    orientation === 'portrait'
+                      ? 'bg-yellow-300 border-black shadow-[2px_2px_0px_#000] ring-1 ring-black'
+                      : 'bg-white hover:bg-neutral-100 border-neutral-300'
+                  }`}
+                >
+                  <div className="w-6 h-8 border-2 border-black rounded-xs bg-white flex items-center justify-center text-[8px] font-black">
+                    A4
+                  </div>
+                  <div className="text-[11px] font-black uppercase">Portrait</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOrientation('landscape')}
+                  className={`p-2.5 rounded-xl border-2 text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                    orientation === 'landscape'
+                      ? 'bg-yellow-300 border-black shadow-[2px_2px_0px_#000] ring-1 ring-black'
+                      : 'bg-white hover:bg-neutral-100 border-neutral-300'
+                  }`}
+                >
+                  <div className="w-8 h-6 border-2 border-black rounded-xs bg-white flex items-center justify-center text-[8px] font-black">
+                    A4
+                  </div>
+                  <div className="text-[11px] font-black uppercase">Landscape</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Card 2: Pilihan 5 Gaya Desain */}
+            <div className="bg-neutral-50 border-2 border-black rounded-xl p-3.5 space-y-2">
+              <h4 className="text-xs font-black uppercase tracking-wider text-neutral-900 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-yellow-500" />
+                2. Gaya Visual (5 Tema)
+              </h4>
+              <div className="space-y-1.5 max-h-[175px] overflow-y-auto pr-1">
+                {STYLES_LIST.map((st) => {
+                  const isSelected = activeStyle === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setActiveStyle(st.id)}
+                      className={`w-full p-2 rounded-lg border-2 text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                        isSelected
+                          ? 'bg-yellow-200 border-black shadow-[2px_2px_0px_#000] font-black'
+                          : 'bg-white hover:bg-neutral-100 border-neutral-300 text-neutral-700'
+                      }`}
+                    >
+                      <span className="text-[11px] uppercase truncate">{st.name}</span>
+                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-black shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Card 3: Watermark Logo & Footer */}
+            <div className="bg-neutral-50 border-2 border-black rounded-xl p-3.5 space-y-2.5 flex flex-col justify-between">
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-neutral-900 flex items-center gap-1.5 mb-1.5">
+                  <Sliders className="w-4 h-4 text-neutral-700" />
+                  3. Watermark &amp; Footer
+                </h4>
+                <div className="text-[11px] text-neutral-600 mb-2">
+                  Transparansi logo di tengah halaman:
+                </div>
+                <div className="grid grid-cols-4 gap-1 mb-2">
+                  {[6, 10, 14, 20].map((op) => (
                     <button
                       key={op}
                       type="button"
                       onClick={() => setWatermarkOpacity(op)}
-                      className={`flex-1 py-1 rounded text-xs font-bold border transition-colors cursor-pointer ${
+                      className={`py-1 rounded text-xs font-bold border transition-colors cursor-pointer text-center ${
                         watermarkOpacity === op
-                          ? 'bg-black text-white border-black shadow-xs'
-                          : 'bg-neutral-100 hover:bg-neutral-200 border-neutral-300 text-neutral-800'
+                          ? 'bg-black text-white border-black font-black shadow-xs'
+                          : 'bg-white hover:bg-neutral-200 border-neutral-300 text-neutral-800'
                       }`}
                     >
                       {op}%
@@ -976,62 +1023,74 @@ export const PosterDesigner: React.FC<PosterDesignerProps> = ({
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-neutral-200">
-                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-neutral-800">
+              <div className="pt-2 border-t border-neutral-300">
+                <label className="flex items-start gap-2 cursor-pointer select-none text-[11px] font-bold text-neutral-800">
                   <input
                     type="checkbox"
                     checked={showAddress}
                     onChange={(e) => setShowAddress(e.target.checked)}
-                    className="w-4 h-4 rounded text-black border-2 border-black focus:ring-0 cursor-pointer"
+                    className="w-3.5 h-3.5 rounded text-black border-2 border-black focus:ring-0 cursor-pointer mt-0.5 shrink-0"
                   />
-                  <span>Tampilkan Alamat Lengkap Sekolah di Footer</span>
+                  <span>Tampilkan Alamat di Footer</span>
                 </label>
               </div>
             </div>
-          </div>
 
-          {/* Card 4: Switcher Pratinjau Jenis Poster */}
-          <div className="bg-purple-50 border-2 border-purple-300 rounded-xl p-3.5 space-y-2">
-            <div className="text-[11px] font-black uppercase text-purple-950 flex items-center gap-1.5">
-              <DoorClosed className="w-3.5 h-3.5 text-purple-700" />
-              Uji Coba Tampilan pada Jenis Poster:
+            {/* Card 4: Uji Coba Pratinjau */}
+            <div className="bg-purple-50/70 border-2 border-purple-300 rounded-xl p-3.5 space-y-2">
+              <h4 className="text-xs font-black uppercase tracking-wider text-purple-950 flex items-center gap-1.5">
+                <DoorClosed className="w-4 h-4 text-purple-700" />
+                4. Uji Coba Jenis Poster
+              </h4>
+              <p className="text-[10px] text-purple-900">
+                Lihat simulasi pada format template:
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {PREVIEW_TYPES.map((pt) => {
+                  const Icon = pt.icon;
+                  const isSelected = previewType === pt.id;
+                  return (
+                    <button
+                      key={pt.id}
+                      type="button"
+                      onClick={() => setPreviewType(pt.id)}
+                      className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase border transition-all cursor-pointer flex items-center gap-1.5 truncate ${
+                        isSelected
+                          ? 'bg-purple-600 text-white border-black shadow-xs'
+                          : 'bg-white text-neutral-800 border-neutral-300 hover:border-black'
+                      }`}
+                    >
+                      <Icon className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{pt.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              {PREVIEW_TYPES.map((pt) => {
-                const Icon = pt.icon;
-                const isSelected = previewType === pt.id;
-                return (
-                  <button
-                    key={pt.id}
-                    type="button"
-                    onClick={() => setPreviewType(pt.id)}
-                    className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase border transition-all cursor-pointer flex items-center justify-center gap-1 truncate ${
-                      isSelected
-                        ? 'bg-purple-600 text-white border-black shadow-xs'
-                        : 'bg-white text-neutral-700 border-neutral-300 hover:border-black'
-                    }`}
-                  >
-                    <Icon className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{pt.title}</span>
-                  </button>
-                );
-              })}
-            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3. TAMPILAN PREVIEW A4 LEBAR & JELAS */}
+      <div className="bg-white border-2 sm:border-3 border-black shadow-[4px_4px_0px_#000] sm:shadow-[6px_6px_0px_#000] rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col items-center">
+        <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4 pb-3 border-b-2 border-neutral-200">
+          <div>
+            <span className="text-xs sm:text-sm font-black uppercase tracking-tight text-neutral-900 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-yellow-500" />
+              Live Pratinjau Lembar A4 Penuh ({orientation.toUpperCase()})
+            </span>
+            <p className="text-xs text-neutral-500 mt-0.5">
+              Menampilkan contoh format &ldquo;{PREVIEW_TYPES.find((p) => p.id === previewType)?.title}&rdquo; dengan ukuran dan proporsi asli A4.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="px-2.5 py-1 bg-yellow-300 text-black border border-black rounded text-[10px] font-black uppercase">
+              A4 {orientation.toUpperCase()}
+            </span>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: LIVE A4 PREVIEW (7 Cols) */}
-        <div className="lg:col-span-7 flex flex-col items-center">
-          <div className="w-full flex items-center justify-between mb-2 px-1">
-            <span className="text-xs font-black uppercase text-neutral-800 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
-              Pratinjau Hasil Desain ({orientation.toUpperCase()})
-            </span>
-            <span className="text-[10px] font-bold text-neutral-500">
-              *Tampilan cetak presisi 100% ukuran A4
-            </span>
-          </div>
-
+        <div className="w-full flex justify-center overflow-x-auto py-2">
           <A4SheetContainer
             pageNumber={1}
             totalPages={1}
