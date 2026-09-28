@@ -830,13 +830,13 @@ export const PrintPreview: React.FC<PrintPreviewProps> = ({
   if (activeCategory === 'exam_admin') {
     return (
       <div className="space-y-6">
-        {renderCategorySwitcher()}
         <ExamAdminPrint
           school={school}
           exam={currentExam}
           students={printableStudents}
           teachers={teachers}
           onBackToMenu={() => setActiveCategory('menu')}
+          renderGlobalCategorySwitcher={renderCategorySwitcher}
         />
       </div>
     );
