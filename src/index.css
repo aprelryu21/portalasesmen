@@ -160,8 +160,24 @@ html.dark .border-black {
   header.no-print,
   footer,
   button,
-  .print-hide {
+  .print-hide,
+  .fixed:not(.print-fixed) {
     display: none !important;
+  }
+
+  /* Hilangkan semua scrollbar dan cegah overflow scrollbar di Chromium print */
+  *,
+  *::before,
+  *::after {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
   }
 
   .print-only-container {

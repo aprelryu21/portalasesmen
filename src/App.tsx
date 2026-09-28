@@ -2016,7 +2016,7 @@ export default function App() {
 
       {/* 4. REAL-TIME CLOUD DATABASE STATUS TOAST */}
       {syncToastMessage && (
-        <div className="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-60 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0px_#000] text-xs font-black animate-in fade-in slide-in-from-bottom-2 duration-150 pointer-events-none">
+        <div className="no-print fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-60 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border-2 border-black bg-white shadow-[4px_4px_0px_#000] text-xs font-black animate-in fade-in slide-in-from-bottom-2 duration-150 pointer-events-none">
           {syncStatus === 'syncing' ? (
             <RotateCcw className="w-4 h-4 text-amber-500 animate-spin shrink-0" />
           ) : syncStatus === 'saved' ? (

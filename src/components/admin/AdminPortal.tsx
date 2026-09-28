@@ -870,7 +870,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       </aside>
 
       {/* 2. MOBILE FLOATING BOTTOM BAR (MELAYANG DI BAWAH) */}
-      <div className="lg:hidden fixed bottom-3 left-3 right-3 z-50 bg-white/95 backdrop-blur-md border-3 border-black shadow-[4px_4px_0px_#000] rounded-2xl p-1.5 flex items-center justify-around gap-1">
+      <div className="no-print lg:hidden fixed bottom-3 left-3 right-3 z-50 bg-white/95 backdrop-blur-md border-3 border-black shadow-[4px_4px_0px_#000] rounded-2xl p-1.5 flex items-center justify-around gap-1">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
