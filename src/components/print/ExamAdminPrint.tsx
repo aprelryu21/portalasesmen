@@ -575,10 +575,12 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
     );
   };
 
-  // Base styling untuk lembar A4 Administrasi (Margin 3cm Atas, 4cm Kiri, 3cm Kanan, 3cm Bawah, Tanpa Kotak Border/Scrollbar)
+  // Base styling untuk lembar A4 Administrasi (Margin Standar Resmi: 3cm Atas, 4cm Kiri, 3cm Kanan, 3cm Bawah)
   const basePageStyle: React.CSSProperties = {
     width: '210mm',
+    height: '297mm',
     minHeight: '297mm',
+    maxHeight: '297mm',
     paddingTop: '30mm',
     paddingLeft: '40mm',
     paddingRight: '30mm',
@@ -589,11 +591,11 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
     boxSizing: 'border-box',
     borderRadius: '0px',
     border: 'none',
-    boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08)',
     backgroundColor: '#ffffff',
     scrollbarWidth: 'none',
     msOverflowStyle: 'none',
-    overflow: 'visible',
+    overflow: 'hidden',
   };
 
   // ========================================================
@@ -1926,14 +1928,14 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           @media print {
             @page {
               size: A4 portrait;
-              margin: 30mm 30mm 30mm 40mm; /* Standar Resmi: Atas 3cm, Kanan 3cm, Bawah 3cm, Kiri 4cm */
+              margin: 0 !important;
             }
             html, body {
               background: white !important;
               color: black !important;
               margin: 0 !important;
               padding: 0 !important;
-              width: 100% !important;
+              width: 210mm !important;
               height: auto !important;
               min-height: 0 !important;
               overflow: visible !important;
@@ -1958,8 +1960,8 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             }
             .print-only-container {
               display: block !important;
-              width: 100% !important;
-              margin: 0 !important;
+              width: 210mm !important;
+              margin: 0 auto !important;
               padding: 0 !important;
               background: transparent !important;
               overflow: visible !important;
@@ -1968,23 +1970,34 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               box-shadow: none !important;
               border: none !important;
               border-radius: 0 !important;
-              padding: 0 !important; /* Margin 3-4-3-3cm ditangani langsung secara presisi oleh @page */
+              /* Sinkronisasi Total Aturan Kertas A4: Standar Margin 3cm Atas, 4cm Kiri, 3cm Kanan, 3cm Bawah */
               box-sizing: border-box !important;
-              width: 100% !important;
-              min-height: 0 !important;
-              height: auto !important;
-              margin: 0 !important;
+              width: 210mm !important;
+              min-width: 210mm !important;
+              max-width: 210mm !important;
+              height: 296.5mm !important;
+              min-height: 296.5mm !important;
+              max-height: 296.5mm !important;
+              padding-top: 30mm !important;
+              padding-left: 40mm !important;
+              padding-right: 30mm !important;
+              padding-bottom: 30mm !important;
+              margin: 0 auto !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: space-between !important;
               page-break-after: always !important;
               break-after: page !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
               font-family: "Times New Roman", Times, "Liberation Serif", serif !important;
               line-height: 1.5 !important;
-              overflow: visible !important;
+              overflow: hidden !important;
               background: white !important;
             }
             .print-only-container > .a4-admin-page:last-child,
             .print-only-container > *:last-child .a4-admin-page:last-child,
+            .print-only-container > *:last-child > .a4-admin-page:last-child,
             .a4-admin-page:last-of-type {
               page-break-after: auto !important;
               break-after: auto !important;
@@ -2001,7 +2014,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             .a4-admin-page.proctor-rules-page * {
               line-height: 1.4 !important;
             }
-            /* Menjamin seluruh tabel dan kolom presisi tidak melebihi batas batas halaman */
+            /* Menjamin seluruh tabel dan kolom presisi tidak melebihi batas halaman */
             .admin-table-wrap {
               width: 100% !important;
               max-width: 100% !important;
@@ -2034,9 +2047,9 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             /* Frame Sampul Cover Pas 3cm atas, 4cm kiri, 3cm kanan, 3cm bawah */
             .cover-border-frame {
               width: 100% !important;
-              height: 228mm !important;
-              min-height: 228mm !important;
-              max-height: 230mm !important;
+              height: 100% !important;
+              min-height: 100% !important;
+              max-height: 100% !important;
               box-sizing: border-box !important;
             }
           }
@@ -2203,7 +2216,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             <div className="w-full max-w-[210mm] bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-900 flex items-center gap-2.5 shadow-xs">
               <Printer className="w-4 h-4 text-amber-700 shrink-0" />
               <span>
-                <strong>Panduan Cetak Presisi (WYSIWYG):</strong> Pada jendela cetak browser/PDF, pastikan pilih <strong>Ukuran: A4</strong>, <strong>Margin: None / Minimum</strong>, dan centang <strong>Grafik Latar Belakang (Background graphics)</strong> agar tampilan cetak sama persis dengan preview.
+                <strong>Panduan Cetak Presisi (WYSIWYG):</strong> Aturan kertas pratinjau telah disinkronkan 100% dengan hasil cetak. Pada dialog cetak browser / Simpan PDF, pastikan pilih <strong>Ukuran: A4</strong>, <strong>Margin: None / Default</strong>, dan centang <strong>Grafik Latar Belakang (Background graphics)</strong> agar hasil cetak sama persis dengan preview.
               </span>
             </div>
 
@@ -2246,9 +2259,13 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               <div className="w-full flex flex-col items-center space-y-8">
                 {ADMIN_DOCUMENTS.map((d) => (
                   <div key={d.id} className="w-full flex flex-col items-center">
-                    <div className="mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1">
-                      <span>Dokumen {d.number}:</span>
+                    <div className="mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-black text-white text-[10px] font-black flex items-center justify-center">
+                        {d.number}
+                      </span>
                       <strong className="text-black">{d.title}</strong>
+                      <span className="text-neutral-400">•</span>
+                      <span className="text-[11px] text-neutral-600 font-medium">Kertas A4 (210×297mm) • Margin: 3cm Atas, 4cm Kiri, 3cm Kanan, 3cm Bawah</span>
                     </div>
                     {renderDocById(d.id, `screen_bulk_${d.number}`)}
                   </div>
@@ -2256,7 +2273,17 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               </div>
             ) : (
               /* JIKA MODE SINGLE DOKUMEN DI SCREEN */
-              renderDocById(activeDoc, 'screen_single')
+              <div className="w-full flex flex-col items-center">
+                <div className="mb-2 text-xs font-bold text-neutral-500 uppercase flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-black text-white text-[10px] font-black flex items-center justify-center">
+                    {docInfo?.number || 1}
+                  </span>
+                  <strong className="text-black">{docInfo?.title || 'Dokumen Administrasi'}</strong>
+                  <span className="text-neutral-400">•</span>
+                  <span className="text-[11px] text-neutral-600 font-medium">Kertas A4 (210×297mm) • Margin: 3cm Atas, 4cm Kiri, 3cm Kanan, 3cm Bawah</span>
+                </div>
+                {renderDocById(activeDoc, 'screen_single')}
+              </div>
             )}
           </div>
 
