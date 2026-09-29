@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   UserAccount,
+  SchoolApplicant,
   GoogleSheetsConfig,
   UserSchoolData,
   LoginLogEntry,
@@ -75,6 +76,8 @@ import {
   Globe,
   UserCheck,
   Maximize2,
+  UserPlus,
+  XCircle,
 } from 'lucide-react';
 
 interface AdminPortalProps {
@@ -102,6 +105,11 @@ interface AdminPortalProps {
   activeTab?: AdminTab;
   onNavigate?: (tab: AdminTab) => void;
   loginLogs?: LoginLogEntry[];
+  applicants?: SchoolApplicant[];
+  onApproveApplicant?: (applicant: SchoolApplicant) => Promise<{ success: boolean; message?: string }>;
+  onRejectApplicant?: (id: string, reason?: string) => Promise<{ success: boolean; message?: string }>;
+  onDeleteLoginLog?: (id: string, photoUrl?: string) => Promise<{ success: boolean; message?: string }>;
+  onClearAllLoginLogs?: () => Promise<{ success: boolean; message?: string }>;
 }
 
 export type AdminTab = 'insights' | 'accounts' | 'uploads' | 'user_logs' | 'settings';
@@ -329,12 +337,25 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   activeTab: controlledActiveTab,
   onNavigate,
   loginLogs = [],
+  applicants = [],
+  onApproveApplicant,
+  onRejectApplicant,
+  onDeleteLoginLog,
+  onClearAllLoginLogs,
 }) => {
   // Navigation
   const [internalActiveTab, setInternalActiveTab] = useState<AdminTab>('insights');
   const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
   const setActiveTab = onNavigate || setInternalActiveTab;
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Sub-tab Akun: 'active' (Sheet AKUN) vs 'applicants' (Sheet Pendaftar_Baru)
+  const [accountSubTab, setAccountSubTab] = useState<'active' | 'applicants'>('active');
+  const [applicantFilter, setApplicantFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [applicantSearch, setApplicantSearch] = useState('');
+  const [processingApplicantId, setProcessingApplicantId] = useState<string | null>(null);
+  const [deletingLogId, setDeletingLogId] = useState<string | null>(null);
+  const [isClearingAllLogs, setIsClearingAllLogs] = useState(false);
 
   // Selected School in Upload Monitor
   const [selectedUserInUpload, setSelectedUserInUpload] = useState<string | null>(null);
@@ -703,6 +724,130 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const pendingApplicantsCount = useMemo(() => {
+    return (applicants || []).filter((a) => a.status === 'pending').length;
+  }, [applicants]);
+
+  const filteredApplicants = useMemo(() => {
+    return (applicants || []).filter((app) => {
+      const q = applicantSearch.trim().toLowerCase();
+      const matchSearch =
+        !q ||
+        app.username.toLowerCase().includes(q) ||
+        app.schoolName.toLowerCase().includes(q) ||
+        (app.npsn && app.npsn.includes(q)) ||
+        (app.notes && app.notes.toLowerCase().includes(q));
+
+      const matchFilter =
+        applicantFilter === 'all' || app.status === applicantFilter;
+
+      return matchSearch && matchFilter;
+    });
+  }, [applicants, applicantSearch, applicantFilter]);
+
+  const handleApproveApplicantClick = async (app: SchoolApplicant) => {
+    if (!window.confirm(`Setujui pendaftaran sekolah "${app.schoolName}" (@${app.username})?\n\nAkun ini akan langsung ditambahkan ke Sheet AKUN sehingga dapat login dan mengakses aplikasi.`)) {
+      return;
+    }
+
+    if (!onApproveApplicant) return;
+    setProcessingApplicantId(app.id);
+    try {
+      const res = await onApproveApplicant(app);
+      if (res.success) {
+        setActionFeedback({
+          type: 'success',
+          text: res.message || `Sekolah "${app.schoolName}" (@${app.username}) berhasil disetujui!`
+        });
+      } else {
+        setActionFeedback({
+          type: 'error',
+          text: res.message || 'Gagal menyetujui pendaftar sekolah.'
+        });
+      }
+    } finally {
+      setProcessingApplicantId(null);
+      setTimeout(() => setActionFeedback(null), 5000);
+    }
+  };
+
+  const handleRejectApplicantClick = async (app: SchoolApplicant) => {
+    const reason = window.prompt(`Tolak pendaftaran sekolah "${app.schoolName}" (@${app.username})?\n\nMasukkan alasan penolakan (opsional):`, 'Berkas / data pendaftar belum sesuai');
+    if (reason === null) return;
+
+    if (!onRejectApplicant) return;
+    setProcessingApplicantId(app.id);
+    try {
+      const res = await onRejectApplicant(app.id, reason);
+      if (res.success) {
+        setActionFeedback({
+          type: 'success',
+          text: res.message || `Pendaftaran sekolah "${app.schoolName}" ditolak.`
+        });
+      } else {
+        setActionFeedback({
+          type: 'error',
+          text: res.message || 'Gagal menolak pendaftar.'
+        });
+      }
+    } finally {
+      setProcessingApplicantId(null);
+      setTimeout(() => setActionFeedback(null), 5000);
+    }
+  };
+
+  const handleDeleteLogClick = async (logItem: LoginLogEntry) => {
+    if (!window.confirm(`Hapus catatan login @${logItem.username} (${logItem.loginTime}) beserta file foto dari Google Drive?`)) {
+      return;
+    }
+
+    if (!onDeleteLoginLog) return;
+    setDeletingLogId(logItem.id);
+    try {
+      const res = await onDeleteLoginLog(logItem.id, logItem.photoUrl);
+      if (res.success) {
+        setActionFeedback({
+          type: 'success',
+          text: res.message || 'Catatan log & foto berhasil dihapus!'
+        });
+      } else {
+        setActionFeedback({
+          type: 'error',
+          text: res.message || 'Gagal menghapus log.'
+        });
+      }
+    } finally {
+      setDeletingLogId(null);
+      setTimeout(() => setActionFeedback(null), 4000);
+    }
+  };
+
+  const handleClearAllLogsClick = async () => {
+    if (!window.confirm('PERINGATAN: Apakah Anda yakin ingin menghapus SEMUA catatan sesi masuk dan seluruh file foto kamera dari Google Drive?\n\nTindakan ini akan mengosongkan ruang penyimpanan Drive Anda.')) {
+      return;
+    }
+
+    if (!onClearAllLoginLogs) return;
+    setIsClearingAllLogs(true);
+    try {
+      const res = await onClearAllLoginLogs();
+      if (res.success) {
+        setActionFeedback({
+          type: 'success',
+          text: res.message || 'Semua log dan foto berhasil dibersihkan!'
+        });
+      } else {
+        setActionFeedback({
+          type: 'error',
+          text: res.message || 'Gagal membersihkan log.'
+        });
+      }
+    } finally {
+      setIsClearingAllLogs(false);
+      setTimeout(() => setActionFeedback(null), 5000);
+    }
+  };
+
   // Navigation tabs
   const navTabs = [
     {
@@ -716,7 +861,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       label: 'Manajemen Pengguna',
       mobileLabel: 'Pengguna',
       icon: Users,
-      badge: systemInsights.totalSchools,
+      badge: pendingApplicantsCount > 0 ? `${pendingApplicantsCount} Baru` : systemInsights.totalSchools,
+      badgeColor: pendingApplicantsCount > 0 ? 'bg-rose-500 text-white animate-pulse' : undefined,
     },
     {
       id: 'uploads' as AdminTab,
@@ -1248,13 +1394,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     Panitia / Lainnya: <strong className="font-mono">{systemInsights.teachersByRole.panitia + systemInsights.teachersByRole.lainnya}</strong>
                   </div>
                 </div>
-
-                <div className="mt-2.5 text-[11px] text-neutral-500 flex items-center gap-2">
-                  <span>Distribusi Gender Guru:</span>
-                  <span className="font-bold text-blue-800">👨 Laki-laki: {systemInsights.totalMaleTeachers}</span>
-                  <span>•</span>
-                  <span className="font-bold text-pink-700">👩 Perempuan: {systemInsights.totalFemaleTeachers}</span>
-                </div>
               </div>
             </div>
 
@@ -1362,21 +1501,50 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         )}
 
         {/* =========================================================================
-            MENU 2: MANAJEMEN PENGGUNA (DATA REAL SHEET AKUN DENGAN CRUD SUNGGUHAN)
+            MENU 2: MANAJEMEN PENGGUNA (DATA REAL SHEET AKUN & PENDAFTAR BARU)
             ========================================================================= */}
         {activeTab === 'accounts' && (
           <div className="space-y-4">
-            {/* Toolbar */}
-            <div className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="relative flex-1 min-w-[240px]">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-                <input
-                  type="text"
-                  placeholder="Cari nama sekolah, username, atau NPSN..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs font-bold border-2 border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
-                />
+            {/* Sub-tab Switcher: Akun Aktif vs Pendaftar Baru */}
+            <div className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAccountSubTab('active')}
+                  className={`px-4 py-2 rounded-lg border-2 border-black font-black text-xs uppercase flex items-center gap-2 transition-all cursor-pointer ${
+                    accountSubTab === 'active'
+                      ? 'bg-yellow-300 text-black shadow-[2px_2px_0px_#000] -translate-y-0.5'
+                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Akun Aktif (Sheet &quot;AKUN&quot;)</span>
+                  <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-neutral-200 text-black border border-black font-mono">
+                    {accounts.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAccountSubTab('applicants')}
+                  className={`px-4 py-2 rounded-lg border-2 border-black font-black text-xs uppercase flex items-center gap-2 transition-all cursor-pointer relative ${
+                    accountSubTab === 'applicants'
+                      ? 'bg-yellow-300 text-black shadow-[2px_2px_0px_#000] -translate-y-0.5'
+                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                  }`}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Pendaftar Baru (Sheet &quot;Pendaftar_Baru&quot;)</span>
+                  {pendingApplicantsCount > 0 ? (
+                    <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-rose-500 text-white font-black animate-pulse border border-black">
+                      {pendingApplicantsCount} Baru
+                    </span>
+                  ) : (
+                    <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-neutral-200 text-black border border-black font-mono">
+                      {(applicants || []).length}
+                    </span>
+                  )}
+                </button>
               </div>
 
               <div className="flex items-center gap-2">
@@ -1384,124 +1552,329 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   type="button"
                   onClick={onReloadAllData}
                   disabled={isReloading}
-                  className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 border-2 border-black rounded-lg text-xs font-bold flex items-center gap-1.5"
-                  title="Ambil ulang data akun dari spreadsheet"
+                  className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 border-2 border-black rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  title="Ambil ulang data akun dan pendaftar dari spreadsheet"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isReloading ? 'animate-spin' : ''}`} />
                   Muat Ulang
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingAccount(null);
-                    setFormUsername('');
-                    setFormPassword('');
-                    setFormSchoolName('');
-                    setFormNpsn('');
-                    setFormRole('operator');
-                    setIsAddUserModalOpen(true);
-                  }}
-                  className="px-4 py-2 bg-yellow-300 hover:bg-yellow-200 text-black border-2 border-black rounded-lg text-xs font-black uppercase shadow-[2px_2px_0px_#000] flex items-center gap-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  Tambah Akun Sekolah
-                </button>
               </div>
             </div>
 
-            {/* Accounts Table */}
-            <div className="bg-white border-3 border-black shadow-[5px_5px_0px_#000] rounded-2xl overflow-hidden">
-              <div className="p-3 bg-neutral-100 border-b-2 border-black flex items-center justify-between text-xs font-black uppercase">
-                <span>Daftar Akun Pengguna Real (Sheet &quot;AKUN&quot;)</span>
-                <span className="font-mono text-neutral-600">{filteredAccounts.length} Akun Terdaftar</span>
-              </div>
+            {/* SUB-TAB 1: AKUN AKTIF (SHEET "AKUN") */}
+            {accountSubTab === 'active' && (
+              <div className="space-y-4">
+                {/* Toolbar */}
+                <div className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="relative flex-1 min-w-[240px]">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                    <input
+                      type="text"
+                      placeholder="Cari nama sekolah, username, atau NPSN..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs font-bold border-2 border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                    />
+                  </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-neutral-50 border-b-2 border-black text-[10px] font-black uppercase text-neutral-700">
-                    <tr>
-                      <th className="p-3 w-12 text-center">No</th>
-                      <th className="p-3">Username & Role</th>
-                      <th className="p-3">Nama Sekolah</th>
-                      <th className="p-3">NPSN</th>
-                      <th className="p-3 text-center">Status</th>
-                      <th className="p-3 text-center">Aksi Manajemen</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y-2 divide-neutral-200 font-medium">
-                    {filteredAccounts.map((acc, idx) => (
-                      <tr key={acc.id || acc.username} className="hover:bg-neutral-50">
-                        <td className="p-3 text-center font-mono font-bold text-neutral-500">#{idx + 1}</td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-sm">@{acc.username}</span>
-                            {acc.role === 'admin' ? (
-                              <span className="px-2 py-0.5 bg-yellow-300 text-black border border-black rounded text-[9px] font-black uppercase">
-                                Admin
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingAccount(null);
+                        setFormUsername('');
+                        setFormPassword('');
+                        setFormSchoolName('');
+                        setFormNpsn('');
+                        setFormRole('operator');
+                        setIsAddUserModalOpen(true);
+                      }}
+                      className="px-4 py-2 bg-yellow-300 hover:bg-yellow-200 text-black border-2 border-black rounded-lg text-xs font-black uppercase shadow-[2px_2px_0px_#000] flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Tambah Akun Manual
+                    </button>
+                  </div>
+                </div>
+
+                {/* Accounts Table */}
+                <div className="bg-white border-3 border-black shadow-[5px_5px_0px_#000] rounded-2xl overflow-hidden">
+                  <div className="p-3 bg-neutral-100 border-b-2 border-black flex items-center justify-between text-xs font-black uppercase">
+                    <span>Daftar Akun Pengguna Aktif (Sheet &quot;AKUN&quot;)</span>
+                    <span className="font-mono text-neutral-600">{filteredAccounts.length} Akun Terdaftar</span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-neutral-50 border-b-2 border-black text-[10px] font-black uppercase text-neutral-700">
+                        <tr>
+                          <th className="p-3 w-12 text-center">No</th>
+                          <th className="p-3">Username & Role</th>
+                          <th className="p-3">Nama Sekolah</th>
+                          <th className="p-3">NPSN</th>
+                          <th className="p-3 text-center">Status</th>
+                          <th className="p-3 text-center">Aksi Manajemen</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y-2 divide-neutral-200 font-medium">
+                        {filteredAccounts.map((acc, idx) => (
+                          <tr key={acc.id || acc.username} className="hover:bg-neutral-50">
+                            <td className="p-3 text-center font-mono font-bold text-neutral-500">#{idx + 1}</td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-sm">@{acc.username}</span>
+                                {acc.role === 'admin' ? (
+                                  <span className="px-2 py-0.5 bg-yellow-300 text-black border border-black rounded text-[9px] font-black uppercase">
+                                    Admin
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 bg-neutral-200 text-neutral-800 border border-neutral-400 rounded text-[9px] font-bold uppercase">
+                                    Operator
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3 font-bold text-neutral-900">{acc.schoolName || '-'}</td>
+                            <td className="p-3 font-mono text-neutral-600">{acc.npsn || '-'}</td>
+                            <td className="p-3 text-center">
+                              <span className="px-2.5 py-1 rounded text-[10px] font-black uppercase border border-black bg-emerald-200 text-emerald-950">
+                                Aktif
                               </span>
-                            ) : (
-                              <span className="px-2 py-0.5 bg-neutral-200 text-neutral-800 border border-neutral-400 rounded text-[9px] font-bold uppercase">
-                                Operator
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3 font-bold text-neutral-900">{acc.schoolName || '-'}</td>
-                        <td className="p-3 font-mono text-neutral-600">{acc.npsn || '-'}</td>
-                        <td className="p-3 text-center">
-                          <span className="px-2.5 py-1 rounded text-[10px] font-black uppercase border border-black bg-emerald-200 text-emerald-950">
-                            Aktif
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingAccount(acc);
-                                setFormUsername(acc.username);
-                                setFormSchoolName(acc.schoolName);
-                                setFormNpsn(acc.npsn);
-                                setFormRole(acc.role);
-                                setIsAddUserModalOpen(true);
-                              }}
-                              className="p-1.5 bg-neutral-100 hover:bg-neutral-200 border border-black rounded shadow-[1px_1px_0px_#000]"
-                              title="Edit Akun di Spreadsheet"
-                            >
-                              <Edit className="w-3.5 h-3.5 text-neutral-700" />
-                            </button>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingAccount(acc);
+                                    setFormUsername(acc.username);
+                                    setFormSchoolName(acc.schoolName);
+                                    setFormNpsn(acc.npsn);
+                                    setFormRole(acc.role);
+                                    setIsAddUserModalOpen(true);
+                                  }}
+                                  className="p-1.5 bg-neutral-100 hover:bg-neutral-200 border border-black rounded shadow-[1px_1px_0px_#000] cursor-pointer"
+                                  title="Edit Akun di Spreadsheet"
+                                >
+                                  <Edit className="w-3.5 h-3.5 text-neutral-700" />
+                                </button>
 
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setResetPassAccount(acc);
-                                setNewPassword('');
-                              }}
-                              className="p-1.5 bg-cyan-100 hover:bg-cyan-200 border border-black rounded shadow-[1px_1px_0px_#000]"
-                              title="Ganti Password di Spreadsheet"
-                            >
-                              <KeyRound className="w-3.5 h-3.5 text-cyan-800" />
-                            </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setResetPassAccount(acc);
+                                    setNewPassword('');
+                                  }}
+                                  className="p-1.5 bg-cyan-100 hover:bg-cyan-200 border border-black rounded shadow-[1px_1px_0px_#000] cursor-pointer"
+                                  title="Ganti Password di Spreadsheet"
+                                >
+                                  <KeyRound className="w-3.5 h-3.5 text-cyan-800" />
+                                </button>
 
-                            {acc.username.toLowerCase() !== 'nagata' && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteAccountClick(acc)}
-                                className="p-1.5 bg-rose-100 hover:bg-rose-200 border border-black rounded shadow-[1px_1px_0px_#000]"
-                                title="Hapus Akun dari Spreadsheet"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-rose-800" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                                {acc.username.toLowerCase() !== 'nagata' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteAccountClick(acc)}
+                                    className="p-1.5 bg-rose-100 hover:bg-rose-200 border border-black rounded shadow-[1px_1px_0px_#000] cursor-pointer"
+                                    title="Hapus Akun dari Spreadsheet"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-rose-800" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* SUB-TAB 2: PENDAFTAR BARU (SHEET "Pendaftar_Baru") */}
+            {accountSubTab === 'applicants' && (
+              <div className="space-y-4">
+                {/* Applicant Toolbar */}
+                <div className="bg-white border-2 border-black shadow-[4px_4px_0px_#000] rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="relative flex-1 min-w-[240px]">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                    <input
+                      type="text"
+                      placeholder="Cari nama sekolah, username, atau NPSN pendaftar..."
+                      value={applicantSearch}
+                      onChange={(e) => setApplicantSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs font-bold border-2 border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setApplicantFilter('all')}
+                      className={`px-3 py-1.5 rounded-lg border-2 border-black font-bold text-xs cursor-pointer ${
+                        applicantFilter === 'all' ? 'bg-yellow-300 text-black shadow-[2px_2px_0px_#000]' : 'bg-neutral-100 text-neutral-700'
+                      }`}
+                    >
+                      Semua ({(applicants || []).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setApplicantFilter('pending')}
+                      className={`px-3 py-1.5 rounded-lg border-2 border-black font-bold text-xs cursor-pointer ${
+                        applicantFilter === 'pending' ? 'bg-amber-300 text-black shadow-[2px_2px_0px_#000]' : 'bg-neutral-100 text-neutral-700'
+                      }`}
+                    >
+                      Menunggu ({pendingApplicantsCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setApplicantFilter('approved')}
+                      className={`px-3 py-1.5 rounded-lg border-2 border-black font-bold text-xs cursor-pointer ${
+                        applicantFilter === 'approved' ? 'bg-emerald-300 text-black shadow-[2px_2px_0px_#000]' : 'bg-neutral-100 text-neutral-700'
+                      }`}
+                    >
+                      Disetujui ({(applicants || []).filter((a) => a.status === 'approved').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setApplicantFilter('rejected')}
+                      className={`px-3 py-1.5 rounded-lg border-2 border-black font-bold text-xs cursor-pointer ${
+                        applicantFilter === 'rejected' ? 'bg-rose-300 text-black shadow-[2px_2px_0px_#000]' : 'bg-neutral-100 text-neutral-700'
+                      }`}
+                    >
+                      Ditolak ({(applicants || []).filter((a) => a.status === 'rejected').length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Applicants Table */}
+                <div className="bg-white border-3 border-black shadow-[5px_5px_0px_#000] rounded-2xl overflow-hidden">
+                  <div className="p-3 bg-neutral-100 border-b-2 border-black flex items-center justify-between text-xs font-black uppercase">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="w-4 h-4 text-black" />
+                      <span>Daftar Permohonan Pendaftaran Sekolah (Sheet &quot;Pendaftar_Baru&quot;)</span>
+                    </div>
+                    <span className="font-mono text-neutral-600">{filteredApplicants.length} Permohonan</span>
+                  </div>
+
+                  {filteredApplicants.length === 0 ? (
+                    <div className="p-12 text-center space-y-3">
+                      <UserPlus className="w-12 h-12 text-neutral-300 mx-auto" />
+                      <h3 className="text-sm font-black uppercase text-neutral-700">
+                        {(applicants || []).length === 0 ? 'Belum Ada Pendaftar Sekolah Baru' : 'Tidak Ada Permohonan yang Sesuai Filter'}
+                      </h3>
+                      <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
+                        Ketika user atau pihak sekolah baru mendaftar melalui formulir pendaftaran, datanya akan langsung masuk ke sheet &quot;Pendaftar_Baru&quot; dan muncul di tabel ini untuk disetujui atau ditolak oleh Administrator.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-neutral-50 border-b-2 border-black text-[10px] font-black uppercase text-neutral-700">
+                          <tr>
+                            <th className="p-3 w-12 text-center">No</th>
+                            <th className="p-3">Waktu Daftar</th>
+                            <th className="p-3">Nama Sekolah</th>
+                            <th className="p-3">NPSN</th>
+                            <th className="p-3">Username</th>
+                            <th className="p-3 text-center">Status</th>
+                            <th className="p-3">Catatan / Alasan</th>
+                            <th className="p-3 text-center w-48">Persetujuan Admin</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y-2 divide-neutral-200 font-medium">
+                          {filteredApplicants.map((app, idx) => (
+                            <tr key={app.id || idx} className="hover:bg-neutral-50">
+                              <td className="p-3 text-center font-mono font-bold text-neutral-500">#{idx + 1}</td>
+                              <td className="p-3 whitespace-nowrap text-neutral-600 font-mono text-[11px]">
+                                {app.createdAt ? formatLoginTime(app.createdAt) : '-'}
+                              </td>
+                              <td className="p-3 font-bold text-neutral-900">{app.schoolName}</td>
+                              <td className="p-3 font-mono text-neutral-700">{app.npsn || '-'}</td>
+                              <td className="p-3">
+                                <span className="font-mono font-bold text-xs bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300">
+                                  @{app.username}
+                                </span>
+                              </td>
+                              <td className="p-3 text-center whitespace-nowrap">
+                                {app.status === 'pending' && (
+                                  <span className="px-2.5 py-1 rounded text-[10px] font-black uppercase border border-amber-500 bg-amber-100 text-amber-900 inline-flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-amber-700" />
+                                    Menunggu
+                                  </span>
+                                )}
+                                {app.status === 'approved' && (
+                                  <span className="px-2.5 py-1 rounded text-[10px] font-black uppercase border border-emerald-500 bg-emerald-100 text-emerald-950 inline-flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                                    Disetujui
+                                  </span>
+                                )}
+                                {app.status === 'rejected' && (
+                                  <span className="px-2.5 py-1 rounded text-[10px] font-black uppercase border border-rose-500 bg-rose-100 text-rose-950 inline-flex items-center gap-1">
+                                    <XCircle className="w-3 h-3 text-rose-700" />
+                                    Ditolak
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-neutral-600 max-w-[200px] truncate text-[11px]" title={app.notes || ''}>
+                                {app.notes || '-'}
+                              </td>
+                              <td className="p-3 text-center whitespace-nowrap">
+                                {app.status === 'pending' ? (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApproveApplicantClick(app)}
+                                      disabled={processingApplicantId === app.id}
+                                      className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white border-2 border-black rounded-lg text-xs font-black uppercase shadow-[2px_2px_0px_#000] inline-flex items-center gap-1.5 active:translate-y-0.5 cursor-pointer disabled:opacity-50"
+                                      title="Setujui pendaftaran dan pindahkan ke sheet AKUN"
+                                    >
+                                      <Check className={`w-3.5 h-3.5 ${processingApplicantId === app.id ? 'animate-spin' : ''}`} />
+                                      <span>{processingApplicantId === app.id ? 'Memproses...' : 'Setujui'}</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRejectApplicantClick(app)}
+                                      disabled={processingApplicantId === app.id}
+                                      className="px-3 py-1.5 bg-rose-500 hover:bg-rose-400 text-white border-2 border-black rounded-lg text-xs font-black uppercase shadow-[2px_2px_0px_#000] inline-flex items-center gap-1.5 active:translate-y-0.5 cursor-pointer disabled:opacity-50"
+                                      title="Tolak pendaftaran sekolah ini"
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" />
+                                      <span>Tolak</span>
+                                    </button>
+                                  </div>
+                                ) : app.status === 'approved' ? (
+                                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+                                    Telah Aktif di AKUN
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-1 rounded border border-rose-200">
+                                      Ditolak
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApproveApplicantClick(app)}
+                                      disabled={processingApplicantId === app.id}
+                                      className="px-2 py-1 bg-yellow-300 hover:bg-yellow-200 text-black border border-black rounded text-[10px] font-bold shadow-[1px_1px_0px_#000] cursor-pointer"
+                                      title="Setujui pendaftar yang sempat ditolak"
+                                    >
+                                      Setujui Ulang
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -2816,7 +3189,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2.5 shrink-0">
+                <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleClearAllLogsClick}
+                    disabled={isClearingAllLogs || loginLogs.length === 0}
+                    className="px-4 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-900 border-2 border-black rounded-xl text-xs font-black uppercase tracking-wider shadow-[3px_3px_0px_#000] flex items-center gap-2 active:translate-y-0.5 cursor-pointer disabled:opacity-50"
+                    title="Hapus semua rekaman log dan file foto di Google Drive"
+                  >
+                    <Trash2 className={`w-4 h-4 text-rose-700 ${isClearingAllLogs ? 'animate-spin' : ''}`} />
+                    <span>{isClearingAllLogs ? 'Membersihkan...' : 'Bersihkan Semua Log'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={onReloadAllData}
@@ -2972,6 +3356,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           <th className="py-3 px-4">Browser Digunakan</th>
                           <th className="py-3 px-4 text-center">Tangkapan Kamera</th>
                           <th className="py-3 px-4 text-center w-24">Status</th>
+                          <th className="py-3 px-4 text-center w-28">Aksi</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y-2 divide-neutral-200">
@@ -3074,6 +3459,20 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                   {item.status || 'Berhasil'}
                                 </span>
+                              </td>
+
+                              {/* 6. Aksi Hapus */}
+                              <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteLogClick(item)}
+                                  disabled={deletingLogId === item.id}
+                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-black rounded-lg text-xs font-bold shadow-[1px_1px_0px_#000] inline-flex items-center gap-1 active:translate-y-0.5 cursor-pointer disabled:opacity-50"
+                                  title="Hapus log ini beserta file foto dari Google Drive"
+                                >
+                                  <Trash2 className={`w-3.5 h-3.5 text-rose-700 ${deletingLogId === item.id ? 'animate-spin' : ''}`} />
+                                  <span>{deletingLogId === item.id ? 'Menghapus...' : 'Hapus'}</span>
+                                </button>
                               </td>
                             </tr>
                           );

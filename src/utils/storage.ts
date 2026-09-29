@@ -1,4 +1,4 @@
-import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, AnswerSheetDesignSettings, UserAccount, GoogleSheetsConfig, UserSchoolData, LoginLogEntry } from '../types';
+import { School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, AnswerSheetDesignSettings, UserAccount, SchoolApplicant, GoogleSheetsConfig, UserSchoolData, LoginLogEntry } from '../types';
 import {
   DEFAULT_SCHOOL,
   DEFAULT_EXAM,
@@ -35,6 +35,7 @@ export const DEFAULT_GOOGLE_SHEETS: GoogleSheetsConfig = {
 export interface AppState {
   currentUser: UserAccount | null;
   accounts: UserAccount[];
+  applicants?: SchoolApplicant[];
   googleSheets: GoogleSheetsConfig;
   school: School;
   exam: Exam;
@@ -54,6 +55,7 @@ export interface AppState {
 const STORAGE_KEYS = {
   APP_STATE: 'portal_ujian_clean_state_v4',
   LOGIN_LOGS: 'portal_asesmen_login_logs_v1',
+  APPLICANTS: 'portal_school_applicants_v1',
 };
 
 export const deduplicateStudents = (students: Student[] = []): Student[] => {
@@ -169,6 +171,7 @@ export const loadStoredState = (): AppState => {
           : cleanTeachers.map((t) => t.id),
         schoolDataMap: cleanSchoolDataMap,
         loginLogs: Array.isArray(parsed.loginLogs) ? parsed.loginLogs : getStoredLoginLogs(),
+        applicants: Array.isArray(parsed.applicants) ? parsed.applicants : getStoredApplicants(),
       };
     }
   } catch (err) {
@@ -180,6 +183,7 @@ export const loadStoredState = (): AppState => {
   return {
     currentUser: null,
     accounts: DEFAULT_ACCOUNTS,
+    applicants: getStoredApplicants(),
     googleSheets: {
       ...DEFAULT_GOOGLE_SHEETS,
       webAppUrl: activeUrl,
@@ -207,6 +211,9 @@ export const saveStoredState = (state: AppState): void => {
     if (state.loginLogs && Array.isArray(state.loginLogs)) {
       localStorage.setItem(STORAGE_KEYS.LOGIN_LOGS, JSON.stringify(state.loginLogs));
     }
+    if (state.applicants && Array.isArray(state.applicants)) {
+      localStorage.setItem(STORAGE_KEYS.APPLICANTS, JSON.stringify(state.applicants));
+    }
   } catch (err) {
     console.error('Failed to save app state to localStorage:', err);
   }
@@ -222,6 +229,7 @@ export const resetStoredState = (): AppState => {
   return {
     currentUser: null,
     accounts: DEFAULT_ACCOUNTS,
+    applicants: getStoredApplicants(),
     googleSheets: {
       ...DEFAULT_GOOGLE_SHEETS,
       webAppUrl: activeUrl,
@@ -265,5 +273,82 @@ export const saveLoginLogLocally = (entry: LoginLogEntry): LoginLogEntry[] => {
   } catch (e) {
     console.warn('Gagal menyimpan login log lokal:', e);
     return [entry];
+  }
+};
+
+export const deleteLoginLogLocally = (id: string): LoginLogEntry[] => {
+  try {
+    const current = getStoredLoginLogs();
+    const updated = current.filter((item) => item.id !== id);
+    localStorage.setItem(STORAGE_KEYS.LOGIN_LOGS, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.warn('Gagal menghapus login log lokal:', e);
+    return [];
+  }
+};
+
+export const clearAllLoginLogsLocally = (): void => {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.LOGIN_LOGS);
+  } catch (e) {
+    console.warn('Gagal membersihkan login logs lokal:', e);
+  }
+};
+
+export const getStoredApplicants = (): SchoolApplicant[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.APPLICANTS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('Gagal membaca applicants lokal:', e);
+  }
+  return [];
+};
+
+export const saveApplicantLocally = (applicant: SchoolApplicant): SchoolApplicant[] => {
+  try {
+    const current = getStoredApplicants();
+    const updated = [applicant, ...current.filter((item) => item.id !== applicant.id)];
+    localStorage.setItem(STORAGE_KEYS.APPLICANTS, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.warn('Gagal menyimpan applicant lokal:', e);
+    return [applicant];
+  }
+};
+
+export const updateApplicantStatusLocally = (
+  id: string,
+  status: 'pending' | 'approved' | 'rejected',
+  notes?: string
+): SchoolApplicant[] => {
+  try {
+    const current = getStoredApplicants();
+    const updated = current.map((item) =>
+      item.id === id
+        ? { ...item, status, notes: notes || item.notes }
+        : item
+    );
+    localStorage.setItem(STORAGE_KEYS.APPLICANTS, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.warn('Gagal update applicant status lokal:', e);
+    return [];
+  }
+};
+
+export const deleteApplicantLocally = (id: string): SchoolApplicant[] => {
+  try {
+    const current = getStoredApplicants();
+    const updated = current.filter((item) => item.id !== id);
+    localStorage.setItem(STORAGE_KEYS.APPLICANTS, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.warn('Gagal menghapus applicant lokal:', e);
+    return [];
   }
 };

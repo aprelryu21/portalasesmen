@@ -228,6 +228,18 @@ export interface UserAccount {
   createdAt: string;
 }
 
+export interface SchoolApplicant {
+  id: string;
+  username: string;
+  password?: string;
+  schoolName: string;
+  npsn: string;
+  role: UserRole;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  notes?: string;
+}
+
 export interface PosterDesignSettings {
   styleId: PosterStyleId;
   orientation: PosterOrientation;

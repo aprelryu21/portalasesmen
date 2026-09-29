@@ -1,4 +1,4 @@
-import { UserAccount, School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, AnswerSheetDesignSettings, LoginLogEntry } from '../types';
+import { UserAccount, SchoolApplicant, School, Exam, Student, Teacher, CardDesignSettings, PrintSettings, PosterDesignSettings, AnswerSheetDesignSettings, LoginLogEntry } from '../types';
 
 export interface SpreadsheetCapacity {
   totalAllocatedCells: number;
@@ -78,6 +78,7 @@ export interface GasAllDataResponse {
   driveDatabase?: DriveDatabaseInfo;
   data?: {
     accounts?: UserAccount[];
+    applicants?: SchoolApplicant[];
     schoolsMap?: Record<string, { school: School; exam: Exam }>;
     studentsMap?: Record<string, Student[]>;
     teachersMap?: Record<string, Teacher[]>;
@@ -818,5 +819,111 @@ export const gasGetLoginLogs = async (webAppUrl: string): Promise<LoginLogEntry[
 
   return [];
 };
+
+/**
+ * Registrasi pendaftar sekolah baru ke Sheet "Pendaftar_Baru" (menunggu persetujuan Admin)
+ */
+export const gasRegisterSchoolApplicant = async (
+  webAppUrl: string,
+  applicant: {
+    username: string;
+    password?: string;
+    schoolName: string;
+    npsn?: string;
+    role?: 'operator' | 'admin';
+    notes?: string;
+  }
+): Promise<{ status: 'success' | 'error'; message: string; applicant?: SchoolApplicant }> => {
+  return postToGas(webAppUrl, {
+    action: 'REGISTER_NEW_SCHOOL',
+    ...applicant,
+  });
+};
+
+/**
+ * Mengambil daftar seluruh pendaftar sekolah baru dari Sheet "Pendaftar_Baru"
+ */
+export const gasGetPendaftarBaru = async (webAppUrl: string): Promise<SchoolApplicant[]> => {
+  if (!webAppUrl || !webAppUrl.trim().startsWith('http')) return [];
+
+  try {
+    const url = `${webAppUrl.trim()}${webAppUrl.includes('?') ? '&' : '?'}action=GET_PENDAFTAR_BARU&t=${Date.now()}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.status === 'success' && Array.isArray(data.applicants)) {
+        return data.applicants;
+      }
+    }
+  } catch {
+    // Fallback ke POST
+  }
+
+  try {
+    const res = await postToGas(webAppUrl, { action: 'GET_PENDAFTAR_BARU' });
+    if (res && res.status === 'success' && Array.isArray(res.applicants)) {
+      return res.applicants;
+    }
+  } catch (err) {
+    console.warn('Gagal mengambil pendaftar baru dari GAS:', err);
+  }
+
+  return [];
+};
+
+/**
+ * Menyetujui pendaftar sekolah baru (mentransfer ke Sheet "AKUN" agar bisa login)
+ */
+export const gasApprovePendaftarBaru = async (
+  webAppUrl: string,
+  payload: { id?: string; username: string }
+): Promise<{ status: 'success' | 'error'; message: string; account?: UserAccount }> => {
+  return postToGas(webAppUrl, {
+    action: 'APPROVE_PENDAFTAR_BARU',
+    ...payload,
+  });
+};
+
+/**
+ * Menolak pendaftar sekolah baru
+ */
+export const gasRejectPendaftarBaru = async (
+  webAppUrl: string,
+  payload: { id?: string; username: string; reason?: string }
+): Promise<{ status: 'success' | 'error'; message: string }> => {
+  return postToGas(webAppUrl, {
+    action: 'REJECT_PENDAFTAR_BARU',
+    ...payload,
+  });
+};
+
+/**
+ * Hapus 1 rekaman log masuk dan file foto kamera terkait dari Google Drive
+ */
+export const gasDeleteLoginLog = async (
+  webAppUrl: string,
+  payload: { id: string; photoUrl?: string }
+): Promise<{ status: 'success' | 'error'; message: string }> => {
+  return postToGas(webAppUrl, {
+    action: 'DELETE_LOGIN_LOG',
+    ...payload,
+  });
+};
+
+/**
+ * Hapus SEMUA rekaman log masuk dan seluruh file foto kamera dari Google Drive
+ */
+export const gasClearAllLoginLogs = async (
+  webAppUrl: string
+): Promise<{ status: 'success' | 'error'; message: string }> => {
+  return postToGas(webAppUrl, {
+    action: 'CLEAR_ALL_LOGIN_LOGS',
+  });
+};
+
 
 

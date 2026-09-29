@@ -12,6 +12,7 @@ import {
   GoogleSheetsConfig,
   UserSchoolData,
   LoginLogEntry,
+  SchoolApplicant,
 } from './types';
 import {
   loadStoredState,
@@ -22,6 +23,12 @@ import {
   DEFAULT_ACCOUNTS,
   saveLoginLogLocally,
   getStoredLoginLogs,
+  getStoredApplicants,
+  saveApplicantLocally,
+  updateApplicantStatusLocally,
+  deleteApplicantLocally,
+  deleteLoginLogLocally,
+  clearAllLoginLogsLocally,
 } from './utils/storage';
 import { LandingPage } from './components/auth/LandingPage';
 import { AuthModal } from './components/auth/AuthModal';
@@ -74,6 +81,10 @@ import {
   gasDeleteExam,
   gasSetActiveExam,
   gasRecordLoginLog,
+  gasApprovePendaftarBaru,
+  gasRejectPendaftarBaru,
+  gasDeleteLoginLog,
+  gasClearAllLoginLogs,
   SpreadsheetCapacity,
   DriveDatabaseInfo,
 } from './utils/gasApi';
@@ -352,6 +363,10 @@ export default function App() {
               Array.isArray(res.data?.loginLogs) && res.data.loginLogs.length > 0
                 ? res.data.loginLogs
                 : prev.loginLogs || getStoredLoginLogs(),
+            applicants:
+              Array.isArray(res.data?.applicants)
+                ? res.data.applicants
+                : prev.applicants || getStoredApplicants(),
             googleSheets: {
               ...prev.googleSheets,
               webAppUrl: activeUrl,
@@ -821,6 +836,160 @@ export default function App() {
       const msg = err instanceof Error ? err.message : 'Gagal menghapus akun';
       return { success: false, message: msg };
     }
+  };
+
+  // Handler Pendaftaran Sekolah Baru (Persetujuan & Penolakan Admin)
+  const handleApproveApplicant = async (applicant: SchoolApplicant): Promise<{ success: boolean; message?: string }> => {
+    try {
+      let createdAccount: UserAccount | undefined;
+      if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+        const gasRes = await gasApprovePendaftarBaru(activeGasUrl, {
+          id: applicant.id,
+          username: applicant.username,
+        });
+        if (gasRes.status === 'success' && gasRes.account) {
+          createdAccount = gasRes.account;
+        } else if (gasRes.status === 'error') {
+          return { success: false, message: gasRes.message || 'Gagal menyetujui pendaftar di spreadsheet.' };
+        }
+      }
+
+      if (!createdAccount) {
+        createdAccount = {
+          id: applicant.id,
+          username: applicant.username,
+          password: applicant.password || '123456',
+          role: applicant.role || 'operator',
+          schoolName: applicant.schoolName,
+          npsn: applicant.npsn,
+          createdAt: new Date().toISOString(),
+        };
+      }
+
+      updateApplicantStatusLocally(applicant.id, 'approved', 'Disetujui oleh Administrator');
+      setState((prev) => {
+        const existingAccs = prev.accounts || [];
+        const accExists = existingAccs.some((a) => a.username.toLowerCase() === applicant.username.toLowerCase());
+        const newAccs = accExists
+          ? existingAccs.map((a) => (a.username.toLowerCase() === applicant.username.toLowerCase() ? createdAccount! : a))
+          : [...existingAccs, createdAccount!];
+
+        const updatedApplicants = (prev.applicants || []).map((app) =>
+          app.id === applicant.id ? { ...app, status: 'approved' as const, notes: 'Disetujui oleh Administrator' } : app
+        );
+
+        return {
+          ...prev,
+          accounts: newAccs,
+          applicants: updatedApplicants,
+          schoolDataMap: {
+            ...(prev.schoolDataMap || {}),
+            [createdAccount!.username]: {
+              school: {
+                ...DEFAULT_SCHOOL,
+                id: `sch_${createdAccount!.username}`,
+                name: createdAccount!.schoolName,
+                npsn: createdAccount!.npsn,
+              },
+              exam: DEFAULT_EXAM,
+              students: [],
+              cardDesign: DEFAULT_CARD_DESIGN,
+              printSettings: DEFAULT_PRINT_SETTINGS,
+              selectedStudentIds: [],
+            },
+          },
+        };
+      });
+
+      return { success: true, message: `Pendaftaran sekolah "${applicant.schoolName}" (@${applicant.username}) berhasil disetujui!` };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat menyetujui pendaftar';
+      return { success: false, message: msg };
+    }
+  };
+
+  const handleRejectApplicant = async (id: string, reason?: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const targetApp = (state.applicants || []).find((a) => a.id === id);
+      if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+        const gasRes = await gasRejectPendaftarBaru(activeGasUrl, {
+          id,
+          username: targetApp?.username || '',
+          reason,
+        });
+        if (gasRes.status === 'error') {
+          return { success: false, message: gasRes.message || 'Gagal menolak pendaftar di spreadsheet.' };
+        }
+      }
+
+      updateApplicantStatusLocally(id, 'rejected', reason || 'Ditolak');
+      setState((prev) => ({
+        ...prev,
+        applicants: (prev.applicants || []).map((app) =>
+          app.id === id ? { ...app, status: 'rejected' as const, notes: reason || 'Ditolak' } : app
+        ),
+      }));
+
+      return { success: true, message: 'Pendaftaran sekolah telah ditolak.' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat menolak pendaftar';
+      return { success: false, message: msg };
+    }
+  };
+
+  const handleDeleteLoginLog = async (logId: string, photoUrl?: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+        const gasRes = await gasDeleteLoginLog(activeGasUrl, {
+          id: logId,
+          photoUrl,
+        });
+        if (gasRes.status === 'error') {
+          return { success: false, message: gasRes.message || 'Gagal menghapus log dari spreadsheet.' };
+        }
+      }
+
+      deleteLoginLogLocally(logId);
+      setState((prev) => ({
+        ...prev,
+        loginLogs: (prev.loginLogs || []).filter((l) => l.id !== logId),
+      }));
+
+      return { success: true, message: 'Catatan log & foto berhasil dihapus!' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat menghapus log';
+      return { success: false, message: msg };
+    }
+  };
+
+  const handleClearAllLoginLogs = async (): Promise<{ success: boolean; message?: string }> => {
+    try {
+      if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+        const gasRes = await gasClearAllLoginLogs(activeGasUrl);
+        if (gasRes.status === 'error') {
+          return { success: false, message: gasRes.message || 'Gagal membersihkan log di spreadsheet.' };
+        }
+      }
+
+      clearAllLoginLogsLocally();
+      setState((prev) => ({
+        ...prev,
+        loginLogs: [],
+      }));
+
+      return { success: true, message: 'Semua log dan file foto di Google Drive berhasil dibersihkan!' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat membersihkan log';
+      return { success: false, message: msg };
+    }
+  };
+
+  const handleNewApplicant = (applicant: SchoolApplicant) => {
+    saveApplicantLocally(applicant);
+    setState((prev) => ({
+      ...prev,
+      applicants: [applicant, ...(prev.applicants || []).filter((a) => a.id !== applicant.id)],
+    }));
   };
 
   // Google Sheets Config Handler
@@ -1581,6 +1750,7 @@ export default function App() {
           accounts={state.accounts}
           onAddAccount={handleAddAccount}
           googleSheets={state.googleSheets}
+          onNewApplicant={handleNewApplicant}
         />
 
         {/* Modal Konfirmasi Akses Kamera Setiap Kali Login Sekolah */}
@@ -1895,6 +2065,11 @@ export default function App() {
             activeTab={adminTab}
             onNavigate={(tab) => setAdminTab(tab)}
             loginLogs={state.loginLogs || []}
+            applicants={state.applicants || []}
+            onApproveApplicant={handleApproveApplicant}
+            onRejectApplicant={handleRejectApplicant}
+            onDeleteLoginLog={handleDeleteLoginLog}
+            onClearAllLoginLogs={handleClearAllLoginLogs}
           />
         ) : (
           /* MODE B: PORTAL SEKOLAH (UNTUK OPERATOR SEKOLAH) */

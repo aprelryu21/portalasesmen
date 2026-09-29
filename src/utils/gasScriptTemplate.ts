@@ -49,6 +49,7 @@ export const GOOGLE_APPS_SCRIPT_CODE = `/**
 // Konstanta Nama Sheet/Tab di Spreadsheet Aktif
 var SHEET_NAMES = {
   AKUN: "AKUN",
+  PENDAFTAR_BARU: "Pendaftar_Baru",
   INFORMASI_SEKOLAH: "INFORMASI_SEKOLAH",
   DATA_SISWA: "DATA_SISWA",
   DATA_GURU: "DATA_GURU",
@@ -88,6 +89,16 @@ function initSheets() {
     sheetAkun.appendRow([
       "acc_nagata_admin", "Nagata", "09072022", "Pusat Pengelola Kartu Ujian", "", "admin", new Date().toISOString()
     ]);
+  }
+
+  // 1b. Sheet PENDAFTAR_BARU (Pendaftaran Sekolah Baru Menunggu Persetujuan Admin)
+  var sheetPendaftar = ss.getSheetByName(SHEET_NAMES.PENDAFTAR_BARU);
+  if (!sheetPendaftar) {
+    sheetPendaftar = ss.insertSheet(SHEET_NAMES.PENDAFTAR_BARU);
+    sheetPendaftar.appendRow([
+      "ID", "Username", "Password", "Nama Sekolah", "NPSN", "Role", "Status", "Created At", "Keterangan"
+    ]);
+    sheetPendaftar.getRange("A1:I1").setFontWeight("bold").setBackground("#F59E0B").setFontColor("#FFFFFF");
   }
 
   // 2. Sheet INFORMASI_SEKOLAH
@@ -369,6 +380,16 @@ function doGet(e) {
       });
     }
 
+    // 2.6 AMBIL PENDAFTAR BARU DARI SHEET Pendaftar_Baru
+    if (action === "GET_PENDAFTAR_BARU" || action === "GET_APPLICANTS") {
+      var applicants = handleGetPendaftarBaru();
+      return createJsonResponse({
+        status: "success",
+        action: action,
+        applicants: applicants
+      });
+    }
+
     // 3. DEFAULT PING (DENGAN STATISTIK KAPASITAS SPREADSHEET & DRIVE)
     var driveInfo = getOrCreateDriveDatabaseFolder();
     var capacityStats = getSpreadsheetCapacityStats();
@@ -440,10 +461,37 @@ function doPost(e) {
       return createJsonResponse(authResult);
     }
 
-    // 2. DAFTAR / TAMBAH AKUN BARU
+    // 2. DAFTAR / TAMBAH AKUN BARU (LANGSUNG KE SHEET AKUN)
     if (action === "REGISTER" || action === "ADD_ACCOUNT") {
       var regResult = handleAddAccount(contents);
       return createJsonResponse(regResult);
+    }
+
+    // 2b. DAFTAR SEKOLAH BARU (MASUK KE SHEET "Pendaftar_Baru")
+    if (action === "REGISTER_NEW_SCHOOL" || action === "APPLY_NEW_SCHOOL") {
+      var applyResult = handleRegisterSchoolApplicant(contents);
+      return createJsonResponse(applyResult);
+    }
+
+    // 2c. AMBIL DAFTAR PENDAFTAR BARU
+    if (action === "GET_PENDAFTAR_BARU" || action === "GET_APPLICANTS") {
+      var appList = handleGetPendaftarBaru();
+      return createJsonResponse({
+        status: "success",
+        applicants: appList
+      });
+    }
+
+    // 2d. SETUJUI PENDAFTAR BARU (LEMBARKAN KE SHEET "AKUN")
+    if (action === "APPROVE_PENDAFTAR_BARU" || action === "APPROVE_APPLICANT") {
+      var approveResult = handleApprovePendaftarBaru(contents);
+      return createJsonResponse(approveResult);
+    }
+
+    // 2e. TOLAK PENDAFTAR BARU
+    if (action === "REJECT_PENDAFTAR_BARU" || action === "REJECT_APPLICANT") {
+      var rejectResult = handleRejectPendaftarBaru(contents);
+      return createJsonResponse(rejectResult);
     }
 
     // 3. UPDATE AKUN (EDIT INFORMASI AKUN DI SHEET AKUN)
@@ -635,6 +683,18 @@ function doPost(e) {
         status: "success",
         logs: logsPost
       });
+    }
+
+    // 19b. HAPUS 1 LOG PENGGUNA BESERTA FOTO DI GOOGLE DRIVE
+    if (action === "DELETE_LOGIN_LOG") {
+      var delLogResult = handleDeleteLoginLog(contents);
+      return createJsonResponse(delLogResult);
+    }
+
+    // 19c. BERSIHKAN SEMUA LOG PENGGUNA & HAPUS SEMUA FOTO DI DRIVE
+    if (action === "CLEAR_ALL_LOGIN_LOGS") {
+      var clearLogsResult = handleClearAllLoginLogs();
+      return createJsonResponse(clearLogsResult);
     }
 
     return createJsonResponse({
@@ -1261,6 +1321,7 @@ function handleGetAllDatabaseData() {
 
   return {
     accounts: accounts,
+    applicants: handleGetPendaftarBaru(),
     schoolsMap: schoolsMap,
     studentsMap: studentsMap,
     teachersMap: teachersMap,
@@ -3001,6 +3062,342 @@ function handleGetLoginLogs() {
   // Urutkan dari yang terbaru
   logs.reverse();
   return logs;
+}
+
+/**
+ * 21. Registrasi pendaftar sekolah baru (Disimpan di Sheet Pendaftar_Baru dengan status pending)
+ */
+function handleRegisterSchoolApplicant(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  initSheets();
+  var sheet = ss.getSheetByName(SHEET_NAMES.PENDAFTAR_BARU);
+  var username = String(contents.username || "").trim();
+  var password = String(contents.password || "").trim();
+  var schoolName = String(contents.schoolName || "").trim();
+  var npsn = String(contents.npsn || "").trim();
+  var role = String(contents.role || "operator").trim();
+  var notes = String(contents.notes || "Menunggu Verifikasi Admin").trim();
+
+  if (!username || !password || !schoolName) {
+    return {
+      status: "error",
+      message: "Username, Password, dan Nama Sekolah wajib diisi!"
+    };
+  }
+
+  // Cek apakah username sudah ada di Sheet AKUN
+  var sheetAkun = ss.getSheetByName(SHEET_NAMES.AKUN);
+  if (sheetAkun) {
+    var akunRows = sheetAkun.getDataRange().getValues();
+    for (var a = 1; a < akunRows.length; a++) {
+      if (String(akunRows[a][1]).trim().toLowerCase() === username.toLowerCase()) {
+        return {
+          status: "error",
+          message: "Username '" + username + "' sudah terdaftar di sistem. Silakan login atau gunakan username lain."
+        };
+      }
+    }
+  }
+
+  // Cek apakah username sudah ada di Sheet PENDAFTAR_BARU dengan status pending
+  if (sheet) {
+    var rows = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      var u = String(rows[i][1]).trim().toLowerCase();
+      var st = String(rows[i][6]).trim().toLowerCase();
+      if (u === username.toLowerCase() && st === "pending") {
+        return {
+          status: "error",
+          message: "Pendaftaran untuk username '" + username + "' sudah dikirim dan sedang menunggu persetujuan Admin."
+        };
+      }
+    }
+  }
+
+  var newId = "app_" + new Date().getTime();
+  var now = new Date().toISOString();
+
+  sheet.appendRow([
+    newId,
+    username,
+    password,
+    schoolName,
+    npsn,
+    role,
+    "pending",
+    now,
+    notes
+  ]);
+
+  return {
+    status: "success",
+    message: "Pendaftaran sekolah berhasil dikirim! Menunggu persetujuan Administrator.",
+    applicant: {
+      id: newId,
+      username: username,
+      schoolName: schoolName,
+      npsn: npsn,
+      role: role,
+      status: "pending",
+      createdAt: now,
+      notes: notes
+    }
+  };
+}
+
+/**
+ * Mengambil daftar pendaftar baru dari Sheet Pendaftar_Baru (urut dari yang terbaru)
+ */
+function handleGetPendaftarBaru() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAMES.PENDAFTAR_BARU);
+  if (!sheet) return [];
+
+  var rows = sheet.getDataRange().getValues();
+  var applicants = [];
+
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    var id = String(r[0] || "");
+    var username = String(r[1] || "").trim();
+    if (!username && !id) continue;
+
+    applicants.push({
+      id: id || ("app_" + i),
+      username: username,
+      password: String(r[2] || ""),
+      schoolName: String(r[3] || ""),
+      npsn: String(r[4] || ""),
+      role: String(r[5] || "operator"),
+      status: String(r[6] || "pending").toLowerCase(),
+      createdAt: String(r[7] || ""),
+      notes: String(r[8] || "")
+    });
+  }
+
+  applicants.reverse();
+  return applicants;
+}
+
+/**
+ * 22. Menyetujui pendaftar sekolah baru:
+ * Memindahkan data ke Sheet AKUN agar dapat login dan mendapatkan akses,
+ * serta memperbarui status di Sheet Pendaftar_Baru menjadi "approved"
+ */
+function handleApprovePendaftarBaru(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  initSheets();
+  var sheetPendaftar = ss.getSheetByName(SHEET_NAMES.PENDAFTAR_BARU);
+  var sheetAkun = ss.getSheetByName(SHEET_NAMES.AKUN);
+  if (!sheetPendaftar || !sheetAkun) {
+    return { status: "error", message: "Sheet Pendaftar_Baru atau AKUN tidak ditemukan!" };
+  }
+
+  var id = String(contents.id || "").trim();
+  var username = String(contents.username || "").trim().toLowerCase();
+
+  var rows = sheetPendaftar.getDataRange().getValues();
+  var foundRowIdx = -1;
+  var applicantData = null;
+
+  for (var i = 1; i < rows.length; i++) {
+    var rId = String(rows[i][0]).trim();
+    var rUser = String(rows[i][1]).trim().toLowerCase();
+    if ((id && rId === id) || (username && rUser === username)) {
+      foundRowIdx = i + 1;
+      applicantData = {
+        id: rId,
+        username: String(rows[i][1]).trim(),
+        password: String(rows[i][2] || "").trim(),
+        schoolName: String(rows[i][3] || "").trim(),
+        npsn: String(rows[i][4] || "").trim(),
+        role: String(rows[i][5] || "operator").trim(),
+        status: String(rows[i][6] || "pending").trim()
+      };
+      break;
+    }
+  }
+
+  if (foundRowIdx === -1 || !applicantData) {
+    return { status: "error", message: "Data pendaftar sekolah tidak ditemukan." };
+  }
+
+  // Cek apakah akun sudah ada di Sheet AKUN
+  var akunRows = sheetAkun.getDataRange().getValues();
+  var alreadyInAkun = false;
+  for (var a = 1; a < akunRows.length; a++) {
+    if (String(akunRows[a][1]).trim().toLowerCase() === applicantData.username.toLowerCase()) {
+      alreadyInAkun = true;
+      break;
+    }
+  }
+
+  var now = new Date().toISOString();
+  var newAccId = "acc_" + new Date().getTime();
+
+  if (!alreadyInAkun) {
+    sheetAkun.appendRow([
+      newAccId,
+      applicantData.username,
+      applicantData.password,
+      applicantData.schoolName,
+      applicantData.npsn,
+      applicantData.role,
+      now
+    ]);
+
+    try {
+      getOrCreateSchoolFolder(applicantData.schoolName || applicantData.username);
+    } catch(eDrive) {}
+  }
+
+  // Update status di Sheet Pendaftar_Baru
+  sheetPendaftar.getRange(foundRowIdx, 7).setValue("approved");
+  sheetPendaftar.getRange(foundRowIdx, 9).setValue("Disetujui pada " + Utilities.formatDate(new Date(), "Asia/Jakarta", "dd MMM yyyy HH:mm") + " WIB");
+
+  return {
+    status: "success",
+    message: "Sekolah '" + applicantData.schoolName + "' (@" + applicantData.username + ") berhasil disetujui dan ditambahkan ke Sheet AKUN!",
+    account: {
+      id: newAccId,
+      username: applicantData.username,
+      password: applicantData.password,
+      schoolName: applicantData.schoolName,
+      npsn: applicantData.npsn,
+      role: applicantData.role,
+      status: "active",
+      createdAt: now
+    }
+  };
+}
+
+/**
+ * 23. Menolak pendaftar sekolah baru
+ */
+function handleRejectPendaftarBaru(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetPendaftar = ss.getSheetByName(SHEET_NAMES.PENDAFTAR_BARU);
+  if (!sheetPendaftar) {
+    return { status: "error", message: "Sheet Pendaftar_Baru tidak ditemukan!" };
+  }
+
+  var id = String(contents.id || "").trim();
+  var username = String(contents.username || "").trim().toLowerCase();
+  var reason = String(contents.reason || contents.notes || "Ditolak oleh Administrator").trim();
+
+  var rows = sheetPendaftar.getDataRange().getValues();
+  var foundRowIdx = -1;
+
+  for (var i = 1; i < rows.length; i++) {
+    var rId = String(rows[i][0]).trim();
+    var rUser = String(rows[i][1]).trim().toLowerCase();
+    if ((id && rId === id) || (username && rUser === username)) {
+      foundRowIdx = i + 1;
+      break;
+    }
+  }
+
+  if (foundRowIdx === -1) {
+    return { status: "error", message: "Data pendaftar tidak ditemukan." };
+  }
+
+  sheetPendaftar.getRange(foundRowIdx, 7).setValue("rejected");
+  sheetPendaftar.getRange(foundRowIdx, 9).setValue(reason + " (" + Utilities.formatDate(new Date(), "Asia/Jakarta", "dd MMM yyyy HH:mm") + " WIB)");
+
+  return {
+    status: "success",
+    message: "Pendaftaran sekolah berhasil ditolak."
+  };
+}
+
+/**
+ * Helper untuk menghapus file foto di Google Drive berdasarkan URL atau ID
+ */
+function deleteDrivePhotoByUrl(photoUrl) {
+  if (!photoUrl || typeof photoUrl !== "string") return false;
+  try {
+    var match = photoUrl.match(/id=([a-zA-Z0-9_-]+)/) || photoUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      var file = DriveApp.getFileById(match[1]);
+      if (file) {
+        file.setTrashed(true);
+        return true;
+      }
+    }
+  } catch(e) {
+    Logger.log("Peringatan deleteDrivePhoto: " + e.toString());
+  }
+  return false;
+}
+
+/**
+ * 24. Hapus 1 baris log dari Sheet LOG_PENGGUNA dan hapus file foto terkait di Google Drive
+ */
+function handleDeleteLoginLog(contents) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetLog = ss.getSheetByName(SHEET_NAMES.LOG_PENGGUNA);
+  if (!sheetLog) {
+    return { status: "error", message: "Sheet LOG_PENGGUNA tidak ditemukan!" };
+  }
+
+  var logId = String(contents.id || contents.logId || "").trim();
+  var photoUrl = String(contents.photoUrl || "").trim();
+
+  var rows = sheetLog.getDataRange().getValues();
+  var deleted = false;
+
+  for (var i = rows.length - 1; i >= 1; i--) {
+    var rId = String(rows[i][0] || "").trim();
+    if (rId === logId) {
+      if (!photoUrl && rows[i][5]) {
+        photoUrl = String(rows[i][5]).trim();
+      }
+      sheetLog.deleteRow(i + 1);
+      deleted = true;
+      break;
+    }
+  }
+
+  if (photoUrl) {
+    deleteDrivePhotoByUrl(photoUrl);
+  }
+
+  return {
+    status: "success",
+    message: deleted ? "Catatan log dan file foto kamera di Drive berhasil dihapus!" : "Log diproses untuk dibersihkan."
+  };
+}
+
+/**
+ * 25. Bersihkan SEMUA baris log dari Sheet LOG_PENGGUNA dan hapus seluruh file foto di Drive
+ */
+function handleClearAllLoginLogs() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetLog = ss.getSheetByName(SHEET_NAMES.LOG_PENGGUNA);
+  if (!sheetLog) {
+    return { status: "success", message: "Sheet LOG_PENGGUNA kosong." };
+  }
+
+  var rows = sheetLog.getDataRange().getValues();
+  var deletedPhotos = 0;
+
+  for (var i = 1; i < rows.length; i++) {
+    var photoUrl = String(rows[i][5] || "").trim();
+    if (photoUrl) {
+      if (deleteDrivePhotoByUrl(photoUrl)) {
+        deletedPhotos++;
+      }
+    }
+  }
+
+  if (rows.length > 1) {
+    sheetLog.deleteRows(2, rows.length - 1);
+  }
+
+  return {
+    status: "success",
+    message: "Seluruh catatan log masuk dan " + deletedPhotos + " file foto kamera di Google Drive berhasil dibersihkan!"
+  };
 }
 
 function createJsonResponse(data) {
