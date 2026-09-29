@@ -990,10 +990,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             Kegiatan {exam?.name || 'Asesmen'} dilaksanakan di {school?.name || 'Satuan Pendidikan'} pada tanggal {examExecutionDate} dengan rincian jumlah peserta asesmen sebagai berikut :
           </p>
 
-          {/* Tabel Jumlah Peserta (table-fixed 100% agar garis KET kanan tidak terpotong) */}
-          <div className="my-3 w-full">
+          {/* Tabel Jumlah Peserta (admin-table-wrap pr-[3px] agar garis kanan tidak terpotong) */}
+          <div className="my-3 w-full admin-table-wrap pr-[3px] box-border">
             <table
-              className="w-full text-center border-collapse border border-black table-fixed box-border"
+              className="admin-table-safe w-full text-center border-collapse border border-black table-fixed box-border"
               style={{ fontSize: '11pt', lineHeight: 1.5 }}
             >
               <colgroup>
@@ -1015,7 +1015,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   <th colSpan={3} className="p-1.5 border-b border-r border-black align-middle text-center">
                     PESERTA
                   </th>
-                  <th rowSpan={2} className="p-2 align-middle text-center">
+                  <th rowSpan={2} className="p-2 border-r border-black align-middle text-center">
                     KET
                   </th>
                 </tr>
@@ -1037,7 +1037,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                     <td className="p-2 border-r border-black font-mono font-bold text-center">
                       {row.total}
                     </td>
-                    <td className="p-2 text-center text-xs">{row.notes}</td>
+                    <td className="p-2 border-r border-black text-center text-xs">{row.notes}</td>
                   </tr>
                 ))}
                 {/* Baris Total / Jumlah */}
@@ -1048,7 +1048,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   <td className="p-2 border-r border-black font-mono text-center">{totalMale}</td>
                   <td className="p-2 border-r border-black font-mono text-center">{totalFemale}</td>
                   <td className="p-2 border-r border-black font-mono text-center">{grandTotal}</td>
-                  <td className="p-2"></td>
+                  <td className="p-2 border-r border-black"></td>
                 </tr>
               </tbody>
             </table>
@@ -1108,10 +1108,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             Berdasarkan hasil Rapat Panitia Pelaksana Asesmen, Kegiatan {exam?.name || 'Asesmen'} yang dilaksanakan di {school?.name || 'Satuan Pendidikan'} pada tanggal {examExecutionDate} dilaksanakan selama {examDurationDaysText} dengan rincian jadwal asesmen sebagai berikut :
           </p>
 
-          {/* Tabel Jadwal Resmi (Kolom Hari/Tgl Diperkecil, Waktu & Mapel Lebih Lebar, Tanpa KET) */}
-          <div className="my-3 w-full">
+          {/* Tabel Jadwal Resmi (Kolom Hari/Tgl Diperkecil, Waktu & Mapel Lebih Lebar, Garis Kanan Aman) */}
+          <div className="my-3 w-full admin-table-wrap pr-[3px] box-border">
             <table
-              className="w-full text-center border-collapse border border-black table-fixed box-border"
+              className="admin-table-safe w-full text-center border-collapse border border-black table-fixed box-border"
               style={{ fontSize: '10.5pt', lineHeight: 1.5 }}
             >
               <colgroup>
@@ -1125,7 +1125,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   <th className="p-2 border-r border-black align-middle text-center">NO</th>
                   <th className="p-2 border-r border-black align-middle text-center">HARI / TANGGAL</th>
                   <th className="p-2 border-r border-black align-middle text-center">WAKTU</th>
-                  <th className="p-2 align-middle text-center">MATA PELAJARAN</th>
+                  <th className="p-2 border-r border-black align-middle text-center">MATA PELAJARAN</th>
                 </tr>
               </thead>
               <tbody>
@@ -1138,7 +1138,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                     <td className="p-2 border-r border-black font-mono text-center text-[10pt]">
                       {it.time || '07.30 - 09.30'}
                     </td>
-                    <td className="p-2 font-semibold text-center uppercase text-[10pt]">
+                    <td className="p-2 border-r border-black font-semibold text-center uppercase text-[10pt]">
                       {it.subject || '-'}
                     </td>
                   </tr>
@@ -1214,10 +1214,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             Berdasarkan hasil Rapat Panitia Pelaksana Asesmen, Berikut adalah Jadwal Kepengawasan Ruang {exam?.name || 'Asesmen'} {exam?.semester ? exam.semester.toUpperCase() : ''} {exam?.academicYear ? `Tahun Pelajaran ${exam.academicYear}` : ''} yang dilaksanakan pada tanggal {examExecutionDate} :
           </p>
 
-          {/* Tabel Pengawas Ruang (NO: 10%, NAMA: 52% Rata Kiri, TUGAS: 38% - Utuh Tidak Terpotong) */}
-          <div className="my-3 w-full">
+          {/* Tabel Pengawas Ruang (admin-table-wrap pr-[3px] agar garis kanan tidak terpotong) */}
+          <div className="my-3 w-full admin-table-wrap pr-[3px] box-border">
             <table
-              className="w-full border-collapse border border-black table-fixed box-border"
+              className="admin-table-safe w-full border-collapse border border-black table-fixed box-border"
               style={{ fontSize: '11pt', lineHeight: 1.5 }}
             >
               <colgroup>
@@ -1229,7 +1229,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                 <tr className="bg-[#E8EDE5] border-b border-black font-bold">
                   <th className="p-2 border-r border-black align-middle text-center">NO</th>
                   <th className="p-2 border-r border-black align-middle text-left pl-3">NAMA PENGAWAS</th>
-                  <th className="p-2 align-middle text-center">TUGAS KEPENGAWASAN</th>
+                  <th className="p-2 border-r border-black align-middle text-center">TUGAS KEPENGAWASAN</th>
                 </tr>
               </thead>
               <tbody>
@@ -1239,7 +1239,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                     <td className="p-2.5 border-r border-black font-semibold text-left pl-3 uppercase">
                       {row.name}
                     </td>
-                    <td className="p-2.5 text-center font-semibold uppercase">
+                    <td className="p-2.5 border-r border-black text-center font-semibold uppercase">
                       {row.duty}
                     </td>
                   </tr>
@@ -1289,10 +1289,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             </p>
           </div>
 
-          {/* Tabel Daftar Hadir Panitia */}
-          <div className="my-3 w-full">
+          {/* Tabel Daftar Hadir Panitia (admin-table-wrap pr-[3px] agar seluruh garis kanan presisi) */}
+          <div className="my-3 w-full admin-table-wrap pr-[3px] box-border">
             <table
-              className="w-full text-center border-collapse border border-black table-fixed box-border"
+              className="admin-table-safe w-full text-center border-collapse border border-black table-fixed box-border"
               style={{ fontSize: '10pt', lineHeight: 1.5 }}
             >
               <colgroup>
@@ -1309,9 +1309,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   {examScheduleDays.map((d, i) => (
                     <th
                       key={i}
-                      className={`p-1.5 align-middle text-center uppercase leading-tight ${
-                        i < examScheduleDays.length - 1 ? 'border-r border-black' : ''
-                      }`}
+                      className="p-1.5 border-r border-black align-middle text-center uppercase leading-tight"
                       style={{ fontSize: '9pt' }}
                     >
                       <div>{d.dayName}</div>
@@ -1331,9 +1329,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                     {examScheduleDays.map((_, dayIdx) => (
                       <td
                         key={dayIdx}
-                        className={`p-1.5 text-center align-middle ${
-                          dayIdx < examScheduleDays.length - 1 ? 'border-r border-black' : ''
-                        }`}
+                        className="p-1.5 border-r border-black text-center align-middle"
                       >
                         <div className="h-7 flex items-center justify-center text-[8pt] font-mono text-neutral-300">
                           ........
@@ -1414,10 +1410,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               <span>SESI : 1 (07.30 - 09.30)</span>
             </div>
 
-            {/* Tabel Presensi Siswa per Kelas */}
-            <div className="my-2 w-full">
+            {/* Tabel Presensi Siswa per Kelas (admin-table-wrap pr-[3px] agar seluruh garis kanan presisi) */}
+            <div className="my-2 w-full admin-table-wrap pr-[3px] box-border">
               <table
-                className="w-full text-center border-collapse border border-black table-fixed box-border"
+                className="admin-table-safe w-full text-center border-collapse border border-black table-fixed box-border"
                 style={{ fontSize: '9.5pt', lineHeight: 1.4 }}
               >
                 <colgroup>
@@ -1434,9 +1430,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                     {examScheduleDays.map((d, i) => (
                       <th
                         key={i}
-                        className={`p-1 align-middle text-center uppercase leading-tight ${
-                          i < examScheduleDays.length - 1 ? 'border-r border-black' : ''
-                        }`}
+                        className="p-1 border-r border-black align-middle text-center uppercase leading-tight"
                         style={{ fontSize: '8.5pt' }}
                       >
                         <div>{d.dayName}</div>
@@ -1462,9 +1456,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                       {examScheduleDays.map((_, dayIdx) => (
                         <td
                           key={dayIdx}
-                          className={`p-1 align-middle ${
-                            dayIdx < examScheduleDays.length - 1 ? 'border-r border-black' : ''
-                          }`}
+                          className="p-1 border-r border-black align-middle"
                         >
                           <div
                             className={`text-[7.5pt] font-mono text-neutral-300 ${
@@ -1506,11 +1498,11 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
   const renderStudentRulesPage = (key = 'student_rules_page') => (
     <div
       key={key}
-      className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      className="a4-admin-page rules-page bg-white text-black flex flex-col justify-between no-scrollbar"
       style={{
         ...basePageStyle,
-        fontSize: '10.5pt',
-        lineHeight: 1.45,
+        fontSize: '9.5pt',
+        lineHeight: 1.32,
       }}
     >
       <div>
@@ -1518,7 +1510,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         {renderOfficialSchoolKop()}
 
         {/* Judul Dokumen */}
-        <div className="text-center my-3 space-y-0.5">
+        <div className="text-center my-2 space-y-0.5">
           <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
             TATA TERTIB PESERTA UJIAN
           </h1>
@@ -1530,9 +1522,9 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           </p>
         </div>
 
-        {/* 14 Poin Tata Tertib Sesuai Lampiran 1 */}
-        <div className="my-3 text-justify" style={{ fontSize: '10pt', lineHeight: 1.45 }}>
-          <ol className="list-decimal pl-5 space-y-1">
+        {/* 14 Poin Tata Tertib Sesuai Lampiran 1 (Didesain Pas 1 Halaman Rapi) */}
+        <div className="my-2 text-justify" style={{ fontSize: '9.5pt', lineHeight: 1.32 }}>
+          <ol className="list-decimal pl-5 space-y-0.5">
             <li>
               Peserta ujian memasuki ruangan setelah tanda masuk dibunyikan, yakni 15 (lima belas) menit sebelum Ujian dimulai.
             </li>
@@ -1599,11 +1591,11 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
   const renderProctorRulesPage = (key = 'proctor_rules_page') => (
     <div
       key={key}
-      className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      className="a4-admin-page proctor-rules-page bg-white text-black flex flex-col justify-between no-scrollbar"
       style={{
         ...basePageStyle,
-        fontSize: '11pt',
-        lineHeight: 1.5,
+        fontSize: '10.5pt',
+        lineHeight: 1.4,
       }}
     >
       <div>
@@ -1611,7 +1603,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         {renderOfficialSchoolKop()}
 
         {/* Judul Dokumen (Sesuai Foto Acuan Lampiran 2) */}
-        <div className="text-center my-4 space-y-1">
+        <div className="text-center my-3 space-y-1">
           <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
             TATA TERTIB PENGAWAS RUANG
           </h1>
@@ -1621,7 +1613,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         </div>
 
         {/* 3 Tahap Pengawasan Sesuai Lampiran 2 */}
-        <div className="my-5 space-y-5 text-justify" style={{ fontSize: '11pt', lineHeight: 1.5 }}>
+        <div className="my-3 space-y-3.5 text-justify" style={{ fontSize: '10.5pt', lineHeight: 1.4 }}>
           {/* 1. Tahap Persiapan */}
           <div>
             <h2 className="font-bold mb-1.5 text-[11.5pt]">
@@ -1748,9 +1740,9 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                 </ol>
               </div>
 
-              {/* Tabel Susunan Panitia */}
-              <div className="pt-2 w-full">
-                <table className="w-full text-left border border-black table-fixed box-border" style={{ fontSize: '10.5pt', lineHeight: 1.5 }}>
+              {/* Tabel Susunan Panitia (admin-table-wrap pr-[3px] agar seluruh garis kanan presisi) */}
+              <div className="pt-2 w-full admin-table-wrap pr-[3px] box-border">
+                <table className="admin-table-safe w-full text-left border border-black table-fixed box-border" style={{ fontSize: '10.5pt', lineHeight: 1.5 }}>
                   <colgroup>
                     <col style={{ width: '8%' }} />
                     <col style={{ width: '37%' }} />
@@ -1762,7 +1754,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                       <th className="p-1.5 border-r border-black">No</th>
                       <th className="p-1.5 border-r border-black">Jabatan Kepanitiaan</th>
                       <th className="p-1.5 border-r border-black">Nama Lengkap</th>
-                      <th className="p-1.5">Keterangan</th>
+                      <th className="p-1.5 border-r border-black">Keterangan</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1770,31 +1762,31 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                       <td className="p-1.5 border-r border-black text-center">1</td>
                       <td className="p-1.5 border-r border-black font-semibold">Penanggung Jawab</td>
                       <td className="p-1.5 border-r border-black font-bold uppercase">{school?.principalName || 'Kepala Sekolah'}</td>
-                      <td className="p-1.5 text-center text-xs">Kepala Sekolah</td>
+                      <td className="p-1.5 border-r border-black text-center text-xs">Kepala Sekolah</td>
                     </tr>
                     <tr className="border-b border-black">
                       <td className="p-1.5 border-r border-black text-center">2</td>
                       <td className="p-1.5 border-r border-black font-semibold">Ketua Panitia</td>
                       <td className="p-1.5 border-r border-black">{teachers[0]?.name || 'Guru Senior / Wakasek'}</td>
-                      <td className="p-1.5 text-center text-xs">Pendidik</td>
+                      <td className="p-1.5 border-r border-black text-center text-xs">Pendidik</td>
                     </tr>
                     <tr className="border-b border-black">
                       <td className="p-1.5 border-r border-black text-center">3</td>
                       <td className="p-1.5 border-r border-black font-semibold">Sekretaris</td>
                       <td className="p-1.5 border-r border-black">{teachers[1]?.name || 'Guru Pelaksana'}</td>
-                      <td className="p-1.5 text-center text-xs">Pendidik</td>
+                      <td className="p-1.5 border-r border-black text-center text-xs">Pendidik</td>
                     </tr>
                     <tr className="border-b border-black">
                       <td className="p-1.5 border-r border-black text-center">4</td>
                       <td className="p-1.5 border-r border-black font-semibold">Bendahara</td>
                       <td className="p-1.5 border-r border-black">{teachers[2]?.name || 'Bendahara Sekolah'}</td>
-                      <td className="p-1.5 text-center text-xs">Pendidik</td>
+                      <td className="p-1.5 border-r border-black text-center text-xs">Pendidik</td>
                     </tr>
                     <tr className="border-b border-black">
                       <td className="p-1.5 border-r border-black text-center">5</td>
                       <td className="p-1.5 border-r border-black font-semibold">Seksi Penggandaan &amp; Naskah</td>
                       <td className="p-1.5 border-r border-black">{teachers[3]?.name || 'Tenaga Kependidikan'}</td>
-                      <td className="p-1.5 text-center text-xs">Tenaga Kependidikan</td>
+                      <td className="p-1.5 border-r border-black text-center text-xs">Tenaga Kependidikan</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1818,6 +1810,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         return renderSchoolProfilePage(`${docKeyPrefix}_profile`);
       case 'confidentiality_statement':
         return renderConfidentialityStatementPage(`${docKeyPrefix}_confidentiality`);
+      case 'committee_decree': {
+        const doc = ADMIN_DOCUMENTS.find((d) => d.id === 'committee_decree');
+        return doc ? renderPlaceholderDocPage(doc, `${docKeyPrefix}_committee_decree`) : null;
+      }
       case 'participant_count':
         return renderParticipantCountPage(`${docKeyPrefix}_participants`);
       case 'assessment_schedule':
@@ -1857,6 +1853,28 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             display: none !important;
             width: 0 !important;
             height: 0 !important;
+          }
+
+          /* Styling Tabel Administrasi Presisi di Layar dan Cetak (Garis Kanan Tidak Terpotong) */
+          .admin-table-wrap {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding-right: 3px;
+          }
+          .admin-table-wrap table,
+          table.admin-table-safe {
+            width: 100%;
+            max-width: 100%;
+            border-collapse: collapse;
+            box-sizing: border-box;
+            border: 1.5px solid black;
+          }
+          .admin-table-wrap th:last-child,
+          .admin-table-wrap td:last-child,
+          table.admin-table-safe th:last-child,
+          table.admin-table-safe td:last-child {
+            border-right: 1.5px solid black !important;
           }
 
           @media print {
@@ -1909,24 +1927,56 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               width: 100% !important;
               min-height: 0 !important;
               height: auto !important;
-              max-height: none !important;
+              max-height: 236mm !important;
               margin: 0 !important;
               page-break-after: always !important;
               break-after: page !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
               font-family: "Times New Roman", Times, "Liberation Serif", serif !important;
               line-height: 1.5 !important;
               overflow: visible !important;
               background: white !important;
             }
+            .print-only-container > .a4-admin-page:last-child,
+            .print-only-container > *:last-child .a4-admin-page:last-child,
+            .a4-admin-page:last-of-type {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
             .a4-admin-page.confidentiality-page,
             .a4-admin-page.confidentiality-page * {
               line-height: 1.15 !important;
             }
+            .a4-admin-page.rules-page,
+            .a4-admin-page.rules-page * {
+              line-height: 1.32 !important;
+            }
+            .a4-admin-page.proctor-rules-page,
+            .a4-admin-page.proctor-rules-page * {
+              line-height: 1.4 !important;
+            }
             /* Menjamin seluruh tabel dan kolom presisi tidak melebihi batas batas halaman */
-            table {
+            .admin-table-wrap {
+              width: 100% !important;
+              max-width: 100% !important;
+              box-sizing: border-box !important;
+              padding-right: 3px !important;
+              overflow: visible !important;
+            }
+            .admin-table-wrap table,
+            table.admin-table-safe {
+              width: 100% !important;
+              max-width: 100% !important;
               border-collapse: collapse !important;
               box-sizing: border-box !important;
-              max-width: 100% !important;
+              border: 1.5px solid black !important;
+            }
+            .admin-table-wrap th:last-child,
+            .admin-table-wrap td:last-child,
+            table.admin-table-safe th:last-child,
+            table.admin-table-safe td:last-child {
+              border-right: 1.5px solid black !important;
             }
             th, td {
               box-sizing: border-box !important;
@@ -1939,9 +1989,9 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             /* Frame Sampul Cover Pas 3cm atas, 4cm kiri, 3cm kanan, 3cm bawah */
             .cover-border-frame {
               width: 100% !important;
-              height: 237mm !important;
-              min-height: 237mm !important;
-              max-height: 237mm !important;
+              height: 228mm !important;
+              min-height: 228mm !important;
+              max-height: 230mm !important;
               box-sizing: border-box !important;
             }
           }
