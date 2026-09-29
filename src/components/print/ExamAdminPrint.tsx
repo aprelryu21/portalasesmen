@@ -240,7 +240,6 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
   renderGlobalCategorySwitcher,
 }) => {
   const [activeDoc, setActiveDoc] = useState<ExamAdminDocType | null>(null);
-  const [selectedAttendanceClass, setSelectedAttendanceClass] = useState<string>('ALL');
 
   // Nomor Surat Keputusan (SK) Panitia - Dapat diedit secara manual di preview cetak & tersimpan otomatis
   const defaultDecreeNumber = useMemo(() => {
@@ -256,8 +255,6 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       return defaultDecreeNumber;
     }
   });
-
-  const [selectedDecreeSheet, setSelectedDecreeSheet] = useState<string>('ALL');
 
   const handleDecreeNumberChange = (val: string) => {
     setCustomDecreeNumber(val);
@@ -1403,7 +1400,6 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           <div>
             <h3 className="font-bold">2. Ketua Pelaksana</h3>
             <ul className="list-disc pl-6 space-y-1 mt-1">
-              <li>Menyusun program kerja dan jadwal pelaksanaan {decreeExamNameText} berdasarkan petunjuk teknis dari Dinas Pendidikan dan peraturan yang berlaku.</li>
               <li>Mengoordinasikan pembagian tugas kepada seluruh panitia dan memastikan setiap seksi memahami fungsinya.</li>
               <li>Memimpin rapat koordinasi panitia sebelum, selama, dan sesudah pelaksanaan asesmen.</li>
               <li>Mengambil keputusan teknis/taktis di lapangan jika terjadi kendala operasional (misal: penanganan peserta didik yang sakit atau kendala naskah soal).</li>
@@ -2041,11 +2037,11 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             }}
           >
             <div>
-              {/* Kop Resmi Sekolah dari Database */}
-              {renderOfficialSchoolKop()}
+              {/* Kop Resmi Sekolah dari Database: Hanya ditampilkan di Lembar 1 */}
+              {pageNumber === 1 && renderOfficialSchoolKop()}
 
               {/* Judul Dokumen */}
-              <div className="text-center my-2.5 space-y-0.5">
+              <div className={`text-center space-y-0.5 ${pageNumber === 1 ? 'my-2.5' : 'mb-3'}`}>
                 <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
                   DAFTAR HADIR PESERTA ASESMEN
                   {totalClassPages > 1 && pageNumber > 1 ? ' (LANJUTAN)' : ''}
@@ -2366,7 +2362,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       return renderCommitteeAttendancePage(key);
     }
     if (targetDoc.id === 'participant_attendance') {
-      return renderParticipantAttendancePages(key, selectedAttendanceClass);
+      return renderParticipantAttendancePages(key, 'ALL');
     }
     if (targetDoc.id === 'student_rules') {
       return renderStudentRulesPage(key);
@@ -2490,7 +2486,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       case 'committee_decree': {
         return renderCommitteeDecreePages(
           `${docKeyPrefix}_committee_decree`,
-          docKeyPrefix.includes('bulk') ? 'ALL' : selectedDecreeSheet
+          'ALL'
         );
       }
       case 'participant_count':
@@ -2504,7 +2500,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       case 'participant_attendance':
         return renderParticipantAttendancePages(
           `${docKeyPrefix}_participant_attendance`,
-          docKeyPrefix.includes('bulk') ? 'ALL' : selectedAttendanceClass
+          'ALL'
         );
       case 'student_rules':
         return renderStudentRulesPage(`${docKeyPrefix}_student_rules`);
@@ -2856,104 +2852,38 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               </span>
             </div>
 
-            {/* Filter Lembar Kelas Khusus Daftar Hadir Peserta di Layar */}
-            {activeDoc === 'participant_attendance' && (
-              <div className="w-full max-w-[210mm] bg-white border-2 border-black rounded-xl p-3 shadow-[2px_2px_0px_#000] flex flex-wrap items-center gap-2">
-                <span className="text-xs font-black uppercase text-neutral-800 mr-1">
-                  Pilih Lembar Kelas:
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedAttendanceClass('ALL')}
-                  className={`px-3 py-1.5 rounded-lg border-2 border-black text-xs font-black uppercase cursor-pointer transition-transform active:translate-y-0.5 ${
-                    selectedAttendanceClass === 'ALL'
-                      ? 'bg-yellow-300 text-black shadow-[1.5px_1.5px_0px_#000]'
-                      : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
-                  }`}
-                >
-                  Semua Kelas ({studentClasses.length})
-                </button>
-                {studentClasses.map((cls) => (
-                  <button
-                    key={cls}
-                    type="button"
-                    onClick={() => setSelectedAttendanceClass(cls)}
-                    className={`px-3 py-1.5 rounded-lg border-2 border-black text-xs font-black uppercase cursor-pointer transition-transform active:translate-y-0.5 ${
-                      selectedAttendanceClass === cls
-                        ? 'bg-yellow-300 text-black shadow-[1.5px_1.5px_0px_#000]'
-                        : 'bg-white hover:bg-neutral-100 text-neutral-800'
-                    }`}
-                  >
-                    {cls}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Toolbar Khusus Surat Keputusan (SK) Panitia: Input Nomor SK Manual & Filter Halaman */}
+            {/* Toolbar Khusus Surat Keputusan (SK) Panitia: Input Nomor SK Manual */}
             {activeDoc === 'committee_decree' && (
-              <div className="w-full max-w-[210mm] space-y-3">
-                {/* 1. Input Nomor Surat Keputusan (SK) Manual */}
-                <div className="bg-white border-2 border-black rounded-xl p-3.5 shadow-[2px_2px_0px_#000] space-y-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <label
-                      htmlFor="customDecreeNumberInput"
-                      className="text-xs font-black uppercase text-neutral-800 flex items-center gap-1.5"
-                    >
-                      <Award className="w-4 h-4 text-emerald-600" />
-                      <span>Nomor Surat Keputusan (SK) Panitia:</span>
-                    </label>
-                    <span className="text-[11px] text-neutral-500 font-medium">
-                      Otomatis tersimpan &amp; disinkronkan ke seluruh lembar SK
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      id="customDecreeNumberInput"
-                      type="text"
-                      value={customDecreeNumber}
-                      onChange={(e) => handleDecreeNumberChange(e.target.value)}
-                      placeholder="Contoh: 400.3.11.1 / .... / 418.47.1.78.10.24 / 2026"
-                      className="flex-1 px-3 py-2 bg-neutral-50 border-2 border-black rounded-lg text-xs font-mono font-bold focus:bg-yellow-50 focus:outline-none shadow-inner"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleDecreeNumberChange(defaultDecreeNumber)}
-                      className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 border-2 border-black rounded-lg text-xs font-black text-neutral-800 cursor-pointer shadow-[1px_1px_0px_#000] shrink-0"
-                      title="Kembalikan ke format nomor standar"
-                    >
-                      Reset Format
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. Filter Pilihan Lembar SK Panitia (6 Halaman) */}
-                <div className="bg-white border-2 border-black rounded-xl p-3 shadow-[2px_2px_0px_#000] flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-black uppercase text-neutral-800 mr-1">
-                    Pilih Lembar SK:
+              <div className="w-full max-w-[210mm] bg-white border-2 border-black rounded-xl p-3.5 shadow-[2px_2px_0px_#000] space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <label
+                    htmlFor="customDecreeNumberInput"
+                    className="text-xs font-black uppercase text-neutral-800 flex items-center gap-1.5"
+                  >
+                    <Award className="w-4 h-4 text-emerald-600" />
+                    <span>Nomor Surat Keputusan (SK) Panitia:</span>
+                  </label>
+                  <span className="text-[11px] text-neutral-500 font-medium">
+                    Otomatis tersimpan &amp; disinkronkan ke seluruh lembar SK
                   </span>
-                  {[
-                    { id: 'ALL', label: 'Semua Lembar (6 Hal)' },
-                    { id: 'SK_MAIN', label: 'SK Utama (Hal 1-3)' },
-                    { id: 'PAGE_1', label: 'Hal 1' },
-                    { id: 'PAGE_2', label: 'Hal 2' },
-                    { id: 'PAGE_3', label: 'Hal 3 (TTD)' },
-                    { id: 'LAMPIRAN_1', label: 'Lampiran 1 (Susunan Panitia)' },
-                    { id: 'LAMPIRAN_2', label: 'Lampiran 2 (Uraian Tugas)' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setSelectedDecreeSheet(tab.id)}
-                      className={`px-3 py-1.5 rounded-lg border-2 border-black text-xs font-black uppercase cursor-pointer transition-transform active:translate-y-0.5 ${
-                        selectedDecreeSheet === tab.id
-                          ? 'bg-yellow-300 text-black shadow-[1.5px_1.5px_0px_#000]'
-                          : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="customDecreeNumberInput"
+                    type="text"
+                    value={customDecreeNumber}
+                    onChange={(e) => handleDecreeNumberChange(e.target.value)}
+                    placeholder="Contoh: 400.3.11.1 / .... / 418.47.1.78.10.24 / 2026"
+                    className="flex-1 px-3 py-2 bg-neutral-50 border-2 border-black rounded-lg text-xs font-mono font-bold focus:bg-yellow-50 focus:outline-none shadow-inner"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleDecreeNumberChange(defaultDecreeNumber)}
+                    className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 border-2 border-black rounded-lg text-xs font-black text-neutral-800 cursor-pointer shadow-[1px_1px_0px_#000] shrink-0"
+                    title="Kembalikan ke format nomor standar"
+                  >
+                    Reset Format
+                  </button>
                 </div>
               </div>
             )}
