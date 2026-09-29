@@ -564,11 +564,11 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           </p>
           <p className="font-semibold">Guru Pengawas Ruang,</p>
           <div className="h-[15mm] flex items-center justify-center my-1 relative" />
-          <p className="font-bold text-[10pt] underline">
-            ( ......................................... )
+          <p className="font-bold text-[10pt] underline whitespace-nowrap">
+            ( ........................................ )
           </p>
-          <p className="font-mono text-[9.5pt]">
-            NIP. .....................................
+          <p className="font-mono text-[9.5pt] whitespace-nowrap">
+            NIP. ....................
           </p>
         </div>
       </div>
@@ -578,9 +578,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
   // Base styling untuk lembar A4 Administrasi (Margin Standar Resmi: 3cm Atas, 4cm Kiri, 3cm Kanan, 3cm Bawah)
   const basePageStyle: React.CSSProperties = {
     width: '210mm',
-    height: '297mm',
     minHeight: '297mm',
-    maxHeight: '297mm',
     paddingTop: '30mm',
     paddingLeft: '40mm',
     paddingRight: '30mm',
@@ -595,7 +593,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
     backgroundColor: '#ffffff',
     scrollbarWidth: 'none',
     msOverflowStyle: 'none',
-    overflow: 'hidden',
+    overflow: 'visible',
   };
 
   // ========================================================
@@ -1928,14 +1926,14 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           @media print {
             @page {
               size: A4 portrait;
-              margin: 0 !important;
+              margin: 30mm 30mm 30mm 40mm; /* Standar Resmi: Atas 3cm, Kanan 3cm, Bawah 3cm, Kiri 4cm */
             }
             html, body {
               background: white !important;
               color: black !important;
               margin: 0 !important;
               padding: 0 !important;
-              width: 210mm !important;
+              width: 100% !important;
               height: auto !important;
               min-height: 0 !important;
               overflow: visible !important;
@@ -1960,8 +1958,8 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             }
             .print-only-container {
               display: block !important;
-              width: 210mm !important;
-              margin: 0 auto !important;
+              width: 100% !important;
+              margin: 0 !important;
               padding: 0 !important;
               background: transparent !important;
               overflow: visible !important;
@@ -1970,29 +1968,23 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               box-shadow: none !important;
               border: none !important;
               border-radius: 0 !important;
-              /* Sinkronisasi Total Aturan Kertas A4: Standar Margin 3cm Atas, 4cm Kiri, 3cm Kanan, 3cm Bawah */
               box-sizing: border-box !important;
-              width: 210mm !important;
-              min-width: 210mm !important;
-              max-width: 210mm !important;
-              height: 296.5mm !important;
-              min-height: 296.5mm !important;
-              max-height: 296.5mm !important;
-              padding-top: 30mm !important;
-              padding-left: 40mm !important;
-              padding-right: 30mm !important;
-              padding-bottom: 30mm !important;
-              margin: 0 auto !important;
+              width: 100% !important;
+              min-width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              min-height: 236mm !important;
+              max-height: none !important;
+              padding: 0 !important; /* Margin 3cm atas, 4cm kiri, 3cm kanan, 3cm bawah ditangani langsung oleh @page di setiap lembar cetak */
+              margin: 0 !important;
               display: flex !important;
               flex-direction: column !important;
               justify-content: space-between !important;
               page-break-after: always !important;
               break-after: page !important;
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
               font-family: "Times New Roman", Times, "Liberation Serif", serif !important;
               line-height: 1.5 !important;
-              overflow: hidden !important;
+              overflow: visible !important;
               background: white !important;
             }
             .print-only-container > .a4-admin-page:last-child,
@@ -2039,17 +2031,24 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             th, td {
               box-sizing: border-box !important;
             }
+            /* Cegah pemotongan baris tabel di tengah halaman */
+            tr {
+              break-inside: avoid !important;
+              page-break-inside: avoid !important;
+            }
             /* Aturan Penyelamat TTD: Jangan pernah memotong kolom tanda tangan di tengah */
+            /* Jika menyentuh batas bawah 3cm, seluruh kolom tanda tangan otomatis pindah utuh ke halaman baru */
             .admin-signature-block {
               break-inside: avoid !important;
               page-break-inside: avoid !important;
+              break-before: auto !important;
             }
             /* Frame Sampul Cover Pas 3cm atas, 4cm kiri, 3cm kanan, 3cm bawah */
             .cover-border-frame {
               width: 100% !important;
-              height: 100% !important;
-              min-height: 100% !important;
-              max-height: 100% !important;
+              height: 236mm !important;
+              min-height: 236mm !important;
+              max-height: 236mm !important;
               box-sizing: border-box !important;
             }
           }
@@ -2315,9 +2314,6 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   <FileText className="w-6 h-6 text-rose-700" />
                   Administrasi Pelaksanaan Ujian
                 </h2>
-                <p className="text-xs sm:text-sm text-neutral-700 max-w-2xl font-medium mt-1">
-                  Pusat pencetakan bundel portofolio administrasi ujian untuk <strong>{exam?.name || 'Asesmen Ujian'}</strong> di <strong>{school?.name || 'Sekolah'}</strong>. Standar margin: 3cm atas, 4cm kiri, 3cm kanan, 3cm bawah • Font: Times New Roman (1,5 spasi).
-                </p>
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
@@ -2359,40 +2355,6 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
           {/* Grid 11 Sub-menu Dokumen Administrasi Ujian: 2 menu per baris di Desktop */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-            {/* Card Utama: CETAK MASAL SELURUH BERKAS (1 FILE) */}
-            <div
-              onClick={() => setActiveDoc('bulk_all')}
-              className="group bg-gradient-to-r from-rose-50 via-amber-50/60 to-rose-50 hover:from-rose-100 hover:to-amber-100/80 border-2 sm:border-3 border-black rounded-2xl p-5 shadow-[4px_4px_0px_#000] hover:shadow-[6px_6px_0px_#000] transition-all duration-150 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer active:translate-x-0.5 active:translate-y-0.5 md:col-span-2"
-            >
-              <div className="flex items-start sm:items-center gap-3.5">
-                <div className="w-12 h-12 rounded-xl border-2 border-black bg-rose-600 text-white flex items-center justify-center shadow-[2px_2px_0px_#000] shrink-0">
-                  <Layers className="w-6 h-6 text-yellow-300" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2.5 py-0.5 bg-rose-600 text-white rounded text-[10px] font-black uppercase tracking-wider">
-                      FITUR CETAK MASAL
-                    </span>
-                    <span className="text-xs font-bold text-neutral-500 uppercase">
-                      11 Berkas dalam 1 File PDF
-                    </span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-black uppercase tracking-tight text-neutral-900 group-hover:text-rose-700 transition-colors">
-                    Cetak Masal Seluruh Berkas Administrasi Ujian
-                  </h3>
-                  <p className="text-xs text-neutral-600 leading-relaxed max-w-2xl">
-                    Cetak keseluruhan 11 dokumen administrasi ujian (Cover, Profil Sekolah, Surat Kerahasiaan, SK Panitia, Jadwal Asesmen, Daftar Hadir, hingga Tata Tertib) berurutan dalam satu kali cetak (1 file PDF).
-                  </p>
-                </div>
-              </div>
-
-              <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-300 group-hover:bg-yellow-200 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] transition-all shrink-0">
-                <Printer className="w-4 h-4" />
-                <span>Buka Cetak Masal</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-              </span>
-            </div>
-
             {ADMIN_DOCUMENTS.map((doc) => {
               const Icon = doc.icon;
               return (
