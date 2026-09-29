@@ -3311,14 +3311,29 @@ function handleRejectPendaftarBaru(contents) {
 }
 
 /**
+ * Helper untuk mengekstrak File ID Google Drive dari URL
+ */
+function extractDriveIdFromUrl(photoUrl) {
+  if (!photoUrl || typeof photoUrl !== "string") return "";
+  var idMatch = photoUrl.match(/id=([a-zA-Z0-9_-]+)/);
+  if (idMatch && idMatch[1]) return idMatch[1];
+  var parts = photoUrl.split("/d/");
+  if (parts.length > 1) {
+    var sub = parts[1].split("/")[0].split("?")[0].split("&")[0];
+    if (sub) return sub;
+  }
+  return "";
+}
+
+/**
  * Helper untuk menghapus file foto di Google Drive berdasarkan URL atau ID
  */
 function deleteDrivePhotoByUrl(photoUrl) {
   if (!photoUrl || typeof photoUrl !== "string") return false;
   try {
-    var match = photoUrl.match(/id=([a-zA-Z0-9_-]+)/) || photoUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if (match && match[1]) {
-      var file = DriveApp.getFileById(match[1]);
+    var fileId = extractDriveIdFromUrl(photoUrl);
+    if (fileId) {
+      var file = DriveApp.getFileById(fileId);
       if (file) {
         file.setTrashed(true);
         return true;
