@@ -242,6 +242,32 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
   const [activeDoc, setActiveDoc] = useState<ExamAdminDocType | null>(null);
   const [selectedAttendanceClass, setSelectedAttendanceClass] = useState<string>('ALL');
 
+  // Nomor Surat Keputusan (SK) Panitia - Dapat diedit secara manual di preview cetak & tersimpan otomatis
+  const defaultDecreeNumber = useMemo(() => {
+    const academicYearClean = exam?.academicYear?.split('/')[0]?.trim() || new Date().getFullYear().toString();
+    return `400.3.11.1 / .... / 418.47.1.78.10.24 / ${academicYearClean}`;
+  }, [exam?.academicYear]);
+
+  const [customDecreeNumber, setCustomDecreeNumber] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(`portal_decree_num_${exam?.id || 'default'}`);
+      return saved || defaultDecreeNumber;
+    } catch {
+      return defaultDecreeNumber;
+    }
+  });
+
+  const [selectedDecreeSheet, setSelectedDecreeSheet] = useState<string>('ALL');
+
+  const handleDecreeNumberChange = (val: string) => {
+    setCustomDecreeNumber(val);
+    try {
+      localStorage.setItem(`portal_decree_num_${exam?.id || 'default'}`, val);
+    } catch {
+      // ignore
+    }
+  };
+
   const docInfo = activeDoc && activeDoc !== 'bulk_all' ? ADMIN_DOCUMENTS.find((d) => d.id === activeDoc) : null;
   const scheduleItems = parseExamSchedule(exam?.scheduleInfo);
 
@@ -894,6 +920,611 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       {renderSignatureBlock('Yang membuat pernyataan', true, 'pt-3')}
     </div>
   );
+
+  // ========================================================
+  // 4. RENDER SURAT KEPUTUSAN PANITIA (6 Halaman Resmi Sesuai Berkas PDF User)
+  // Termasuk: SK Hal 1, SK Hal 2, SK Hal 3 (Penetapan & TTD), Lampiran 1 (Susunan Panitia),
+  // Lampiran 2 Hal 1 & Hal 2 (Uraian Tugas dan Tanggung Jawab)
+  // ========================================================
+  const decreeExamNameCaps = exam?.name?.toUpperCase() || 'ASESMEN SUMATIF TENGAH SEMESTER 1';
+  const decreeExamNameText = exam?.name || 'Asesmen Sumatif Tengah Semester 1';
+  const decreeSchoolNameCaps = school?.name?.toUpperCase() || 'SD NEGERI MEDOWO 1';
+  const decreeSchoolNameText = school?.name || 'SD Negeri Medowo 1';
+  const decreeSchoolFullNameCaps =
+    school?.name?.toUpperCase().replace(/^SD\s+/i, 'SEKOLAH DASAR ') || 'SEKOLAH DASAR NEGERI MEDOWO 1';
+  const decreeAcademicYearText = exam?.academicYear || '2026 / 2027';
+  const decreeBudgetYear =
+    exam?.academicYear?.split('/')[0]?.trim() || new Date().getFullYear().toString();
+
+  // Tanggal Rapat Panitia (default 4 hari sebelum titimangsa atau fallback 21 September 2026)
+  const meetingDateText = useMemo(() => {
+    if (exam?.signatureDate) {
+      try {
+        const d = new Date(exam.signatureDate);
+        if (!isNaN(d.getTime())) {
+          d.setDate(d.getDate() - 4);
+          const dayName = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][d.getDay()];
+          const months = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+          ];
+          return `${dayName}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+        }
+      } catch {
+        // fallback
+      }
+    }
+    return 'Senin, 21 September 2026';
+  }, [exam?.signatureDate]);
+
+  // Susunan Panitia SK Pelaksanaan Asesmen (Sesuai Lampiran 1 Berkas PDF User & Data Database)
+  const decreeCommitteeList = useMemo(() => {
+    const fallbackList = [
+      { name: school?.principalName || 'HERIYANTO, S.Pd', dinas: 'Kepala Sekolah', panitia: 'Penanggung Jawab' },
+      { name: 'ISRO’IN KASANAH, S.Pd', dinas: 'Guru Kelas', panitia: 'Ketua Pelaksana' },
+      { name: 'MUJIATI, S.Pd', dinas: 'Guru Kelas', panitia: 'Bendahara' },
+      { name: 'APRILIYANTO RATIH S., S.Pd', dinas: 'Guru Kelas', panitia: 'Petugas Administrasi' },
+      { name: 'HERU WIDIYATAMA, S.Pd', dinas: 'Guru Mapel', panitia: 'Petugas Administrasi' },
+      { name: 'RIKAH, S.Pd', dinas: 'Guru Mapel', panitia: 'Anggota' },
+      { name: 'LAILATUL BADRIYAH, S.Pd.I, M.Pd', dinas: 'Guru Mapel', panitia: 'Anggota' },
+      { name: 'ARLINA, S.Pd', dinas: 'Guru Kelas', panitia: 'Anggota' },
+      { name: 'WARES KRISWAHYUNI, S.Pd', dinas: 'Guru Kelas', panitia: 'Anggota' },
+      { name: 'SRIANI, S.E', dinas: 'Guru Kelas', panitia: 'Anggota' },
+    ];
+
+    if (!teachers || teachers.length === 0) {
+      return fallbackList;
+    }
+
+    const validTeachers = teachers.filter(
+      (t) => t.name.trim().toUpperCase() !== (school?.principalName || '').trim().toUpperCase()
+    );
+    if (validTeachers.length === 0) {
+      return fallbackList;
+    }
+
+    const list: { name: string; dinas: string; panitia: string }[] = [];
+    list.push({
+      name: school?.principalName || 'HERIYANTO, S.Pd',
+      dinas: 'Kepala Sekolah',
+      panitia: 'Penanggung Jawab',
+    });
+
+    validTeachers.forEach((t, idx) => {
+      let dinas = 'Guru Kelas';
+      if (t.roleType === 'guru_mapel' || (t.subject && !t.subject.toLowerCase().includes('kelas'))) {
+        dinas = 'Guru Mapel';
+      } else if (t.roleType === 'guru_kelas') {
+        dinas = 'Guru Kelas';
+      } else if (t.subject) {
+        dinas = t.subject.startsWith('Guru') ? t.subject : `Guru ${t.subject}`;
+      }
+
+      let panitia = 'Anggota';
+      if (idx === 0) panitia = 'Ketua Pelaksana';
+      else if (idx === 1) panitia = 'Bendahara';
+      else if (idx === 2) panitia = 'Petugas Administrasi';
+      else if (idx === 3) panitia = 'Petugas Administrasi';
+      else panitia = 'Anggota';
+
+      list.push({
+        name: t.name,
+        dinas,
+        panitia,
+      });
+    });
+
+    return list;
+  }, [school?.principalName, teachers]);
+
+  const baseDecreePageStyle: React.CSSProperties = {
+    ...basePageStyle,
+    fontSize: '11pt',
+    lineHeight: 1.35,
+  };
+
+  // SK Halaman 1: Kop Surat, Judul, Menimbang (a, b), Mengingat (1 s.d. 4)
+  const renderDecreePage1 = (key = 'decree_page_1') => (
+    <div
+      key={key}
+      className="a4-admin-page decree-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      style={baseDecreePageStyle}
+    >
+      <div>
+        {/* Kop Surat Resmi Sekolah */}
+        {renderOfficialSchoolKop()}
+
+        {/* Judul Surat Keputusan */}
+        <div className="text-center my-2.5">
+          <h1 className="font-bold uppercase tracking-wider text-[12pt] underline">
+            SURAT KEPUTUSAN KEPALA {decreeSchoolNameCaps}
+          </h1>
+          <p className="font-bold text-[11pt] tracking-normal mt-0.5">
+            NOMOR : {customDecreeNumber}
+          </p>
+          <div className="font-bold text-[11pt] uppercase tracking-wider mt-2.5">
+            TENTANG
+          </div>
+          <div className="font-bold text-[11.5pt] uppercase tracking-wide mt-1.5 leading-snug">
+            PEMBENTUKAN PANITIA PENYELENGGARA<br />
+            {decreeExamNameCaps}<br />
+            TAHUN PELAJARAN {decreeAcademicYearText}
+          </div>
+          <div className="font-bold text-[11.5pt] uppercase tracking-wide mt-3">
+            KEPALA {decreeSchoolFullNameCaps}
+          </div>
+        </div>
+
+        {/* Menimbang */}
+        <table className="w-full text-justify mb-2" style={{ fontSize: '11pt', lineHeight: 1.35 }}>
+          <tbody>
+            <tr>
+              <td className="w-[120px] font-bold align-top py-0.5">Menimbang</td>
+              <td className="w-[15px] font-bold align-top py-0.5 text-center">:</td>
+              <td className="w-[24px] align-top py-0.5">a.</td>
+              <td className="align-top py-0.5 text-justify">
+                Bahwa untuk kelancaran Penyelenggaraan Kegiatan {decreeExamNameText} Tahun Pelajaran {decreeAcademicYearText} bagi siswa-siswi {decreeSchoolNameText}, maka perlu membentuk Panitia Penyelenggara Ujian.
+              </td>
+            </tr>
+            <tr>
+              <td className="align-top py-0.5"></td>
+              <td className="align-top py-0.5 text-center">:</td>
+              <td className="align-top py-0.5">b.</td>
+              <td className="align-top py-0.5 text-justify">
+                Bahwa berdasarkan pertimbangan sebagaimana dimaksud dalam huruf a, maka perlu menetapkan Surat Keputusan Kepala {decreeSchoolNameText} tentang Pembentukan Panitia Penyelenggara {decreeExamNameText} {decreeSchoolNameText} Tahun Pelajaran {decreeAcademicYearText}.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Mengingat */}
+        <table className="w-full text-justify" style={{ fontSize: '11pt', lineHeight: 1.35 }}>
+          <tbody>
+            <tr>
+              <td className="w-[120px] font-bold align-top py-0.5">Mengingat</td>
+              <td className="w-[15px] font-bold align-top py-0.5 text-center">:</td>
+              <td className="w-[24px] align-top py-0.5">1.</td>
+              <td className="align-top py-0.5 text-justify">
+                Undang-undang Nomor 20 Tahun 2003 tentang Sistem Pendidikan Nasional;
+              </td>
+            </tr>
+            <tr>
+              <td className="align-top py-0.5"></td>
+              <td className="align-top py-0.5 text-center">:</td>
+              <td className="align-top py-0.5">2.</td>
+              <td className="align-top py-0.5 text-justify">
+                Peraturan Pemerintah Nomor 57 Tahun 2021 tentang Standar Nasional Pendidikan sebagaimana telah diubah dengan Peraturan Pemerintah Nomor 4 Tahun 2022 tentang Perubahan atas Peraturan Pemerintah Nomor 57 Tahun 2021 tentang Standar Nasional Pendidikan;
+              </td>
+            </tr>
+            <tr>
+              <td className="align-top py-0.5"></td>
+              <td className="align-top py-0.5 text-center">:</td>
+              <td className="align-top py-0.5">3.</td>
+              <td className="align-top py-0.5 text-justify">
+                Peraturan Menteri Pendidikan, Kebudayaan, Riset, dan Teknologi Nomor 5 Tahun 2022 tentang Standar Kompetensi Lulusan pada Pendidikan Anak Usia Dini, Jenjang Pendidikan Dasar, dan Jenjang Pendidikan Menengah;
+              </td>
+            </tr>
+            <tr>
+              <td className="align-top py-0.5"></td>
+              <td className="align-top py-0.5 text-center">:</td>
+              <td className="align-top py-0.5">4.</td>
+              <td className="align-top py-0.5 text-justify">
+                Peraturan Menteri Pendidikan, Kebudayaan, Riset, dan Teknologi Nomor 21 Tahun 2022 tentang Standar Penilaian Pendidikan pada Pendidikan Anak Usia Dini, Jenjang Pendidikan Dasar, dan Jenjang Pendidikan Menengah;
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  // SK Halaman 2: Mengingat (poin 5), Memperhatikan (1 s.d. 3), MEMUTUSKAN, Menetapkan (Kesatu s.d. Keempat)
+  const renderDecreePage2 = (key = 'decree_page_2') => (
+    <div
+      key={key}
+      className="a4-admin-page decree-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      style={baseDecreePageStyle}
+    >
+      <div>
+        {/* Sambungan Mengingat Poin 5 */}
+        <table className="w-full text-justify mb-2.5" style={{ fontSize: '11pt', lineHeight: 1.35 }}>
+          <tbody>
+            <tr>
+              <td className="w-[120px] align-top py-0.5"></td>
+              <td className="w-[15px] align-top py-0.5 text-center"></td>
+              <td className="w-[24px] align-top py-0.5">5.</td>
+              <td className="align-top py-0.5 text-justify">
+                Peraturan Menteri Pendidikan, Kebudayaan, Riset, dan Teknologi Nomor 12 Tahun 2024 tentang Kurikulum pada Pendidikan Anak Usia Dini, Jenjang Pendidikan Dasar, dan Jenjang Pendidikan Menengah;
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Memperhatikan */}
+        <table className="w-full text-justify mb-3.5" style={{ fontSize: '11pt', lineHeight: 1.35 }}>
+          <tbody>
+            <tr>
+              <td className="w-[120px] font-bold align-top py-0.5">Memperhatikan</td>
+              <td className="w-[15px] font-bold align-top py-0.5 text-center">:</td>
+              <td className="w-[24px] align-top py-0.5">1.</td>
+              <td className="align-top py-0.5 text-justify">
+                Panduan Pembelajaran dan Asesmen Pendidikan Anak Usia Dini, Pendidikan Dasar, dan Menengah (revisi terbaru) yang diterbitkan oleh Badan Standar, Kurikulum, dan Asesmen Pendidikan (BSKAP) Kemendikbudristek;
+              </td>
+            </tr>
+            <tr>
+              <td className="align-top py-0.5"></td>
+              <td className="align-top py-0.5 text-center">:</td>
+              <td className="align-top py-0.5">2.</td>
+              <td className="align-top py-0.5 text-justify">
+                Kurikulum Satuan Pendidikan {decreeSchoolNameText} Tahun Pelajaran {decreeAcademicYearText};
+              </td>
+            </tr>
+            <tr>
+              <td className="align-top py-0.5"></td>
+              <td className="align-top py-0.5 text-center">:</td>
+              <td className="align-top py-0.5">3.</td>
+              <td className="align-top py-0.5 text-justify">
+                Hasil Keputusan Rapat Intern {decreeSchoolNameText} bersama Kepala Sekolah dan Guru Kelas maupun Mapel pada hari {meetingDateText}, tentang Pembentukan Panitia Pelaksana {decreeExamNameText} Tahun Pelajaran {decreeAcademicYearText}.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* MEMUTUSKAN */}
+        <div className="text-center font-bold tracking-wider text-[11.5pt] uppercase my-3.5">
+          MEMUTUSKAN
+        </div>
+
+        {/* Menetapkan */}
+        <table className="w-full text-justify" style={{ fontSize: '11pt', lineHeight: 1.35 }}>
+          <tbody>
+            <tr>
+              <td className="w-[120px] font-bold align-top py-1">Menetapkan</td>
+              <td className="w-[15px] font-bold align-top py-1 text-center">:</td>
+              <td colSpan={2} className="py-1"></td>
+            </tr>
+            <tr>
+              <td className="font-semibold align-top py-1">Kesatu</td>
+              <td className="font-semibold align-top py-1 text-center">:</td>
+              <td colSpan={2} className="align-top py-1 text-justify">
+                Membentuk Panitia Penyelenggara Kegiatan {decreeExamNameText} {decreeSchoolFullNameCaps} Tahun Pelajaran {decreeAcademicYearText} dengan Susunan Keanggotaan sebagaimana tersebut dalam lampiran keputusan ini.
+              </td>
+            </tr>
+            <tr>
+              <td className="font-semibold align-top py-1">Kedua</td>
+              <td className="font-semibold align-top py-1 text-center">:</td>
+              <td colSpan={2} className="align-top py-1 text-justify">
+                Panitia Penyelenggara sebagaimana dimaksud dalam Diktum Kesatu mempunyai tugas dan tanggung jawab :
+                <ul className="list-disc pl-5 mt-1 space-y-1">
+                  <li>Melaksanakan Kegiatan {decreeExamNameText} Sekolah Dasar sesuai dengan Prosedur Operasi Standar;</li>
+                  <li>menetapkan kelulusan peserta Kegiatan {decreeExamNameText} ;</li>
+                  <li>melaporkan pelaksanaan Kegiatan {decreeExamNameText} kepada Kepala Dinas Pendidikan dan Kebudayaan {school?.regency ? (school.regency.toUpperCase().startsWith('KAB') ? school.regency : `Kabupaten ${school.regency}`) : 'Kabupaten Kediri'}.</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td className="font-semibold align-top py-1">Ketiga</td>
+              <td className="font-semibold align-top py-1 text-center">:</td>
+              <td colSpan={2} className="align-top py-1 text-justify">
+                Segala biaya yang timbul sebagai akibat ditetapkannya keputusan ini dibebankan pada Anggaran dan Belanja Sekolah Tahun {decreeBudgetYear} dan sumber lain yang relevan.
+              </td>
+            </tr>
+            <tr>
+              <td className="font-semibold align-top py-1">Keempat</td>
+              <td className="font-semibold align-top py-1 text-center">:</td>
+              <td colSpan={2} className="align-top py-1 text-justify">
+                Keputusan ini mulai berlaku pada tanggal ditetapkan. Apabila dikemudian hari ternyata terdapat kekeliruan dalam keputusan ini, akan diadakan perbaikan sebagaimana mestinya.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  // SK Halaman 3: Penetapan & Kolom Tanda Tangan Resmi Kepala Sekolah
+  const renderDecreePage3 = (key = 'decree_page_3') => (
+    <div
+      key={key}
+      className="a4-admin-page decree-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      style={baseDecreePageStyle}
+    >
+      <div className="flex justify-end pt-16 sm:pt-20">
+        <div className="w-[85mm] text-left" style={{ fontSize: '11pt', lineHeight: 1.35 }}>
+          <table className="w-full mb-1">
+            <tbody>
+              <tr>
+                <td className="w-[105px]">Ditetapkan di</td>
+                <td className="w-[15px]">:</td>
+                <td>{school?.district || 'Kandangan'}</td>
+              </tr>
+              <tr>
+                <td>Pada tanggal</td>
+                <td>:</td>
+                <td>{cleanSignatureDate || '25 September 2026'}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="text-left mt-2">
+            <p className="font-semibold">Kepala {school?.name || 'SD Negeri Medowo 1'}</p>
+            <p className="font-semibold">Kecamatan {school?.district || 'Kandangan'}</p>
+
+            {/* Area Tanda Tangan / Scan */}
+            <div className="h-[25mm] flex items-center justify-start my-2 relative">
+              {school?.principalSignatureUrl ? (
+                <img
+                  src={school.principalSignatureUrl}
+                  alt="Tanda Tangan Kepala Sekolah"
+                  className="h-[22mm] object-contain"
+                />
+              ) : null}
+            </div>
+
+            <p className="font-bold underline uppercase">
+              {school?.principalName || 'HERIYANTO, S.Pd'}
+            </p>
+            <p className="font-mono text-[10.5pt]">
+              NIP. {school?.principalNip || '19780313 200604 1 012'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // SK Halaman 4 (Lampiran 1): Susunan Panitia Pelaksanaan
+  const renderDecreeLampiran1 = (key = 'decree_lampiran_1') => (
+    <div
+      key={key}
+      className="a4-admin-page decree-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      style={baseDecreePageStyle}
+    >
+      <div>
+        {/* Header Lampiran 1 */}
+        <div className="mb-4 text-left" style={{ fontSize: '11pt', lineHeight: 1.3 }}>
+          <table className="text-left font-medium">
+            <tbody>
+              <tr>
+                <td className="w-[100px]">Lampiran 1</td>
+                <td className="w-[15px]">:</td>
+                <td>Keputusan Kepala {decreeSchoolNameCaps}</td>
+              </tr>
+              <tr>
+                <td>Nomor</td>
+                <td>:</td>
+                <td>{customDecreeNumber}</td>
+              </tr>
+              <tr>
+                <td>Tanggal</td>
+                <td>:</td>
+                <td>{cleanSignatureDate || '25 September 2026'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Judul Lampiran 1 */}
+        <div className="text-center my-3">
+          <h2 className="font-bold uppercase tracking-wider text-[12pt]">
+            SUSUNAN PANITIA PELAKSANAAN
+          </h2>
+          <div className="font-bold uppercase text-[11.5pt] tracking-wide mt-0.5 leading-snug">
+            {decreeExamNameCaps}<br />
+            TAHUN PELAJARAN {decreeAcademicYearText}
+          </div>
+        </div>
+
+        {/* Tabel Susunan Panitia */}
+        <div className="pt-2 w-full admin-table-wrap pr-[3px] box-border">
+          <table className="admin-table-safe w-full border-collapse border border-black text-black" style={{ fontSize: '10.5pt' }}>
+            <thead>
+              <tr className="border-b border-black text-center font-bold bg-[#E8EDE5]">
+                <th rowSpan={2} className="w-[45px] p-2 border-r border-black align-middle">No</th>
+                <th rowSpan={2} className="p-2 border-r border-black align-middle">Nama Panitia</th>
+                <th colSpan={2} className="p-1 border-b border-black text-center">Jabatan</th>
+              </tr>
+              <tr className="border-b border-black text-center font-bold bg-[#E8EDE5]">
+                <th className="w-[140px] p-1.5 border-r border-black">Dinas</th>
+                <th className="w-[160px] p-1.5">Panitia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {decreeCommitteeList.map((m, idx) => (
+                <tr key={idx} className="border-b border-black">
+                  <td className="p-1.5 text-center border-r border-black align-middle">{idx + 1}.</td>
+                  <td className="p-1.5 border-r border-black align-middle font-medium uppercase">{m.name}</td>
+                  <td className="p-1.5 border-r border-black align-middle text-center">{m.dinas}</td>
+                  <td className="p-1.5 align-middle text-center font-medium">{m.panitia}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Tanda Tangan Kanan Bawah Lampiran 1 */}
+      {renderSignatureBlock(undefined, true, 'pt-4')}
+    </div>
+  );
+
+  // SK Halaman 5 (Lampiran 2 Bagian 1): Uraian Tugas Poin 1 s.d. 4
+  const renderDecreeLampiran2Part1 = (key = 'decree_lampiran_2_part1') => (
+    <div
+      key={key}
+      className="a4-admin-page decree-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      style={baseDecreePageStyle}
+    >
+      <div>
+        {/* Header Lampiran 2 */}
+        <div className="mb-4 text-left" style={{ fontSize: '11pt', lineHeight: 1.3 }}>
+          <table className="text-left font-medium">
+            <tbody>
+              <tr>
+                <td className="w-[100px]">Lampiran 2</td>
+                <td className="w-[15px]">:</td>
+                <td>Keputusan Kepala {decreeSchoolNameCaps}</td>
+              </tr>
+              <tr>
+                <td>Nomor</td>
+                <td>:</td>
+                <td>{customDecreeNumber}</td>
+              </tr>
+              <tr>
+                <td>Tanggal</td>
+                <td>:</td>
+                <td>{cleanSignatureDate || '25 September 2026'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Judul Lampiran 2 */}
+        <div className="text-center my-3">
+          <h2 className="font-bold uppercase tracking-wider text-[12pt]">
+            URAIAN TUGAS DAN TANGGUNG JAWAB PANITIA
+          </h2>
+          <div className="font-bold uppercase text-[11.5pt] tracking-wide mt-0.5 leading-snug">
+            {decreeExamNameCaps}<br />
+            TAHUN PELAJARAN {decreeAcademicYearText}
+          </div>
+        </div>
+
+        {/* Isi Uraian Tugas Poin 1 s.d. 4 */}
+        <div className="space-y-3.5 text-justify mt-3" style={{ fontSize: '11pt', lineHeight: 1.35 }}>
+          <div>
+            <h3 className="font-bold">1. Penanggung Jawab</h3>
+            <ul className="list-disc pl-6 space-y-1 mt-1">
+              <li>Memberikan arahan, kebijakan, dan keputusan strategis terkait pelaksanaan {decreeExamNameText} di tingkat satuan pendidikan.</li>
+              <li>Mengesahkan dan menandatangani seluruh dokumen kelengkapan administrasi {decreeExamNameText}. (SK Panitia, POS Asesmen Sekolah, Berita Acara, dan Laporan Hasil).</li>
+              <li>Melakukan supervisi dan pemantauan langsung terhadap seluruh tahapan kegiatan, mulai dari persiapan, pelaksanaan, hingga pelaporan.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-bold">2. Ketua Pelaksana</h3>
+            <ul className="list-disc pl-6 space-y-1 mt-1">
+              <li>Menyusun program kerja dan jadwal pelaksanaan {decreeExamNameText} berdasarkan petunjuk teknis dari Dinas Pendidikan dan peraturan yang berlaku.</li>
+              <li>Mengoordinasikan pembagian tugas kepada seluruh panitia dan memastikan setiap seksi memahami fungsinya.</li>
+              <li>Memimpin rapat koordinasi panitia sebelum, selama, dan sesudah pelaksanaan asesmen.</li>
+              <li>Mengambil keputusan teknis/taktis di lapangan jika terjadi kendala operasional (misal: penanganan peserta didik yang sakit atau kendala naskah soal).</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-bold">3. Bendahara</h3>
+            <ul className="list-disc pl-6 space-y-1 mt-1">
+              <li>Menyusun Rencana Anggaran Biaya (RAB) pelaksanaan {decreeExamNameText} yang disesuaikan dengan ketersediaan dana sekolah (seperti Bantuan Operasional Sekolah / BOS).</li>
+              <li>Mengelola pencairan dan pendistribusian dana kegiatan sesuai dengan porsinya (pembelian ATK, konsumsi, penggandaan soal, honorarium pengawas silang/kepanitiaan jika ada).</li>
+              <li>Mengumpulkan bukti-bukti transaksi dan kuitansi pengeluaran secara tertib.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-bold">4. Petugas Administrasi</h3>
+            <ul className="list-disc pl-6 space-y-1 mt-1">
+              <li>Menyiapkan seluruh format dan blangko administrasi asesmen (Daftar Hadir Peserta, Daftar Hadir Pengawas, Berita Acara Pelaksanaan, Tata Tertib, dan Pakta Integritas).</li>
+              <li>Mencetak dan mendistribusikan kelengkapan peserta ujian (Kartu Peserta Asesmen, Nomor Bangku, dan Denah Ruangan).</li>
+              <li>Mendata dan mengelola dokumen rekapitulasi nilai akhir dari tim korektor/guru kelas.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // SK Halaman 6 (Lampiran 2 Bagian 2): Lanjutan Poin 4 & Poin 5, 6
+  const renderDecreeLampiran2Part2 = (key = 'decree_lampiran_2_part2') => (
+    <div
+      key={key}
+      className="a4-admin-page decree-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      style={baseDecreePageStyle}
+    >
+      <div>
+        <div className="space-y-4 text-justify pt-1" style={{ fontSize: '11pt', lineHeight: 1.35 }}>
+          <div>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Menyiapkan draf laporan akhir pelaksanaan kegiatan untuk ditandatangani Ketua Pelaksana dan Penanggung Jawab.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-bold">5. Pengawas Ruang Silang</h3>
+            <ul className="list-disc pl-6 space-y-1 mt-1">
+              <li>Hadir di sekolah penyelenggara selambat-lambatnya 30 menit sebelum jadwal asesmen dimulai untuk menerima pengarahan dan naskah/instrumen asesmen.</li>
+              <li>Memeriksa kesiapan ruang asesmen dan memastikan peserta didik duduk sesuai dengan nomor urut/denah.</li>
+              <li>Membacakan tata tertib asesmen, membagikan naskah/lembar jawaban, dan memastikan identitas peserta terisi dengan benar.</li>
+              <li>Mengawasi jalannya asesmen agar berlangsung tertib, tenang, dan jujur (tidak ada kecurangan).</li>
+              <li>Mengisi, menandatangani, dan menyerahkan Berita Acara Pelaksanaan serta Daftar Hadir di ruangan tersebut kepada panitia.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-bold">6. Anggota</h3>
+            <ul className="list-disc pl-6 space-y-2 mt-1">
+              <li><strong>Perlengkapan:</strong> Menyiapkan dan menata ruang asesmen (kebersihan, kecukupan meja/kursi, pencahayaan, serta pemasangan nomor meja dan denah/tata tertib di pintu masuk). Menyiapkan perangkat bel atau tanda waktu.</li>
+              <li><strong>Konsumsi:</strong> Menyusun menu, memesan, dan mendistribusikan konsumsi (snack/makan) untuk panitia dan pengawas ruang setiap harinya.</li>
+              <li><strong>Keamanan:</strong> Memastikan area sekolah bebas dari kebisingan atau gangguan dari luar yang dapat memecah konsentrasi peserta didik. Mengatur alur kedatangan dan kepulangan peserta didik.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Dispatcher Generator Dokumen SK Panitia Lengkap 6 Halaman
+  const renderCommitteeDecreePages = (keyPrefix: string, sheetFilter = 'ALL') => {
+    const isScreen = keyPrefix.includes('screen');
+    let pages: React.ReactNode[] = [];
+
+    switch (sheetFilter) {
+      case 'PAGE_1':
+        pages = [renderDecreePage1(`${keyPrefix}_p1`)];
+        break;
+      case 'PAGE_2':
+        pages = [renderDecreePage2(`${keyPrefix}_p2`)];
+        break;
+      case 'PAGE_3':
+        pages = [renderDecreePage3(`${keyPrefix}_p3`)];
+        break;
+      case 'SK_MAIN':
+        pages = [
+          renderDecreePage1(`${keyPrefix}_p1`),
+          renderDecreePage2(`${keyPrefix}_p2`),
+          renderDecreePage3(`${keyPrefix}_p3`),
+        ];
+        break;
+      case 'LAMPIRAN_1':
+        pages = [renderDecreeLampiran1(`${keyPrefix}_lamp1`)];
+        break;
+      case 'LAMPIRAN_2':
+        pages = [
+          renderDecreeLampiran2Part1(`${keyPrefix}_lamp2_p1`),
+          renderDecreeLampiran2Part2(`${keyPrefix}_lamp2_p2`),
+        ];
+        break;
+      case 'ALL':
+      default:
+        pages = [
+          renderDecreePage1(`${keyPrefix}_p1`),
+          renderDecreePage2(`${keyPrefix}_p2`),
+          renderDecreePage3(`${keyPrefix}_p3`),
+          renderDecreeLampiran1(`${keyPrefix}_lamp1`),
+          renderDecreeLampiran2Part1(`${keyPrefix}_lamp2_p1`),
+          renderDecreeLampiran2Part2(`${keyPrefix}_lamp2_p2`),
+        ];
+        break;
+    }
+
+    if (!isScreen) {
+      return <React.Fragment key={keyPrefix}>{pages}</React.Fragment>;
+    }
+
+    return (
+      <div key={keyPrefix} className="w-full flex flex-col items-center space-y-6">
+        {pages}
+      </div>
+    );
+  };
 
   // ========================================================
   // 5. RENDER JUMLAH PESERTA (Sesuai Foto Acuan User: media_1790609768921.png)
@@ -1857,8 +2488,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
       case 'confidentiality_statement':
         return renderConfidentialityStatementPage(`${docKeyPrefix}_confidentiality`);
       case 'committee_decree': {
-        const doc = ADMIN_DOCUMENTS.find((d) => d.id === 'committee_decree');
-        return doc ? renderPlaceholderDocPage(doc, `${docKeyPrefix}_committee_decree`) : null;
+        return renderCommitteeDecreePages(
+          `${docKeyPrefix}_committee_decree`,
+          docKeyPrefix.includes('bulk') ? 'ALL' : selectedDecreeSheet
+        );
       }
       case 'participant_count':
         return renderParticipantCountPage(`${docKeyPrefix}_participants`);
@@ -2005,6 +2638,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             .a4-admin-page.proctor-rules-page,
             .a4-admin-page.proctor-rules-page * {
               line-height: 1.4 !important;
+            }
+            .a4-admin-page.decree-page,
+            .a4-admin-page.decree-page * {
+              line-height: 1.35 !important;
             }
             /* Menjamin seluruh tabel dan kolom presisi tidak melebihi batas halaman */
             .admin-table-wrap {
@@ -2250,6 +2887,74 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                     {cls}
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* Toolbar Khusus Surat Keputusan (SK) Panitia: Input Nomor SK Manual & Filter Halaman */}
+            {activeDoc === 'committee_decree' && (
+              <div className="w-full max-w-[210mm] space-y-3">
+                {/* 1. Input Nomor Surat Keputusan (SK) Manual */}
+                <div className="bg-white border-2 border-black rounded-xl p-3.5 shadow-[2px_2px_0px_#000] space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <label
+                      htmlFor="customDecreeNumberInput"
+                      className="text-xs font-black uppercase text-neutral-800 flex items-center gap-1.5"
+                    >
+                      <Award className="w-4 h-4 text-emerald-600" />
+                      <span>Nomor Surat Keputusan (SK) Panitia:</span>
+                    </label>
+                    <span className="text-[11px] text-neutral-500 font-medium">
+                      Otomatis tersimpan &amp; disinkronkan ke seluruh lembar SK
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="customDecreeNumberInput"
+                      type="text"
+                      value={customDecreeNumber}
+                      onChange={(e) => handleDecreeNumberChange(e.target.value)}
+                      placeholder="Contoh: 400.3.11.1 / .... / 418.47.1.78.10.24 / 2026"
+                      className="flex-1 px-3 py-2 bg-neutral-50 border-2 border-black rounded-lg text-xs font-mono font-bold focus:bg-yellow-50 focus:outline-none shadow-inner"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDecreeNumberChange(defaultDecreeNumber)}
+                      className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 border-2 border-black rounded-lg text-xs font-black text-neutral-800 cursor-pointer shadow-[1px_1px_0px_#000] shrink-0"
+                      title="Kembalikan ke format nomor standar"
+                    >
+                      Reset Format
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Filter Pilihan Lembar SK Panitia (6 Halaman) */}
+                <div className="bg-white border-2 border-black rounded-xl p-3 shadow-[2px_2px_0px_#000] flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-black uppercase text-neutral-800 mr-1">
+                    Pilih Lembar SK:
+                  </span>
+                  {[
+                    { id: 'ALL', label: 'Semua Lembar (6 Hal)' },
+                    { id: 'SK_MAIN', label: 'SK Utama (Hal 1-3)' },
+                    { id: 'PAGE_1', label: 'Hal 1' },
+                    { id: 'PAGE_2', label: 'Hal 2' },
+                    { id: 'PAGE_3', label: 'Hal 3 (TTD)' },
+                    { id: 'LAMPIRAN_1', label: 'Lampiran 1 (Susunan Panitia)' },
+                    { id: 'LAMPIRAN_2', label: 'Lampiran 2 (Uraian Tugas)' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setSelectedDecreeSheet(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg border-2 border-black text-xs font-black uppercase cursor-pointer transition-transform active:translate-y-0.5 ${
+                        selectedDecreeSheet === tab.id
+                          ? 'bg-yellow-300 text-black shadow-[1.5px_1.5px_0px_#000]'
+                          : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
