@@ -294,17 +294,41 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
     });
   };
 
-  // Daftar susunan panitia untuk daftar hadir panitia
+  // Daftar susunan panitia untuk daftar hadir panitia: menampilkan penanggung jawab dan SEMUA nama guru dari database
   const committeeMembers = useMemo(() => {
-    return [
-      { role: 'Penanggung Jawab', name: school?.principalName || 'Kepala Sekolah' },
-      { role: 'Ketua Panitia', name: teachers[0]?.name || 'Guru Senior / Pendidik' },
-      { role: 'Sekretaris', name: teachers[1]?.name || 'Guru Pelaksana / Pendidik' },
-      { role: 'Bendahara', name: teachers[2]?.name || 'Bendahara Sekolah' },
-      { role: 'Seksi Naskah & Penggandaan', name: teachers[3]?.name || 'Tenaga Kependidikan' },
-      { role: 'Seksi Konsumsi', name: teachers[4]?.name || 'Guru Pelaksana' },
-      { role: 'Seksi Perlengkapan & Ruang', name: teachers[5]?.name || 'Tenaga Kependidikan' },
-    ];
+    const list: { role: string; name: string }[] = [];
+    list.push({
+      role: 'Penanggung Jawab (Kepala Sekolah)',
+      name: school?.principalName || 'Kepala Sekolah',
+    });
+
+    if (teachers && teachers.length > 0) {
+      teachers.forEach((t, idx) => {
+        let role = '';
+        if (idx === 0) role = 'Ketua Panitia';
+        else if (idx === 1) role = 'Sekretaris';
+        else if (idx === 2) role = 'Bendahara';
+        else if (idx === 3) role = 'Seksi Naskah / Penggandaan';
+        else if (idx === 4) role = 'Seksi Konsumsi';
+        else if (idx === 5) role = 'Seksi Perlengkapan & Ruang';
+        else role = t.subject ? `Guru ${t.subject}` : 'Anggota Panitia';
+
+        list.push({
+          role,
+          name: t.name || `Guru ${idx + 1}`,
+        });
+      });
+    } else {
+      [
+        { role: 'Ketua Panitia', name: 'Guru Senior / Pendidik' },
+        { role: 'Sekretaris', name: 'Guru Pelaksana / Pendidik' },
+        { role: 'Bendahara', name: 'Bendahara Sekolah' },
+        { role: 'Seksi Naskah & Penggandaan', name: 'Tenaga Kependidikan' },
+        { role: 'Seksi Konsumsi', name: 'Guru Pelaksana' },
+        { role: 'Seksi Perlengkapan & Ruang', name: 'Tenaga Kependidikan' },
+      ].forEach((m) => list.push(m));
+    }
+    return list;
   }, [school, teachers]);
 
   // Email resmi: jika tidak ada data email maka tampilkan '-' (jangan diisi otomatis)
@@ -316,6 +340,28 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
     formatReadableIndonesianDate(exam?.signatureDate) ||
     formatReadableIndonesianDate(exam?.dateText ? exam.dateText.split('-')[0].trim() : '') ||
     '01 Desember 2026';
+
+  // Format tanggal pelaksanaan asesmen untuk teks pengantar dokumen
+  const examExecutionDate = useMemo(() => {
+    if (exam?.dateText && exam.dateText.trim().length > 0) return exam.dateText.trim();
+    if (scheduleItems && scheduleItems.length > 0) {
+      const first = scheduleItems[0];
+      const last = scheduleItems[scheduleItems.length - 1];
+      if (first.date && last.date) {
+        if (first.date === last.date) return formatScheduleDateIndo(first.date);
+        return `${formatScheduleDateIndo(first.date)} s.d. ${formatScheduleDateIndo(last.date)}`;
+      }
+    }
+    return cleanSignatureDate;
+  }, [exam?.dateText, scheduleItems, cleanSignatureDate]);
+
+  // Format durasi hari pelaksanaan asesmen
+  const examDurationDaysText = useMemo(() => {
+    const n = examScheduleDays.length || 6;
+    const words = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh'];
+    const word = words[n] || String(n);
+    return `${n} (${word}) hari`;
+  }, [examScheduleDays]);
 
   const titimangsaLocation = exam?.location || school?.regency || 'Kediri';
 
@@ -477,7 +523,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
     );
   };
 
-  // Komponen Tanda Tangan Ganda: Kiri Mengetahui Kepala Sekolah, Kanan Guru Pengawas Ruang
+  // Komponen Tanda Tangan Ganda: Kiri Mengetahui Kepala Sekolah, Kanan Guru Pengawas Ruang (Nama & NIP 1 Baris)
   const renderDualSignatureBlock = (ptClass = 'pt-3') => {
     return (
       <div
@@ -488,7 +534,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         }}
       >
         {/* Kiri: Mengetahui, Kepala Sekolah */}
-        <div className="w-[75mm] text-center" style={{ fontSize: '10.5pt', lineHeight: 1.25 }}>
+        <div className="w-[68mm] text-center" style={{ fontSize: '10.5pt', lineHeight: 1.25 }}>
           <p className="font-semibold">Mengetahui,</p>
           <p className="font-semibold">
             {school?.headTitle || 'Kepala'} {school?.name || ''}
@@ -503,26 +549,22 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               />
             ) : null}
           </div>
-          <p className="font-bold underline uppercase">
-            {school?.principalName || 'NAMA KEPALA SEKOLAH'}
-          </p>
-          <p className="font-mono text-[10pt]">
-            NIP. {school?.principalNip || '-'}
+          <p className="font-bold text-[9.5pt] whitespace-nowrap">
+            <span className="underline uppercase">{school?.principalName || 'NAMA KEPALA SEKOLAH'}</span>
+            <span className="font-mono font-normal ml-2">NIP. {school?.principalNip || '-'}</span>
           </p>
         </div>
 
-        {/* Kanan: Guru Pengawas Ruang */}
-        <div className="w-[75mm] text-center" style={{ fontSize: '10.5pt', lineHeight: 1.25 }}>
+        {/* Kanan: Guru Pengawas Ruang (Nama dan NIP 1 Baris seperti Kepala Sekolah) */}
+        <div className="w-[68mm] text-center" style={{ fontSize: '10.5pt', lineHeight: 1.25 }}>
           <p>
             {titimangsaLocation}, {cleanSignatureDate}
           </p>
           <p className="font-semibold">Guru Pengawas Ruang,</p>
           <div className="h-[16mm] flex items-center justify-center my-1 relative" />
-          <p className="font-bold uppercase tracking-wider text-[10pt]">
-            ( .................................................. )
-          </p>
-          <p className="font-mono text-[10pt]">
-            NIP. ..................................................
+          <p className="font-bold text-[9.5pt] whitespace-nowrap">
+            <span className="underline">( ......................................... )</span>
+            <span className="font-mono font-normal ml-2">NIP. .....................................</span>
           </p>
         </div>
       </div>
@@ -580,10 +622,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         {/* Garis Dalam Tipis Resmi Portofolio */}
         <div className="absolute inset-[3.5mm] border border-black pointer-events-none" />
 
-        {/* Konten Terpusat di Tengah */}
-        <div className="flex flex-col justify-center items-center text-center w-full my-auto space-y-7">
+        {/* Konten Terpusat di Tengah dengan Jarak Proporsional */}
+        <div className="flex flex-col justify-center items-center text-center w-full my-auto space-y-10 sm:space-y-12">
           {/* Teks Atas: Ukuran 20pt Bold Huruf Besar */}
-          <div className="space-y-2 w-full">
+          <div className="space-y-2.5 w-full">
             <h1
               className="font-bold uppercase tracking-wider text-black leading-snug"
               style={{ fontSize: '20pt', lineHeight: 1.35 }}
@@ -598,24 +640,24 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             </h2>
           </div>
 
-          {/* Logo Sekolah di Tengah dengan Jarak Cukup */}
-          <div className="py-2 flex flex-col items-center justify-center">
+          {/* Logo Sekolah di Tengah: Ukuran Lebih Besar dan Jarak Lebih Luas */}
+          <div className="py-4 my-2 flex flex-col items-center justify-center">
             {school?.logoUrl ? (
               <img
                 src={school.logoUrl}
                 alt={`Logo ${school.name}`}
-                className="w-36 h-36 object-contain"
+                className="w-48 h-48 sm:w-52 sm:h-52 object-contain"
               />
             ) : (
-              <div className="w-36 h-36 border-2 border-dashed border-neutral-400 flex flex-col items-center justify-center p-4 text-neutral-400">
-                <Building2 className="w-16 h-16 mb-2" />
+              <div className="w-48 h-48 border-2 border-dashed border-neutral-400 flex flex-col items-center justify-center p-4 text-neutral-400">
+                <Building2 className="w-20 h-20 mb-2" />
                 <span className="text-xs font-bold uppercase">Logo Sekolah</span>
               </div>
             )}
           </div>
 
           {/* Teks Bawah: Nama Asesmen (16pt), Semester (16pt), Nama Sekolah (20pt), Tahun Pelajaran (16pt) */}
-          <div className="space-y-3 w-full">
+          <div className="space-y-3.5 w-full">
             {/* Nama Asesmen: Ukuran 16pt */}
             <div
               className="font-bold uppercase tracking-wide text-black leading-snug"
@@ -744,22 +786,23 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         </div>
       </div>
 
-      {/* Kolom Tanda Tangan Kepala Sekolah (Bawah Kanan) */}
-      {renderSignatureBlock()}
+      {/* Kolom Tanda Tangan Kepala Sekolah (Bawah Kanan dengan Jarak Ekstra ke Bawah) */}
+      {renderSignatureBlock(undefined, true, 'pt-16 sm:pt-20')}
     </div>
   );
 
   // ========================================================
-  // 3. RENDER SURAT PERNYATAAN KERAHASIAAN (Jarak Baris Lebih Kecil Agar Pas 1 Halaman)
+  // ========================================================
+  // 3. RENDER SURAT PERNYATAAN KERAHASIAAN (Spasi 1 Agar Pas 1 Halaman)
   // ========================================================
   const renderConfidentialityStatementPage = (key = 'confidentiality_page') => (
     <div
       key={key}
-      className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      className="a4-admin-page confidentiality-page bg-white text-black flex flex-col justify-between no-scrollbar"
       style={{
         ...basePageStyle,
         fontSize: '11pt',
-        lineHeight: 1.3,
+        lineHeight: 1.15,
       }}
     >
       <div>
@@ -774,10 +817,12 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         </div>
 
         {/* Pembuka */}
-        <p className="mb-1 text-justify">Yang bertanda tangan di bawah ini :</p>
+        <p className="mb-1 text-justify" style={{ lineHeight: 1.15 }}>
+          Yang bertanda tangan di bawah ini :
+        </p>
 
         {/* Tabel Identitas Kepala Sekolah */}
-        <table className="w-full text-left mb-2" style={{ fontSize: '11pt', lineHeight: 1.3 }}>
+        <table className="w-full text-left mb-2" style={{ fontSize: '11pt', lineHeight: 1.2 }}>
           <tbody>
             <tr>
               <td className="w-[140px] font-semibold py-0.5 align-top">Nama</td>
@@ -807,7 +852,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         </table>
 
         {/* Paragraf Inti */}
-        <p className="text-justify mb-1.5 leading-[1.3]">
+        <p className="text-justify mb-1.5" style={{ lineHeight: 1.15 }}>
           Dalam rangka Pelaksanaan dan Penyelenggaraan{' '}
           <strong>
             {exam?.name || 'Asesmen Sumatif'} {exam?.semester || 'Semester Ganjil'}
@@ -816,7 +861,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         </p>
 
         {/* Poin Butir 1, 2, 3 */}
-        <ol className="list-decimal pl-6 space-y-1 mb-2 text-justify leading-[1.3]">
+        <ol className="list-decimal pl-6 space-y-1 mb-2 text-justify" style={{ lineHeight: 1.15 }}>
           <li>
             Menyadari Hakekat dan Kerahasiaan{' '}
             <strong>
@@ -833,7 +878,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         </ol>
 
         {/* Paragraf Penutup */}
-        <p className="text-justify leading-[1.3]">
+        <p className="text-justify" style={{ lineHeight: 1.15 }}>
           Pernyataan ini saya buat dan tanda tangani dengan sebenarnya, dalam keadaan sadar, tanpa
           paksaan oleh pihak lain, serta penuh rasa tanggung jawab. Apabila saya melakukan
           perbuatan-perbuatan yang bertentangan dengan pernyataan di atas, saya bersedia dituntut dan
@@ -848,7 +893,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
   // ========================================================
   // 5. RENDER JUMLAH PESERTA (Sesuai Foto Acuan User: media_1790609768921.png)
-  // Tabel Rekapitulasi Rombel (L, P, Jumlah), Garis Kanan Keterangan Utuh Tidak Terpotong
+  // Teks Pengantar Ukuran 12pt, Tabel Rombel Spasi 1.5, Garis Kanan Keterangan Utuh
   // ========================================================
   const renderParticipantCountPage = (key = 'participant_count_page') => {
     // 1. Ekstrak data rombel dari siswa di database
@@ -920,7 +965,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
         style={{
           ...basePageStyle,
-          lineHeight: 1.3,
+          lineHeight: 1.5,
         }}
       >
         <div>
@@ -940,11 +985,16 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             </p>
           </div>
 
+          {/* Teks Pengantar Ukuran 12pt, Jarak Spasi 1.5 */}
+          <p className="text-[12pt] text-justify mb-3" style={{ lineHeight: 1.5 }}>
+            Kegiatan {exam?.name || 'Asesmen'} dilaksanakan di {school?.name || 'Satuan Pendidikan'} pada tanggal {examExecutionDate} dengan rincian jumlah peserta asesmen sebagai berikut :
+          </p>
+
           {/* Tabel Jumlah Peserta (table-fixed 100% agar garis KET kanan tidak terpotong) */}
-          <div className="my-4">
+          <div className="my-3 w-full">
             <table
               className="w-full text-center border-collapse border border-black table-fixed box-border"
-              style={{ fontSize: '11pt', lineHeight: 1.35 }}
+              style={{ fontSize: '11pt', lineHeight: 1.5 }}
             >
               <colgroup>
                 <col style={{ width: '8%' }} />
@@ -1005,17 +1055,17 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           </div>
         </div>
 
-        {/* Kolom Tanda Tangan Resmi Kepala Sekolah (Sesuai Foto) */}
+        {/* Kolom Tanda Tangan Resmi Kepala Sekolah */}
         {renderSignatureBlock(undefined, true, 'pt-3')}
       </div>
     );
   };
 
   // ========================================================
-  // 6. RENDER JADWAL ASESMEN (Tanpa KET, Lebar Waktu & Mapel Proporsional, 1 Halaman)
+  // 6. RENDER JADWAL ASESMEN (Tanpa KET, Lebar Waktu & Mapel Proporsional, Spasi 1.5)
   // ========================================================
   const renderAssessmentSchedulePage = (key = 'assessment_schedule_page') => {
-    // Tampilkan seluruh jadwal dalam 1 halaman dengan spasi kompak
+    // Tampilkan seluruh jadwal dengan spasi 1.5
     const displayScheduleItems =
       scheduleItems && scheduleItems.length > 0
         ? scheduleItems
@@ -1033,14 +1083,14 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
         style={{
           ...basePageStyle,
-          lineHeight: 1.25,
+          lineHeight: 1.5,
         }}
       >
         <div>
           {/* Kop Resmi Sekolah dari Database */}
           {renderOfficialSchoolKop()}
 
-          {/* Judul Dokumen (Sesuai Foto Acuan) */}
+          {/* Judul Dokumen */}
           <div className="text-center my-3 space-y-0.5">
             <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
               JADWAL ASESMEN
@@ -1053,11 +1103,16 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             </p>
           </div>
 
+          {/* Teks Pengantar Ukuran 12pt, Jarak Spasi 1.5 */}
+          <p className="text-[12pt] text-justify mb-3" style={{ lineHeight: 1.5 }}>
+            Berdasarkan hasil Rapat Panitia Pelaksana Asesmen, Kegiatan {exam?.name || 'Asesmen'} yang dilaksanakan di {school?.name || 'Satuan Pendidikan'} pada tanggal {examExecutionDate} dilaksanakan selama {examDurationDaysText} dengan rincian jadwal asesmen sebagai berikut :
+          </p>
+
           {/* Tabel Jadwal Resmi (Kolom Hari/Tgl Diperkecil, Waktu & Mapel Lebih Lebar, Tanpa KET) */}
-          <div className="my-4">
+          <div className="my-3 w-full">
             <table
               className="w-full text-center border-collapse border border-black table-fixed box-border"
-              style={{ fontSize: '10.5pt', lineHeight: 1.25 }}
+              style={{ fontSize: '10.5pt', lineHeight: 1.5 }}
             >
               <colgroup>
                 <col style={{ width: '8%' }} />
@@ -1093,14 +1148,14 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           </div>
         </div>
 
-        {/* Kolom Tanda Tangan Resmi Kepala Sekolah (Pas 1 Halaman) */}
+        {/* Kolom Tanda Tangan Resmi Kepala Sekolah */}
         {renderSignatureBlock(undefined, true, 'pt-3')}
       </div>
     );
   };
 
   // ========================================================
-  // 7. RENDER PENGAWAS RUANG (Hanya Kolom NO, NAMA PENGAWAS, TUGAS KEPENGAWASAN - 1 Halaman)
+  // 7. RENDER PENGAWAS RUANG (Hanya Kolom NO, NAMA PENGAWAS Rata Kiri, TUGAS KEPENGAWASAN)
   // ========================================================
   const renderRoomProctorsPage = (key = 'room_proctors_page') => {
     // 1. Ekstrak data guru pengawas dari database
@@ -1134,7 +1189,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
         style={{
           ...basePageStyle,
-          lineHeight: 1.25,
+          lineHeight: 1.5,
         }}
       >
         <div>
@@ -1154,11 +1209,16 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             </p>
           </div>
 
-          {/* Tabel Pengawas Ruang (NO: 10%, NAMA: 52%, TUGAS: 38% - Utuh Tidak Terpotong) */}
-          <div className="my-4">
+          {/* Teks Pengantar Ukuran 12pt, Jarak Spasi 1.5 */}
+          <p className="text-[12pt] text-justify mb-3" style={{ lineHeight: 1.5 }}>
+            Berdasarkan hasil Rapat Panitia Pelaksana Asesmen, Berikut adalah Jadwal Kepengawasan Ruang {exam?.name || 'Asesmen'} {exam?.semester ? exam.semester.toUpperCase() : ''} {exam?.academicYear ? `Tahun Pelajaran ${exam.academicYear}` : ''} yang dilaksanakan pada tanggal {examExecutionDate} :
+          </p>
+
+          {/* Tabel Pengawas Ruang (NO: 10%, NAMA: 52% Rata Kiri, TUGAS: 38% - Utuh Tidak Terpotong) */}
+          <div className="my-3 w-full">
             <table
-              className="w-full text-center border-collapse border border-black table-fixed box-border"
-              style={{ fontSize: '11pt', lineHeight: 1.35 }}
+              className="w-full border-collapse border border-black table-fixed box-border"
+              style={{ fontSize: '11pt', lineHeight: 1.5 }}
             >
               <colgroup>
                 <col style={{ width: '10%' }} />
@@ -1168,7 +1228,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               <thead>
                 <tr className="bg-[#E8EDE5] border-b border-black font-bold">
                   <th className="p-2 border-r border-black align-middle text-center">NO</th>
-                  <th className="p-2 border-r border-black align-middle text-center">NAMA PENGAWAS</th>
+                  <th className="p-2 border-r border-black align-middle text-left pl-3">NAMA PENGAWAS</th>
                   <th className="p-2 align-middle text-center">TUGAS KEPENGAWASAN</th>
                 </tr>
               </thead>
@@ -1176,7 +1236,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                 {proctorRows.map((row) => (
                   <tr key={row.no} className="border-b border-black">
                     <td className="p-2.5 border-r border-black text-center">{row.no}</td>
-                    <td className="p-2.5 border-r border-black font-semibold text-center uppercase">
+                    <td className="p-2.5 border-r border-black font-semibold text-left pl-3 uppercase">
                       {row.name}
                     </td>
                     <td className="p-2.5 text-center font-semibold uppercase">
@@ -1189,7 +1249,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           </div>
         </div>
 
-        {/* Kolom Tanda Tangan Resmi Kepala Sekolah (Pas 1 Halaman) */}
+        {/* Kolom Tanda Tangan Resmi Kepala Sekolah */}
         {renderSignatureBlock(undefined, true, 'pt-3')}
       </div>
     );
@@ -1197,6 +1257,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
   // ========================================================
   // 8. RENDER DAFTAR HADIR PANITIA (Hari Awal s.d Akhir Sesuai Jadwal dalam 1 Baris)
+  // Menampilkan Semua Guru, Kolom TTD Tanpa Nomor Urut, Spasi 1.5
   // ========================================================
   const renderCommitteeAttendancePage = (key = 'committee_attendance_page') => {
     const daysCount = examScheduleDays.length || 5;
@@ -1208,7 +1269,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
         style={{
           ...basePageStyle,
-          lineHeight: 1.25,
+          lineHeight: 1.5,
         }}
       >
         <div>
@@ -1228,11 +1289,11 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             </p>
           </div>
 
-          {/* Tabel Daftar Hadir Panitia (1 Baris Hari Pelaksanaan dari Awal Sampai Akhir Sesuai Jadwal) */}
-          <div className="my-4">
+          {/* Tabel Daftar Hadir Panitia */}
+          <div className="my-3 w-full">
             <table
               className="w-full text-center border-collapse border border-black table-fixed box-border"
-              style={{ fontSize: '10pt', lineHeight: 1.25 }}
+              style={{ fontSize: '10pt', lineHeight: 1.5 }}
             >
               <colgroup>
                 <col style={{ width: '7%' }} />
@@ -1274,8 +1335,8 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                           dayIdx < examScheduleDays.length - 1 ? 'border-r border-black' : ''
                         }`}
                       >
-                        <div className="h-6 flex items-center justify-center text-[8pt] font-mono text-neutral-400">
-                          {idx + 1}. .....
+                        <div className="h-7 flex items-center justify-center text-[8pt] font-mono text-neutral-300">
+                          ........
                         </div>
                       </td>
                     ))}
@@ -1293,7 +1354,8 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
   };
 
   // ========================================================
-  // 9. RENDER DAFTAR HADIR PESERTA (Lembar per Kelas 1 s.d 6, Tanda Tangan Pengawas & Mengetahui KS di Kiri)
+  // 9. RENDER DAFTAR HADIR PESERTA (Lembar per Kelas 1 s.d 6, Kolom TTD Siswa Tanpa Nomor)
+  // Tanda Tangan Ganda: Nama & NIP 1 Baris, Halaman Terisolasi
   // ========================================================
   const renderParticipantAttendancePages = (keyPrefix: string, classFilter = 'ALL') => {
     const targetClasses =
@@ -1303,135 +1365,321 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
     const daysCount = examScheduleDays.length || 5;
     const dayWidthPercent = 58 / daysCount;
+    const isScreen = keyPrefix.includes('screen');
+
+    const content = targetClasses.map((className, classIdx) => {
+      const classStudents = getStudentsForClass(className);
+      // Jika belum ada data siswa untuk kelas ini, sediakan 10 baris kosong tertata
+      const displayStudents =
+        classStudents.length > 0
+          ? classStudents
+          : Array.from({ length: 10 }).map((_, idx) => ({
+              id: `dummy_${className}_${idx}`,
+              name: '-',
+              nisn: '',
+              className,
+              gender: 'L',
+            }));
+
+      return (
+        <div
+          key={`${keyPrefix}_${className}_${classIdx}`}
+          className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+          style={{
+            ...basePageStyle,
+            lineHeight: 1.5,
+          }}
+        >
+          <div>
+            {/* Kop Resmi Sekolah dari Database */}
+            {renderOfficialSchoolKop()}
+
+            {/* Judul Dokumen */}
+            <div className="text-center my-2.5 space-y-0.5">
+              <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
+                DAFTAR HADIR PESERTA ASESMEN
+              </h1>
+              <h2 className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
+                {exam?.name || 'ASESMEN SUMATIF'} {exam?.semester ? exam.semester.toUpperCase() : ''}
+              </h2>
+              <p className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
+                TAHUN PELAJARAN {exam?.academicYear || '2025 / 2026'}
+              </p>
+            </div>
+
+            {/* Baris Identitas Kelas & Ruang */}
+            <div className="flex justify-between items-center text-[10.5pt] font-bold border-b border-black pb-1 mb-3">
+              <span>ROMBEL : {className}</span>
+              <span>RUANG : 01</span>
+              <span>SESI : 1 (07.30 - 09.30)</span>
+            </div>
+
+            {/* Tabel Presensi Siswa per Kelas */}
+            <div className="my-2 w-full">
+              <table
+                className="w-full text-center border-collapse border border-black table-fixed box-border"
+                style={{ fontSize: '9.5pt', lineHeight: 1.4 }}
+              >
+                <colgroup>
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '35%' }} />
+                  {examScheduleDays.map((_, i) => (
+                    <col key={i} style={{ width: `${dayWidthPercent}%` }} />
+                  ))}
+                </colgroup>
+                <thead>
+                  <tr className="bg-[#E8EDE5] border-b border-black font-bold">
+                    <th className="p-1.5 border-r border-black align-middle text-center">NO</th>
+                    <th className="p-1.5 border-r border-black align-middle text-center">NAMA PESERTA</th>
+                    {examScheduleDays.map((d, i) => (
+                      <th
+                        key={i}
+                        className={`p-1 align-middle text-center uppercase leading-tight ${
+                          i < examScheduleDays.length - 1 ? 'border-r border-black' : ''
+                        }`}
+                        style={{ fontSize: '8.5pt' }}
+                      >
+                        <div>{d.dayName}</div>
+                        <div className="text-[7.5pt] font-normal">{d.dateShort}</div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayStudents.map((s, idx) => (
+                    <tr key={(s as any).id || idx} className="border-b border-black">
+                      <td className="p-1.5 border-r border-black text-center">{idx + 1}</td>
+                      <td className="p-1.5 border-r border-black text-left">
+                        <div className="font-bold uppercase text-[9pt] leading-snug">
+                          {s.name}
+                        </div>
+                        {s.nisn && (
+                          <div className="text-[7.5pt] font-mono font-normal text-neutral-600">
+                            NISN: {s.nisn}
+                          </div>
+                        )}
+                      </td>
+                      {examScheduleDays.map((_, dayIdx) => (
+                        <td
+                          key={dayIdx}
+                          className={`p-1 align-middle ${
+                            dayIdx < examScheduleDays.length - 1 ? 'border-r border-black' : ''
+                          }`}
+                        >
+                          <div
+                            className={`text-[7.5pt] font-mono text-neutral-300 ${
+                              (idx + 1) % 2 === 1 ? 'text-left pl-1' : 'text-right pr-1'
+                            }`}
+                          >
+                            ........
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Tanda Tangan Ganda: Kiri Mengetahui Kepala Sekolah, Kanan Guru Pengawas Ruang (Nama & NIP 1 Baris) */}
+          {renderDualSignatureBlock('pt-3')}
+        </div>
+      );
+    });
+
+    if (!isScreen) {
+      return <React.Fragment key={keyPrefix}>{content}</React.Fragment>;
+    }
 
     return (
       <div key={keyPrefix} className="w-full flex flex-col items-center space-y-6">
-        {targetClasses.map((className, classIdx) => {
-          const classStudents = getStudentsForClass(className);
-          // Jika belum ada data siswa untuk kelas ini, sediakan 10 baris kosong tertata
-          const displayStudents =
-            classStudents.length > 0
-              ? classStudents
-              : Array.from({ length: 10 }).map((_, idx) => ({
-                  id: `dummy_${className}_${idx}`,
-                  name: '-',
-                  nisn: '',
-                  className,
-                  gender: 'L',
-                }));
-
-          return (
-            <div
-              key={`${keyPrefix}_${className}_${classIdx}`}
-              className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
-              style={{
-                ...basePageStyle,
-                lineHeight: 1.25,
-              }}
-            >
-              <div>
-                {/* Kop Resmi Sekolah dari Database */}
-                {renderOfficialSchoolKop()}
-
-                {/* Judul Dokumen */}
-                <div className="text-center my-2.5 space-y-0.5">
-                  <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
-                    DAFTAR HADIR PESERTA ASESMEN
-                  </h1>
-                  <h2 className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
-                    {exam?.name || 'ASESMEN SUMATIF'} {exam?.semester ? exam.semester.toUpperCase() : ''}
-                  </h2>
-                  <p className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
-                    TAHUN PELAJARAN {exam?.academicYear || '2025 / 2026'}
-                  </p>
-                </div>
-
-                {/* Baris Identitas Kelas & Ruang */}
-                <div className="flex justify-between items-center text-[10.5pt] font-bold border-b border-black pb-1 mb-3">
-                  <span>ROMBEL : {className}</span>
-                  <span>RUANG : 01</span>
-                  <span>SESI : 1 (07.30 - 09.30)</span>
-                </div>
-
-                {/* Tabel Presensi Siswa per Kelas */}
-                <div className="my-2">
-                  <table
-                    className="w-full text-center border-collapse border border-black table-fixed box-border"
-                    style={{ fontSize: '9.5pt', lineHeight: 1.25 }}
-                  >
-                    <colgroup>
-                      <col style={{ width: '7%' }} />
-                      <col style={{ width: '35%' }} />
-                      {examScheduleDays.map((_, i) => (
-                        <col key={i} style={{ width: `${dayWidthPercent}%` }} />
-                      ))}
-                    </colgroup>
-                    <thead>
-                      <tr className="bg-[#E8EDE5] border-b border-black font-bold">
-                        <th className="p-1.5 border-r border-black align-middle text-center">NO</th>
-                        <th className="p-1.5 border-r border-black align-middle text-center">NAMA PESERTA</th>
-                        {examScheduleDays.map((d, i) => (
-                          <th
-                            key={i}
-                            className={`p-1 align-middle text-center uppercase leading-tight ${
-                              i < examScheduleDays.length - 1 ? 'border-r border-black' : ''
-                            }`}
-                            style={{ fontSize: '8.5pt' }}
-                          >
-                            <div>{d.dayName}</div>
-                            <div className="text-[7.5pt] font-normal">{d.dateShort}</div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayStudents.map((s, idx) => (
-                        <tr key={(s as any).id || idx} className="border-b border-black">
-                          <td className="p-1.5 border-r border-black text-center">{idx + 1}</td>
-                          <td className="p-1.5 border-r border-black text-left">
-                            <div className="font-bold uppercase text-[9pt] leading-snug">
-                              {s.name}
-                            </div>
-                            {s.nisn && (
-                              <div className="text-[7.5pt] font-mono font-normal text-neutral-600">
-                                NISN: {s.nisn}
-                              </div>
-                            )}
-                          </td>
-                          {examScheduleDays.map((_, dayIdx) => (
-                            <td
-                              key={dayIdx}
-                              className={`p-1 align-middle ${
-                                dayIdx < examScheduleDays.length - 1 ? 'border-r border-black' : ''
-                              }`}
-                            >
-                              <div
-                                className={`text-[7.5pt] font-mono text-neutral-400 ${
-                                  (idx + 1) % 2 === 1 ? 'text-left pl-1' : 'text-right pr-1'
-                                }`}
-                              >
-                                {idx + 1}. .....
-                              </div>
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Tanda Tangan Ganda: Kiri Mengetahui Kepala Sekolah, Kanan Guru Pengawas Ruang */}
-              {renderDualSignatureBlock('pt-3')}
-            </div>
-          );
-        })}
+        {content}
       </div>
     );
   };
 
   // ========================================================
-  // RENDER BERKAS DOKUMEN LAINNYA (SK Panitia, Tata Tertib Peserta & Pengawas)
+  // 10. RENDER TATA TERTIB PESERTA (Lampiran 1: 14 Poin, Spasi 1.5, Tanpa Kolom TTD)
+  // Tercetak di Halaman Tersendiri
+  // ========================================================
+  const renderStudentRulesPage = (key = 'student_rules_page') => (
+    <div
+      key={key}
+      className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      style={{
+        ...basePageStyle,
+        fontSize: '10.5pt',
+        lineHeight: 1.45,
+      }}
+    >
+      <div>
+        {/* Kop Resmi Sekolah dari Database */}
+        {renderOfficialSchoolKop()}
+
+        {/* Judul Dokumen */}
+        <div className="text-center my-3 space-y-0.5">
+          <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
+            TATA TERTIB PESERTA UJIAN
+          </h1>
+          <h2 className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
+            {exam?.name || 'ASESMEN SUMATIF'} {exam?.semester ? exam.semester.toUpperCase() : ''}
+          </h2>
+          <p className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
+            TAHUN PELAJARAN {exam?.academicYear || '2026 / 2027'}
+          </p>
+        </div>
+
+        {/* 14 Poin Tata Tertib Sesuai Lampiran 1 */}
+        <div className="my-3 text-justify" style={{ fontSize: '10pt', lineHeight: 1.45 }}>
+          <ol className="list-decimal pl-5 space-y-1">
+            <li>
+              Peserta ujian memasuki ruangan setelah tanda masuk dibunyikan, yakni 15 (lima belas) menit sebelum Ujian dimulai.
+            </li>
+            <li>
+              Peserta ujian yang terlambat hadir hanya diperkenankan mengikuti Ujian setelah mendapat izin dari Ketua Penyelenggara ujian Tingkat Sekolah/Madrasah, tanpa diberi perpanjangan waktu.
+            </li>
+            <li>
+              Peserta ujian dilarang membawa alat komunikasi elektronik, kalkulator, tas, buku dan catatan dalam bentuk apapun ke dalam ruang ujian.
+            </li>
+            <li>
+              Peserta ujian membawa alat tulis menulis berupa pensil 2B, penghapus, penggaris, dan bolpoin berwarna hitam/biru serta kartu tanda peserta ujian.
+            </li>
+            <li>Peserta ujian mengisi Daftar Hadir.</li>
+            <li>Peserta ujian mulai mengerjakan soal setelah ada tanda waktu mulai ujian.</li>
+            <li>Peserta ujian yang mengisi identitas pada lembar jawaban secara lengkap dan benar.</li>
+            <li>
+              Peserta ujian yang memerlukan penjelasan cara pengisian identitas pada LJLUS dapat bertanya kepada Pengawas Ruang dengan cara mengacungkan tangan terlebih dahulu.
+            </li>
+            <li>
+              Selama ujian berlangsung, Peserta ujian hanya dapat meninggalkan ruangan dengan izin dan pengawasan dari Pengawas Ruang Ujian, serta tidak melakukannya berulang kali.
+            </li>
+            <li>
+              Peserta ujian yang memperoleh naskah soal yang cacat atau rusak, pengerjaan soal tetap dilakukan sambil menunggu penggantian naskah soal.
+            </li>
+            <li>
+              Peserta ujian yang meninggalkan ruangan setelah membaca soal dan tidak kembali lagi sampai tanda selesai dibunyikan, dinyatakan telah selesai menempuh / mengikuti ujian pada mata pelajaran yang terkait.
+            </li>
+            <li>
+              Peserta ujian yang telah selesai mengerjakan soal sebelum waktu ujian berakhir tidak diperbolehkan meninggalkan ruangan sebelum berakhirnya waktu ujian.
+            </li>
+            <li>Peserta ujian berhenti mengerjakan soal setelah ada tanda berakhirnya waktu ujian.</li>
+            <li>
+              Selama ujian berlangsung, Peserta dilarang :
+              <div className="pl-6 pt-1 space-y-0.5">
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold">A.</span>
+                  <span>menanyakan jawaban soal kepada siapa pun serta bekerja sama dengan peserta lain;</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold">B.</span>
+                  <span>memberi atau menerima bantuan dalam menjawab soal;</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold">C.</span>
+                  <span>memperlihatkan pekerjaan sendiri kepada peserta lain atau melihat pekerjaan peserta lain;</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold">D.</span>
+                  <span>membawa Naskah Soal dan Lembar Jawaban keluar dari ruang ujian;</span>
+                </div>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+      {/* Tanpa Kolom Tanda Tangan Sesuai Instruksi User */}
+    </div>
+  );
+
+  // ========================================================
+  // 11. RENDER TATA TERTIB PENGAWAS RUANG (Lampiran 2: 3 Tahap, Spasi 1.5, Tanpa Kolom TTD)
+  // Tercetak di Halaman Tersendiri
+  // ========================================================
+  const renderProctorRulesPage = (key = 'proctor_rules_page') => (
+    <div
+      key={key}
+      className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+      style={{
+        ...basePageStyle,
+        fontSize: '11pt',
+        lineHeight: 1.5,
+      }}
+    >
+      <div>
+        {/* Kop Resmi Sekolah dari Database */}
+        {renderOfficialSchoolKop()}
+
+        {/* Judul Dokumen (Sesuai Foto Acuan Lampiran 2) */}
+        <div className="text-center my-4 space-y-1">
+          <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
+            TATA TERTIB PENGAWAS RUANG
+          </h1>
+          <p className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
+            TAHUN PELAJARAN {exam?.academicYear || '2026 / 2027'}
+          </p>
+        </div>
+
+        {/* 3 Tahap Pengawasan Sesuai Lampiran 2 */}
+        <div className="my-5 space-y-5 text-justify" style={{ fontSize: '11pt', lineHeight: 1.5 }}>
+          {/* 1. Tahap Persiapan */}
+          <div>
+            <h2 className="font-bold mb-1.5 text-[11.5pt]">
+              Tahap Persiapan (Sebelum Asesmen)
+            </h2>
+            <ol className="list-decimal pl-6 space-y-1">
+              <li>
+                Hadir 30 menit sebelum jadwal untuk mengisi presensi dan mengambil kelengkapan berkas (amplop soal tersegel, lembar jawaban, berita acara, dan daftar hadir).
+              </li>
+            </ol>
+          </div>
+
+          {/* 2. Tahap Pelaksanaan */}
+          <div>
+            <h2 className="font-bold mb-1.5 text-[11.5pt]">
+              Tahap Pelaksanaan (Saat Asesmen)
+            </h2>
+            <ol className="list-decimal pl-6 space-y-2">
+              <li>
+                Masuk ruangan 15 menit sebelum mulai untuk mengatur barang bawaan dan posisi duduk peserta.
+              </li>
+              <li>
+                Membacakan tata tertib peserta, membagikan soal/lembar jawaban, dan memandu pengisian identitas.
+              </li>
+              <li>
+                Menjaga ketertiban ujian. Pengawas dilarang menggunakan gawai/HP, mengobrol, membaca hal di luar asesmen, atau memberi petunjuk jawaban.
+              </li>
+              <li>
+                Memberikan peringatan sisa waktu (10 menit dan 5 menit sebelum selesai).
+              </li>
+            </ol>
+          </div>
+
+          {/* 3. Tahap Penyelesaian */}
+          <div>
+            <h2 className="font-bold mb-1.5 text-[11.5pt]">
+              Tahap Penyelesaian (Setelah Asesmen)
+            </h2>
+            <ol className="list-decimal pl-6 space-y-2">
+              <li>
+                Menghentikan seluruh aktivitas peserta tepat saat waktu habis.
+              </li>
+              <li>
+                Mengumpulkan, menghitung, dan mengurutkan lembar jawaban serta naskah soal.
+              </li>
+              <li>
+                Memasukkan seluruh dokumen (berita acara, daftar hadir, soal, dan jawaban) ke dalam amplop, menyegel dengan lem dan tanda tangan silang, lalu menyerahkannya kepada panitia.
+              </li>
+            </ol>
+          </div>
+        </div>
+      </div>
+      {/* Tanpa Kolom Tanda Tangan Sesuai Instruksi User */}
+    </div>
+  );
+
+  // ========================================================
+  // RENDER BERKAS DOKUMEN LAINNYA (SK Panitia, dll.)
   // Seluruh dokumen menggunakan KOP Resmi Sekolah dari Database & Format 3-4-3-3cm
   // ========================================================
   const renderPlaceholderDocPage = (targetDoc: AdminDocItem, key: string) => {
@@ -1450,6 +1698,12 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
     }
     if (targetDoc.id === 'participant_attendance') {
       return renderParticipantAttendancePages(key, selectedAttendanceClass);
+    }
+    if (targetDoc.id === 'student_rules') {
+      return renderStudentRulesPage(key);
+    }
+    if (targetDoc.id === 'proctor_rules') {
+      return renderProctorRulesPage(key);
     }
 
     return (
@@ -1477,15 +1731,15 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
           {/* 4. SURAT KEPUTUSAN PANITIA */}
           {targetDoc.id === 'committee_decree' && (
-            <div className="my-4 space-y-3" style={{ fontSize: '11.5pt', lineHeight: 1.45 }}>
+            <div className="my-4 space-y-3" style={{ fontSize: '11.5pt', lineHeight: 1.5 }}>
               <div className="text-center font-bold text-xs uppercase mb-2">
                 Nomor: 421.2 / {exam?.id ? String(exam.id).slice(-4) : '048'} / PAN-AS / {new Date().getFullYear()}
               </div>
-              <p className="text-justify">
+              <p className="text-justify" style={{ lineHeight: 1.5 }}>
                 Kepala {school?.name || 'Satuan Pendidikan'}, menimbang perlunya kelancaran dan ketertiban pelaksanaan{' '}
                 <strong>{exam?.name}</strong> Tahun Pelajaran {exam?.academicYear} :
               </p>
-              <div className="space-y-1 text-justify">
+              <div className="space-y-1 text-justify" style={{ lineHeight: 1.5 }}>
                 <p><strong>MEMUTUSKAN :</strong></p>
                 <ol className="list-decimal pl-6 space-y-1">
                   <li>Menetapkan susunan panitia pelaksana asesmen sebagaimana terlampir dalam keputusan ini.</li>
@@ -1495,14 +1749,20 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               </div>
 
               {/* Tabel Susunan Panitia */}
-              <div className="pt-2">
-                <table className="w-full text-left border border-black" style={{ fontSize: '10.5pt', lineHeight: 1.35 }}>
+              <div className="pt-2 w-full">
+                <table className="w-full text-left border border-black table-fixed box-border" style={{ fontSize: '10.5pt', lineHeight: 1.5 }}>
+                  <colgroup>
+                    <col style={{ width: '8%' }} />
+                    <col style={{ width: '37%' }} />
+                    <col style={{ width: '35%' }} />
+                    <col style={{ width: '20%' }} />
+                  </colgroup>
                   <thead>
                     <tr className="bg-neutral-100 border-b border-black text-center font-bold">
-                      <th className="p-1.5 border-r border-black w-10">No</th>
-                      <th className="p-1.5 border-r border-black w-44">Jabatan Kepanitiaan</th>
+                      <th className="p-1.5 border-r border-black">No</th>
+                      <th className="p-1.5 border-r border-black">Jabatan Kepanitiaan</th>
                       <th className="p-1.5 border-r border-black">Nama Lengkap</th>
-                      <th className="p-1.5 w-32">Keterangan</th>
+                      <th className="p-1.5">Keterangan</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1541,48 +1801,6 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               </div>
             </div>
           )}
-
-          {/* 10. TATA TERTIB PESERTA */}
-          {targetDoc.id === 'student_rules' && (
-            <div className="my-4 space-y-2 text-justify" style={{ fontSize: '11pt', lineHeight: 1.45 }}>
-              <p className="font-bold underline mb-1">A. KEWAJIBAN PESERTA :</p>
-              <ol className="list-decimal pl-6 space-y-1 mb-2">
-                <li>Memasuki ruangan setelah tanda masuk dibunyikan, yakni 15 (lima belas) menit sebelum ujian dimulai.</li>
-                <li>Membawa Kartu Tanda Peserta Ujian dan alat tulis yang diperlukan (pensil 2B, pulpen, penghapus).</li>
-                <li>Mengisi daftar hadir peserta ujian dengan menggunakan pulpen yang disediakan atau dibawa sendiri.</li>
-                <li>Mengerjakan soal asesmen secara jujur, mandiri, dan tidak bekerja sama dengan peserta lain.</li>
-                <li>Memeriksa keutuhan dan kelengkapan lembar soal serta lembar jawaban asesmen.</li>
-              </ol>
-
-              <p className="font-bold underline mb-1">B. LARANGAN PESERTA :</p>
-              <ol className="list-decimal pl-6 space-y-1">
-                <li>Dilarang membawa perangkat komunikasi elektronik (HP, kamera, smartwatch) ke dalam ruang ujian.</li>
-                <li>Dilarang membawa buku, catatan, atau contekan dalam bentuk apapun ke tempat duduk peserta.</li>
-                <li>Dilarang bertanya atau meminjam alat tulis kepada peserta lain selama ujian berlangsung.</li>
-                <li>Dilarang meninggalkan ruangan ujian sebelum batas waktu minimal ujian berakhir tanpa izin pengawas.</li>
-              </ol>
-            </div>
-          )}
-
-          {/* 11. TATA TERTIB PENGAWAS */}
-          {targetDoc.id === 'proctor_rules' && (
-            <div className="my-4 space-y-2 text-justify" style={{ fontSize: '11pt', lineHeight: 1.45 }}>
-              <p className="font-bold underline mb-1">A. PERSIAPAN PENGAWAS :</p>
-              <ol className="list-decimal pl-6 space-y-1 mb-2">
-                <li>Hadir di ruang panitia ujian sekurang-kurangnya 30 (tiga puluh) menit sebelum ujian dimulai.</li>
-                <li>Menerima naskah soal, lembar jawaban, daftar hadir, dan berita acara dari panitia pelaksana.</li>
-                <li>Memeriksa kelengkapan administrasi ruang ujian sebelum mengizinkan peserta memasuki ruangan.</li>
-              </ol>
-
-              <p className="font-bold underline mb-1">B. PELAKSANAAN PENGAWASAN :</p>
-              <ol className="list-decimal pl-6 space-y-1">
-                <li>Membacakan tata tertib peserta ujian dan memastikan setiap peserta menempati nomor meja yang tepat.</li>
-                <li>Mengedarkan daftar hadir peserta dan memeriksa kecocokan identitas kartu peserta.</li>
-                <li>Menjaga ketenangan, ketertiban, dan kewaspadaan suasana ruang ujian secara profesional.</li>
-                <li>Menghitung kelengkapan lembar jawaban setelah ujian selesai sebelum peserta meninggalkan ruangan.</li>
-              </ol>
-            </div>
-          )}
         </div>
 
         {/* Footer Tanda Tangan Resmi */}
@@ -1613,6 +1831,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
           `${docKeyPrefix}_participant_attendance`,
           docKeyPrefix.includes('bulk') ? 'ALL' : selectedAttendanceClass
         );
+      case 'student_rules':
+        return renderStudentRulesPage(`${docKeyPrefix}_student_rules`);
+      case 'proctor_rules':
+        return renderProctorRulesPage(`${docKeyPrefix}_proctor_rules`);
       default: {
         const doc = ADMIN_DOCUMENTS.find((d) => d.id === docId);
         return doc ? renderPlaceholderDocPage(doc, `${docKeyPrefix}_${docId}`) : null;
@@ -1696,9 +1918,18 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               overflow: visible !important;
               background: white !important;
             }
-            .a4-admin-page:last-child {
-              page-break-after: auto !important;
-              break-after: auto !important;
+            .a4-admin-page.confidentiality-page,
+            .a4-admin-page.confidentiality-page * {
+              line-height: 1.15 !important;
+            }
+            /* Menjamin seluruh tabel dan kolom presisi tidak melebihi batas batas halaman */
+            table {
+              border-collapse: collapse !important;
+              box-sizing: border-box !important;
+              max-width: 100% !important;
+            }
+            th, td {
+              box-sizing: border-box !important;
             }
             /* Aturan Penyelamat TTD: Jangan pernah memotong kolom tanda tangan di tengah */
             .admin-signature-block {
