@@ -1994,7 +1994,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
     const daysCount = examScheduleDays.length || 5;
     const dayWidthPercent = 58 / daysCount;
     const isScreen = keyPrefix.includes('screen');
-    const STUDENTS_PER_PAGE = 16;
+    const STUDENTS_PER_PAGE = 14;
 
     const content = targetClasses.flatMap((className, classIdx) => {
       const classStudents = getStudentsForClass(className);
@@ -2010,7 +2010,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               gender: 'L' as const,
             }));
 
-      // Paginasi: pecah menjadi beberapa lembar jika siswa lebih dari 16 orang
+      // Paginasi: pecah menjadi beberapa lembar jika siswa lebih dari 14 orang agar tidak pernah tumpah saat dicetak
       const studentChunks: (typeof displayStudents)[] = [];
       if (displayStudents.length <= STUDENTS_PER_PAGE) {
         studentChunks.push(displayStudents);
@@ -2030,32 +2030,34 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         return (
           <div
             key={`${keyPrefix}_${className}_${classIdx}_p${pageNumber}`}
-            className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+            className="a4-admin-page attendance-page bg-white text-black flex flex-col justify-between no-scrollbar"
             style={{
               ...basePageStyle,
-              lineHeight: 1.5,
+              fontSize: '9.5pt',
+              lineHeight: 1.25,
             }}
           >
             <div>
               {/* Kop Resmi Sekolah dari Database: Hanya ditampilkan di Lembar 1 */}
               {pageNumber === 1 && renderOfficialSchoolKop()}
 
-              {/* Judul Dokumen */}
-              <div className={`text-center space-y-0.5 ${pageNumber === 1 ? 'my-2.5' : 'mb-3'}`}>
-                <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
-                  DAFTAR HADIR PESERTA ASESMEN
-                  {totalClassPages > 1 && pageNumber > 1 ? ' (LANJUTAN)' : ''}
-                </h1>
-                <h2 className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
-                  {exam?.name || 'ASESMEN SUMATIF'} {exam?.semester ? exam.semester.toUpperCase() : ''}
-                </h2>
-                <p className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
-                  TAHUN PELAJARAN {exam?.academicYear || '2025 / 2026'}
-                </p>
-              </div>
+              {/* Judul Dokumen: HANYA TAMPIL DI LEMBAR 1 (Lembar lanjutan tidak menampilkan judul agar pas) */}
+              {pageNumber === 1 && (
+                <div className="text-center my-2 space-y-0.5">
+                  <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
+                    DAFTAR HADIR PESERTA ASESMEN
+                  </h1>
+                  <h2 className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
+                    {exam?.name || 'ASESMEN SUMATIF'} {exam?.semester ? exam.semester.toUpperCase() : ''}
+                  </h2>
+                  <p className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
+                    TAHUN PELAJARAN {exam?.academicYear || '2025 / 2026'}
+                  </p>
+                </div>
+              )}
 
               {/* Baris Identitas Kelas & Ruang */}
-              <div className="flex justify-between items-center text-[10.5pt] font-bold border-b border-black pb-1 mb-3">
+              <div className={`flex justify-between items-center text-[10.5pt] font-bold border-b border-black pb-1 ${pageNumber === 1 ? 'mb-2.5' : 'mb-3'}`}>
                 <span>ROMBEL : {className}</span>
                 <span>RUANG : 01</span>
                 <span>SESI : 1 (07.30 - 09.30)</span>
@@ -2067,10 +2069,10 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               </div>
 
               {/* Tabel Presensi Siswa per Kelas (admin-table-wrap pr-[3px] agar seluruh garis kanan presisi) */}
-              <div className="my-2 w-full admin-table-wrap pr-[3px] box-border">
+              <div className="my-1.5 w-full admin-table-wrap pr-[3px] box-border">
                 <table
                   className="admin-table-safe w-full text-center border-collapse border border-black table-fixed box-border"
-                  style={{ fontSize: '9.5pt', lineHeight: 1.4 }}
+                  style={{ fontSize: '9pt', lineHeight: 1.25 }}
                 >
                   <colgroup>
                     <col style={{ width: '7%' }} />
@@ -2081,16 +2083,16 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                   </colgroup>
                   <thead>
                     <tr className="bg-[#E8EDE5] border-b border-black font-bold">
-                      <th className="p-1.5 border-r border-black align-middle text-center">NO</th>
-                      <th className="p-1.5 border-r border-black align-middle text-center">NAMA PESERTA</th>
+                      <th className="py-1 px-1 border-r border-black align-middle text-center">NO</th>
+                      <th className="py-1 px-1.5 border-r border-black align-middle text-center">NAMA PESERTA</th>
                       {examScheduleDays.map((d, i) => (
                         <th
                           key={i}
-                          className="p-1 border-r border-black align-middle text-center uppercase leading-tight"
-                          style={{ fontSize: '8.5pt' }}
+                          className="py-1 px-0.5 border-r border-black align-middle text-center uppercase leading-tight"
+                          style={{ fontSize: '8pt' }}
                         >
                           <div>{d.dayName}</div>
-                          <div className="text-[7.5pt] font-normal">{d.dateShort}</div>
+                          <div className="text-[7pt] font-normal">{d.dateShort}</div>
                         </th>
                       ))}
                     </tr>
@@ -2100,13 +2102,13 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                       const studentNo = startNumber + idx;
                       return (
                         <tr key={(s as any).id || `${className}_${studentNo}`} className="border-b border-black">
-                          <td className="p-1.5 border-r border-black text-center">{studentNo}</td>
-                          <td className="p-1.5 border-r border-black text-left">
-                            <div className="font-bold uppercase text-[9pt] leading-snug">
+                          <td className="py-1 px-1 border-r border-black text-center font-medium">{studentNo}</td>
+                          <td className="py-1 px-1.5 border-r border-black text-left">
+                            <div className="font-bold uppercase text-[8.5pt] leading-tight">
                               {s.name}
                             </div>
                             {s.nisn && (
-                              <div className="text-[7.5pt] font-mono font-normal text-neutral-600">
+                              <div className="text-[7pt] font-mono font-normal text-neutral-600 leading-tight">
                                 NISN: {s.nisn}
                               </div>
                             )}
@@ -2114,11 +2116,11 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
                           {examScheduleDays.map((_, dayIdx) => (
                             <td
                               key={dayIdx}
-                              className="p-1 border-r border-black align-middle"
+                              className="py-1 px-1 border-r border-black align-middle"
                             >
                               <div
-                                className={`text-[7.5pt] font-mono text-neutral-300 ${
-                                  studentNo % 2 === 1 ? 'text-left pl-1' : 'text-right pr-1'
+                                className={`text-[7pt] font-mono text-neutral-300 ${
+                                  studentNo % 2 === 1 ? 'text-left pl-0.5' : 'text-right pr-0.5'
                                 }`}
                               >
                                 ........
@@ -2638,6 +2640,17 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
             .a4-admin-page.decree-page,
             .a4-admin-page.decree-page * {
               line-height: 1.35 !important;
+            }
+            .a4-admin-page.attendance-page {
+              min-height: 0 !important;
+              height: auto !important;
+              justify-content: flex-start !important;
+              line-height: 1.25 !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .a4-admin-page.attendance-page * {
+              line-height: 1.25 !important;
             }
             /* Menjamin seluruh tabel dan kolom presisi tidak melebihi batas halaman */
             .admin-table-wrap {
