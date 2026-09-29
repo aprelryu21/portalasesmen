@@ -109,6 +109,7 @@ interface AdminPortalProps {
   onApproveApplicant?: (applicant: SchoolApplicant) => Promise<{ success: boolean; message?: string }>;
   onRejectApplicant?: (id: string, reason?: string) => Promise<{ success: boolean; message?: string }>;
   onDeleteLoginLog?: (id: string, photoUrl?: string) => Promise<{ success: boolean; message?: string }>;
+  onDeleteBulkLoginLogs?: (ids: string[], photoUrls?: string[]) => Promise<{ success: boolean; message?: string }>;
   onClearAllLoginLogs?: () => Promise<{ success: boolean; message?: string }>;
 }
 
@@ -341,6 +342,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onApproveApplicant,
   onRejectApplicant,
   onDeleteLoginLog,
+  onDeleteBulkLoginLogs,
   onClearAllLoginLogs,
 }) => {
   // Navigation
@@ -356,6 +358,16 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [processingApplicantId, setProcessingApplicantId] = useState<string | null>(null);
   const [deletingLogId, setDeletingLogId] = useState<string | null>(null);
   const [isClearingAllLogs, setIsClearingAllLogs] = useState(false);
+
+  // State Seleksi Masal & Konfirmasi Hapus Log dengan Pop-Up Senada Aplikasi
+  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
+  const [logDeleteConfirm, setLogDeleteConfirm] = useState<{
+    type: 'single' | 'selected' | 'all';
+    targetLog?: LoginLogEntry;
+    count: number;
+    hasPhotos: boolean;
+  } | null>(null);
+  const [isExecutingDeleteLog, setIsExecutingDeleteLog] = useState(false);
 
   // Selected School in Upload Monitor
   const [selectedUserInUpload, setSelectedUserInUpload] = useState<string | null>(null);
@@ -796,55 +808,125 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     }
   };
 
-  const handleDeleteLogClick = async (logItem: LoginLogEntry) => {
-    if (!window.confirm(`Hapus catatan login @${logItem.username} (${logItem.loginTime}) beserta file foto dari Google Drive?`)) {
-      return;
-    }
-
-    if (!onDeleteLoginLog) return;
-    setDeletingLogId(logItem.id);
-    try {
-      const res = await onDeleteLoginLog(logItem.id, logItem.photoUrl);
-      if (res.success) {
-        setActionFeedback({
-          type: 'success',
-          text: res.message || 'Catatan log & foto berhasil dihapus!'
-        });
-      } else {
-        setActionFeedback({
-          type: 'error',
-          text: res.message || 'Gagal menghapus log.'
-        });
-      }
-    } finally {
-      setDeletingLogId(null);
-      setTimeout(() => setActionFeedback(null), 4000);
+  // Handler Seleksi & Hapus Log Pengguna (Menggunakan Pop-Up Senada Aplikasi)
+  const handleToggleSelectAllLogs = (filteredList: LoginLogEntry[]) => {
+    if (filteredList.length === 0) return;
+    const allSelected = filteredList.every((l) => selectedLogIds.includes(l.id));
+    if (allSelected) {
+      const filteredIdSet = new Set(filteredList.map((l) => l.id));
+      setSelectedLogIds((prev) => prev.filter((id) => !filteredIdSet.has(id)));
+    } else {
+      const newSelected = new Set(selectedLogIds);
+      filteredList.forEach((l) => newSelected.add(l.id));
+      setSelectedLogIds(Array.from(newSelected));
     }
   };
 
-  const handleClearAllLogsClick = async () => {
-    if (!window.confirm('PERINGATAN: Apakah Anda yakin ingin menghapus SEMUA catatan sesi masuk dan seluruh file foto kamera dari Google Drive?\n\nTindakan ini akan mengosongkan ruang penyimpanan Drive Anda.')) {
-      return;
-    }
+  const handleToggleSelectLog = (id: string) => {
+    setSelectedLogIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
 
-    if (!onClearAllLoginLogs) return;
-    setIsClearingAllLogs(true);
+  const handleOpenSingleDeleteModal = (logItem: LoginLogEntry) => {
+    setLogDeleteConfirm({
+      type: 'single',
+      targetLog: logItem,
+      count: 1,
+      hasPhotos: Boolean(logItem.photoUrl),
+    });
+  };
+
+  const handleOpenSelectedDeleteModal = () => {
+    if (selectedLogIds.length === 0) return;
+    const selectedLogs = loginLogs.filter((l) => selectedLogIds.includes(l.id));
+    setLogDeleteConfirm({
+      type: 'selected',
+      count: selectedLogIds.length,
+      hasPhotos: selectedLogs.some((l) => Boolean(l.photoUrl)),
+    });
+  };
+
+  const handleOpenClearAllModal = () => {
+    if (loginLogs.length === 0) return;
+    setLogDeleteConfirm({
+      type: 'all',
+      count: loginLogs.length,
+      hasPhotos: loginLogs.some((l) => Boolean(l.photoUrl)),
+    });
+  };
+
+  const handleExecuteConfirmedDelete = async () => {
+    if (!logDeleteConfirm) return;
+    setIsExecutingDeleteLog(true);
     try {
-      const res = await onClearAllLoginLogs();
-      if (res.success) {
-        setActionFeedback({
-          type: 'success',
-          text: res.message || 'Semua log dan foto berhasil dibersihkan!'
-        });
-      } else {
-        setActionFeedback({
-          type: 'error',
-          text: res.message || 'Gagal membersihkan log.'
-        });
+      if (logDeleteConfirm.type === 'single' && logDeleteConfirm.targetLog) {
+        const item = logDeleteConfirm.targetLog;
+        if (onDeleteLoginLog) {
+          const res = await onDeleteLoginLog(item.id, item.photoUrl);
+          if (res.success) {
+            setSelectedLogIds((prev) => prev.filter((id) => id !== item.id));
+            setActionFeedback({
+              type: 'success',
+              text: res.message || 'Catatan log & foto berhasil dihapus!'
+            });
+          } else {
+            setActionFeedback({
+              type: 'error',
+              text: res.message || 'Gagal menghapus log.'
+            });
+          }
+        }
+      } else if (logDeleteConfirm.type === 'selected') {
+        const idsToDelete = [...selectedLogIds];
+        const selectedLogs = loginLogs.filter((l) => idsToDelete.includes(l.id));
+        const photoUrls = selectedLogs.map((l) => l.photoUrl).filter(Boolean) as string[];
+
+        if (onDeleteBulkLoginLogs) {
+          const res = await onDeleteBulkLoginLogs(idsToDelete, photoUrls);
+          if (res.success) {
+            setSelectedLogIds([]);
+            setActionFeedback({
+              type: 'success',
+              text: res.message || `${idsToDelete.length} Log berhasil dihapus!`
+            });
+          } else {
+            setActionFeedback({
+              type: 'error',
+              text: res.message || 'Gagal menghapus log terpilih.'
+            });
+          }
+        } else if (onDeleteLoginLog) {
+          for (const item of selectedLogs) {
+            await onDeleteLoginLog(item.id, item.photoUrl);
+          }
+          setSelectedLogIds([]);
+          setActionFeedback({
+            type: 'success',
+            text: `${idsToDelete.length} Log berhasil dihapus!`
+          });
+        }
+      } else if (logDeleteConfirm.type === 'all') {
+        if (onClearAllLoginLogs) {
+          const res = await onClearAllLoginLogs();
+          if (res.success) {
+            setSelectedLogIds([]);
+            setActionFeedback({
+              type: 'success',
+              text: res.message || 'Semua log dan foto berhasil dibersihkan!'
+            });
+          } else {
+            setActionFeedback({
+              type: 'error',
+              text: res.message || 'Gagal membersihkan log.'
+            });
+          }
+        }
       }
     } finally {
-      setIsClearingAllLogs(false);
-      setTimeout(() => setActionFeedback(null), 5000);
+      setIsExecutingDeleteLog(false);
+      setLogDeleteConfirm(null);
+      setTimeout(() => setActionFeedback(null), 4000);
     }
   };
 
@@ -3192,13 +3274,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
                   <button
                     type="button"
-                    onClick={handleClearAllLogsClick}
+                    onClick={handleOpenClearAllModal}
                     disabled={isClearingAllLogs || loginLogs.length === 0}
                     className="px-4 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-900 border-2 border-black rounded-xl text-xs font-black uppercase tracking-wider shadow-[3px_3px_0px_#000] flex items-center gap-2 active:translate-y-0.5 cursor-pointer disabled:opacity-50"
                     title="Hapus semua rekaman log dan file foto di Google Drive"
                   >
-                    <Trash2 className={`w-4 h-4 text-rose-700 ${isClearingAllLogs ? 'animate-spin' : ''}`} />
-                    <span>{isClearingAllLogs ? 'Membersihkan...' : 'Bersihkan Semua Log'}</span>
+                    <Trash2 className="w-4 h-4 text-rose-700" />
+                    <span>Bersihkan Semua Log</span>
                   </button>
 
                   <button
@@ -3333,152 +3415,220 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               }
 
               return (
-                <div className="bg-white border-2 sm:border-3 border-black shadow-[5px_5px_0px_#000] rounded-2xl overflow-hidden">
-                  <div className="p-4 bg-neutral-100 border-b-2 border-black flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-black" />
-                      <span className="text-xs font-black uppercase text-neutral-900">
-                        Daftar Catatan Masuk ({filteredLogs.length} Entri)
-                      </span>
+                <div className="space-y-3">
+                  {/* Floating / Sticky Bar Aksi Hapus Masal Log Terpilih */}
+                  {selectedLogIds.length > 0 && (
+                    <div className="bg-yellow-300 border-3 border-black shadow-[4px_4px_0px_#000] rounded-2xl p-3 sm:p-3.5 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-150">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-8 h-8 bg-black text-yellow-300 rounded-xl flex items-center justify-center font-mono font-black text-sm border-2 border-black shadow-[2px_2px_0px_#000]">
+                          {selectedLogIds.length}
+                        </span>
+                        <div>
+                          <div className="text-xs sm:text-sm font-black uppercase text-black">
+                            {selectedLogIds.length} Catatan Log Dipilih
+                          </div>
+                          <div className="text-[11px] text-neutral-800 font-medium">
+                            Siap untuk dihapus secara masal beserta foto terkait di Google Drive.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLogIds([])}
+                          className="px-3 py-2 bg-white hover:bg-neutral-100 text-black border-2 border-black rounded-xl text-xs font-black uppercase shadow-[2px_2px_0px_#000] cursor-pointer"
+                        >
+                          Batal Pilih
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleOpenSelectedDeleteModal}
+                          className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white border-2 border-black rounded-xl text-xs font-black uppercase shadow-[3px_3px_0px_#000] flex items-center gap-1.5 active:translate-y-0.5 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>Hapus Terpilih ({selectedLogIds.length})</span>
+                        </button>
+                      </div>
                     </div>
-                    <span className="text-[10px] font-bold text-neutral-500">
-                      Diurutkan dari sesi terbaru
-                    </span>
-                  </div>
+                  )}
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-neutral-50 border-b-2 border-black font-black uppercase text-[10px] text-neutral-700 tracking-wider">
-                          <th className="py-3 px-4 w-12 text-center">No</th>
-                          <th className="py-3 px-4">Nama Pengguna</th>
-                          <th className="py-3 px-4">Waktu Login</th>
-                          <th className="py-3 px-4">Browser Digunakan</th>
-                          <th className="py-3 px-4 text-center">Tangkapan Kamera</th>
-                          <th className="py-3 px-4 text-center w-24">Status</th>
-                          <th className="py-3 px-4 text-center w-28">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y-2 divide-neutral-200">
-                        {filteredLogs.map((item, idx) => {
-                          const userAcc = accounts.find(
-                            (a) => a.username.toLowerCase() === item.username.toLowerCase()
-                          );
-                          const displayName = item.schoolName || userAcc?.schoolName || 'Lembaga Sekolah';
+                  {/* Tabel Catatan Log */}
+                  <div className="bg-white border-2 sm:border-3 border-black shadow-[5px_5px_0px_#000] rounded-2xl overflow-hidden">
+                    <div className="p-4 bg-neutral-100 border-b-2 border-black flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-black" />
+                        <span className="text-xs font-black uppercase text-neutral-900">
+                          Daftar Catatan Masuk ({filteredLogs.length} Entri)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] font-bold text-neutral-600">
+                        {selectedLogIds.length > 0 && (
+                          <span className="px-2 py-0.5 bg-yellow-200 text-yellow-950 border border-black rounded-md font-mono">
+                            {selectedLogIds.length} Terpilih
+                          </span>
+                        )}
+                        <span>Diurutkan dari sesi terbaru</span>
+                      </div>
+                    </div>
 
-                          return (
-                            <tr
-                              key={item.id || idx}
-                              className="hover:bg-yellow-50/60 transition-colors"
-                            >
-                              <td className="py-3.5 px-4 text-center font-mono text-[11px] font-bold text-neutral-500">
-                                {idx + 1}
-                              </td>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-neutral-50 border-b-2 border-black font-black uppercase text-[10px] text-neutral-700 tracking-wider">
+                            <th className="py-3 px-3 w-10 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label="Pilih Semua Log"
+                                checked={filteredLogs.length > 0 && filteredLogs.every((l) => selectedLogIds.includes(l.id))}
+                                onChange={() => handleToggleSelectAllLogs(filteredLogs)}
+                                className="w-4 h-4 rounded border-2 border-black accent-yellow-400 cursor-pointer align-middle"
+                              />
+                            </th>
+                            <th className="py-3 px-3 w-12 text-center">No</th>
+                            <th className="py-3 px-4">Nama Pengguna</th>
+                            <th className="py-3 px-4">Waktu Login</th>
+                            <th className="py-3 px-4">Browser Digunakan</th>
+                            <th className="py-3 px-4 text-center">Tangkapan Kamera</th>
+                            <th className="py-3 px-4 text-center w-24">Status</th>
+                            <th className="py-3 px-4 text-center w-24">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y-2 divide-neutral-200">
+                          {filteredLogs.map((item, idx) => {
+                            const isSelected = selectedLogIds.includes(item.id);
+                            const userAcc = accounts.find(
+                              (a) => a.username.toLowerCase() === item.username.toLowerCase()
+                            );
+                            const displayName = item.schoolName || userAcc?.schoolName || 'Lembaga Sekolah';
 
-                              {/* 1. Nama Pengguna & Nama Sekolah */}
-                              <td className="py-3.5 px-4">
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-mono font-black text-xs text-neutral-900 bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300">
-                                      @{item.username}
-                                    </span>
-                                    {userAcc?.role === 'admin' ? (
-                                      <span className="text-[9px] font-black uppercase bg-black text-white px-1.5 py-0.5 rounded">
-                                        ADMIN
+                            return (
+                              <tr
+                                key={item.id || idx}
+                                className={`transition-colors ${
+                                  isSelected ? 'bg-yellow-100/80 hover:bg-yellow-100' : 'hover:bg-yellow-50/60'
+                                }`}
+                              >
+                                {/* Checkbox Pemilih Masal */}
+                                <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    aria-label={`Pilih log @${item.username}`}
+                                    checked={isSelected}
+                                    onChange={() => handleToggleSelectLog(item.id)}
+                                    className="w-4 h-4 rounded border-2 border-black accent-yellow-400 cursor-pointer align-middle"
+                                  />
+                                </td>
+
+                                <td className="py-3.5 px-3 text-center font-mono text-[11px] font-bold text-neutral-500">
+                                  {idx + 1}
+                                </td>
+
+                                {/* 1. Nama Pengguna & Nama Sekolah */}
+                                <td className="py-3.5 px-4">
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-black text-xs text-neutral-900 bg-neutral-100 px-2 py-0.5 rounded border border-neutral-300">
+                                        @{item.username}
                                       </span>
-                                    ) : (
-                                      <span className="text-[9px] font-black uppercase bg-blue-100 text-blue-900 border border-blue-300 px-1.5 py-0.5 rounded">
-                                        SEKOLAH
-                                      </span>
+                                      {userAcc?.role === 'admin' ? (
+                                        <span className="text-[9px] font-black uppercase bg-black text-white px-1.5 py-0.5 rounded">
+                                          ADMIN
+                                        </span>
+                                      ) : (
+                                        <span className="text-[9px] font-black uppercase bg-blue-100 text-blue-900 border border-blue-300 px-1.5 py-0.5 rounded">
+                                          SEKOLAH
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="font-black text-xs text-neutral-900 uppercase">
+                                      {displayName}
+                                    </div>
+                                    {userAcc?.npsn && (
+                                      <div className="text-[10px] font-mono text-neutral-500">
+                                        NPSN: {userAcc.npsn}
+                                      </div>
                                     )}
                                   </div>
-                                  <div className="font-black text-xs text-neutral-900 uppercase">
-                                    {displayName}
+                                </td>
+
+                                {/* 2. Waktu Login */}
+                                <td className="py-3.5 px-4 whitespace-nowrap">
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center gap-1.5 font-bold text-neutral-900">
+                                      <Clock className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                                      <span>{formatLoginTime(item.loginTime)}</span>
+                                    </div>
                                   </div>
-                                  {userAcc?.npsn && (
-                                    <div className="text-[10px] font-mono text-neutral-500">
-                                      NPSN: {userAcc.npsn}
+                                </td>
+
+                                {/* 3. Browser Digunakan */}
+                                <td className="py-3.5 px-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 bg-blue-50 border border-blue-300 rounded-lg flex items-center justify-center text-blue-700 shrink-0">
+                                      <Laptop className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <div className="font-bold text-neutral-900 leading-tight">
+                                        {item.browser || 'Browser Standar'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* 4. Tangkapan Kamera */}
+                                <td className="py-3.5 px-4 text-center">
+                                  {item.photoUrl ? (
+                                    <LogPhotoThumbnail
+                                      photoUrl={item.photoUrl}
+                                      username={item.username}
+                                      onClick={() =>
+                                        setSelectedLogPhotoModal({
+                                          username: item.username,
+                                          schoolName: displayName,
+                                          photoUrl: item.photoUrl!,
+                                          loginTime: formatLoginTime(item.loginTime),
+                                          browser: item.browser,
+                                        })
+                                      }
+                                    />
+                                  ) : (
+                                    <div className="inline-flex flex-col items-center gap-1 text-neutral-400">
+                                      <div className="w-12 h-12 bg-neutral-100 border border-dashed border-neutral-300 rounded-xl flex items-center justify-center">
+                                        <Camera className="w-5 h-5 text-neutral-300" />
+                                      </div>
+                                      <span className="text-[10px] italic">Dilewati</span>
                                     </div>
                                   )}
-                                </div>
-                              </td>
+                                </td>
 
-                              {/* 2. Waktu Login */}
-                              <td className="py-3.5 px-4 whitespace-nowrap">
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-1.5 font-bold text-neutral-900">
-                                    <Clock className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                                    <span>{formatLoginTime(item.loginTime)}</span>
-                                  </div>
-                                </div>
-                              </td>
+                                {/* 5. Status */}
+                                <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-900 border border-emerald-500 rounded-lg text-[10px] font-black uppercase shadow-xs">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                    {item.status || 'Berhasil'}
+                                  </span>
+                                </td>
 
-                              {/* 3. Browser Digunakan */}
-                              <td className="py-3.5 px-4">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 bg-blue-50 border border-blue-300 rounded-lg flex items-center justify-center text-blue-700 shrink-0">
-                                    <Laptop className="w-4 h-4" />
-                                  </div>
-                                  <div>
-                                    <div className="font-bold text-neutral-900 leading-tight">
-                                      {item.browser || 'Browser Standar'}
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-
-                              {/* 4. Tangkapan Kamera */}
-                              <td className="py-3.5 px-4 text-center">
-                                {item.photoUrl ? (
-                                  <LogPhotoThumbnail
-                                    photoUrl={item.photoUrl}
-                                    username={item.username}
-                                    onClick={() =>
-                                      setSelectedLogPhotoModal({
-                                        username: item.username,
-                                        schoolName: displayName,
-                                        photoUrl: item.photoUrl!,
-                                        loginTime: formatLoginTime(item.loginTime),
-                                        browser: item.browser,
-                                      })
-                                    }
-                                  />
-                                ) : (
-                                  <div className="inline-flex flex-col items-center gap-1 text-neutral-400">
-                                    <div className="w-12 h-12 bg-neutral-100 border border-dashed border-neutral-300 rounded-xl flex items-center justify-center">
-                                      <Camera className="w-5 h-5 text-neutral-300" />
-                                    </div>
-                                    <span className="text-[10px] italic">Dilewati</span>
-                                  </div>
-                                )}
-                              </td>
-
-                              {/* 5. Status */}
-                              <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-900 border border-emerald-500 rounded-lg text-[10px] font-black uppercase shadow-xs">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                  {item.status || 'Berhasil'}
-                                </span>
-                              </td>
-
-                              {/* 6. Aksi Hapus */}
-                              <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteLogClick(item)}
-                                  disabled={deletingLogId === item.id}
-                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-black rounded-lg text-xs font-bold shadow-[1px_1px_0px_#000] inline-flex items-center gap-1 active:translate-y-0.5 cursor-pointer disabled:opacity-50"
-                                  title="Hapus log ini beserta file foto dari Google Drive"
-                                >
-                                  <Trash2 className={`w-3.5 h-3.5 text-rose-700 ${deletingLogId === item.id ? 'animate-spin' : ''}`} />
-                                  <span>{deletingLogId === item.id ? 'Menghapus...' : 'Hapus'}</span>
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                                {/* 6. Aksi Hapus Menggunakan Pop-Up Senada */}
+                                <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSingleDeleteModal(item)}
+                                    className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-black rounded-lg text-xs font-bold shadow-[1px_1px_0px_#000] inline-flex items-center gap-1 active:translate-y-0.5 cursor-pointer"
+                                    title="Hapus log ini beserta file foto dari Google Drive"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-rose-700" />
+                                    <span>Hapus</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               );
@@ -4082,6 +4232,123 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   <Trash2 className="w-4 h-4" />
                 )}
                 <span>{isDeletingAccount ? 'Sedang Menghapus...' : 'Ya, Hapus Pengguna & Berkas'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: POP-UP CUSTOM KONFIRMASI HAPUS LOG PENGGUNA (SENADA DENGAN APLIKASI) */}
+      {logDeleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white border-3 border-black shadow-[8px_8px_0px_#000] rounded-2xl max-w-md w-full overflow-hidden p-6 space-y-4 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 pb-3 border-b-2 border-black">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-rose-100 border-2 border-black rounded-xl flex items-center justify-center shadow-[2px_2px_0px_#000] text-rose-600 shrink-0">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-rose-100 text-rose-800 border border-black rounded text-[10px] font-black uppercase">
+                    Konfirmasi Hapus Log
+                  </div>
+                  <h3 className="text-base font-black text-black tracking-tight mt-0.5">
+                    {logDeleteConfirm.type === 'single'
+                      ? 'Hapus Catatan Log Masuk'
+                      : logDeleteConfirm.type === 'selected'
+                      ? `Hapus ${logDeleteConfirm.count} Log Terpilih`
+                      : 'Bersihkan Semua Catatan Log'}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isExecutingDeleteLog}
+                onClick={() => setLogDeleteConfirm(null)}
+                className="p-1.5 hover:bg-neutral-100 border-2 border-black rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Details Box */}
+            <div className="p-3.5 bg-neutral-50 border-2 border-black rounded-xl space-y-2.5">
+              {logDeleteConfirm.type === 'single' && logDeleteConfirm.targetLog && (
+                <div className="p-3 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_#000] space-y-1">
+                  <div className="text-xs font-mono font-bold text-neutral-900">
+                    Pengguna: <strong className="text-indigo-700">@{logDeleteConfirm.targetLog.username}</strong>
+                  </div>
+                  <div className="text-xs font-bold text-neutral-800">
+                    Lembaga: {logDeleteConfirm.targetLog.schoolName}
+                  </div>
+                  <div className="text-[11px] font-mono text-neutral-500">
+                    Waktu Sesi: {formatLoginTime(logDeleteConfirm.targetLog.loginTime)}
+                  </div>
+                  {logDeleteConfirm.targetLog.photoUrl && (
+                    <div className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 inline-block mt-1">
+                      📷 File foto kamera tersimpan di Google Drive
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {logDeleteConfirm.type === 'selected' && (
+                <div className="p-3 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_#000] space-y-1">
+                  <div className="text-xs font-black uppercase text-neutral-900">
+                    Total Yang Akan Dihapus: <span className="font-mono text-rose-600 font-black">{logDeleteConfirm.count} Catatan Sesi</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-600">
+                    Seluruh baris sesi terpilih akan dihapus dari sheet &quot;LOG_PENGGUNA&quot;.
+                  </p>
+                </div>
+              )}
+
+              {logDeleteConfirm.type === 'all' && (
+                <div className="p-3 bg-rose-50 border-2 border-rose-300 rounded-lg space-y-1">
+                  <div className="text-xs font-black text-rose-900 uppercase">
+                    Peringatan: Seluruh Riwayat Log ({logDeleteConfirm.count} Entri)
+                  </div>
+                  <p className="text-[11px] text-rose-800">
+                    Tindakan ini akan mengosongkan seluruh riwayat login dan seluruh file foto dari Google Drive.
+                  </p>
+                </div>
+              )}
+
+              <div className="text-xs text-neutral-700 space-y-1.5 pl-1 font-medium">
+                <div className="flex items-start gap-1.5">
+                  <span className="text-rose-600 font-bold">•</span>
+                  <span>Catatan sesi masuk akan dihapus permanen dari spreadsheet database.</span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="text-rose-600 font-bold">•</span>
+                  <span>File foto kamera yang tersimpan di Google Drive akan otomatis dihapus permanen untuk menghemat kapasitas penyimpanan akun Anda.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Buttons: Batal & Hapus */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isExecutingDeleteLog}
+                onClick={() => setLogDeleteConfirm(null)}
+                className="px-4 py-2 text-xs font-bold bg-neutral-100 hover:bg-neutral-200 border-2 border-black rounded-lg shadow-[2px_2px_0px_#000] cursor-pointer"
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                disabled={isExecutingDeleteLog}
+                onClick={handleExecuteConfirmedDelete}
+                className="px-5 py-2.5 text-xs font-black uppercase bg-rose-600 hover:bg-rose-700 text-white border-2 border-black rounded-xl shadow-[3px_3px_0px_#000] flex items-center gap-2 cursor-pointer active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-60"
+              >
+                {isExecutingDeleteLog ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                <span>{isExecutingDeleteLog ? 'Sedang Menghapus...' : 'Hapus'}</span>
               </button>
             </div>
           </div>

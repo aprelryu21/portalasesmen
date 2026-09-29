@@ -288,6 +288,19 @@ export const deleteLoginLogLocally = (id: string): LoginLogEntry[] => {
   }
 };
 
+export const deleteBulkLoginLogsLocally = (ids: string[]): LoginLogEntry[] => {
+  try {
+    const idSet = new Set(ids);
+    const current = getStoredLoginLogs();
+    const updated = current.filter((item) => !idSet.has(item.id));
+    localStorage.setItem(STORAGE_KEYS.LOGIN_LOGS, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.warn('Gagal menghapus masal login log lokal:', e);
+    return [];
+  }
+};
+
 export const clearAllLoginLogsLocally = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEYS.LOGIN_LOGS);

@@ -906,10 +906,23 @@ export const gasRejectPendaftarBaru = async (
  */
 export const gasDeleteLoginLog = async (
   webAppUrl: string,
-  payload: { id: string; photoUrl?: string }
+  payload: { id?: string; ids?: string[]; photoUrl?: string; photoUrls?: string[] }
 ): Promise<{ status: 'success' | 'error'; message: string }> => {
   return postToGas(webAppUrl, {
     action: 'DELETE_LOGIN_LOG',
+    ...payload,
+  });
+};
+
+/**
+ * Hapus masal rekaman log masuk terpilih beserta file foto di Google Drive
+ */
+export const gasDeleteBulkLoginLogs = async (
+  webAppUrl: string,
+  payload: { ids: string[]; photoUrls?: string[] }
+): Promise<{ status: 'success' | 'error'; message: string }> => {
+  return postToGas(webAppUrl, {
+    action: 'DELETE_BULK_LOGIN_LOGS',
     ...payload,
   });
 };

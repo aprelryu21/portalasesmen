@@ -685,8 +685,8 @@ function doPost(e) {
       });
     }
 
-    // 19b. HAPUS 1 LOG PENGGUNA BESERTA FOTO DI GOOGLE DRIVE
-    if (action === "DELETE_LOGIN_LOG") {
+    // 19b. HAPUS 1 ATAU MASAL LOG PENGGUNA BESERTA FOTO DI GOOGLE DRIVE
+    if (action === "DELETE_LOGIN_LOG" || action === "DELETE_BULK_LOGIN_LOGS") {
       var delLogResult = handleDeleteLoginLog(contents);
       return createJsonResponse(delLogResult);
     }
@@ -3346,7 +3346,7 @@ function deleteDrivePhotoByUrl(photoUrl) {
 }
 
 /**
- * 24. Hapus 1 baris log dari Sheet LOG_PENGGUNA dan hapus file foto terkait di Google Drive
+ * 24. Hapus 1 baris atau masal log dari Sheet LOG_PENGGUNA dan hapus file foto terkait di Google Drive
  */
 function handleDeleteLoginLog(contents) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -3355,31 +3355,59 @@ function handleDeleteLoginLog(contents) {
     return { status: "error", message: "Sheet LOG_PENGGUNA tidak ditemukan!" };
   }
 
-  var logId = String(contents.id || contents.logId || "").trim();
-  var photoUrl = String(contents.photoUrl || "").trim();
+  var targetIds = [];
+  var targetPhotoUrls = [];
+
+  if (Array.isArray(contents.ids)) {
+    targetIds = contents.ids.map(function(id) { return String(id).trim(); });
+  } else if (contents.id || contents.logId) {
+    targetIds.push(String(contents.id || contents.logId).trim());
+  }
+
+  if (Array.isArray(contents.photoUrls)) {
+    targetPhotoUrls = contents.photoUrls.filter(Boolean).map(function(u) { return String(u).trim(); });
+  } else if (contents.photoUrl) {
+    targetPhotoUrls.push(String(contents.photoUrl).trim());
+  }
+
+  var idSet = {};
+  for (var k = 0; k < targetIds.length; k++) {
+    if (targetIds[k]) idSet[targetIds[k]] = true;
+  }
 
   var rows = sheetLog.getDataRange().getValues();
-  var deleted = false;
+  var deletedCount = 0;
 
   for (var i = rows.length - 1; i >= 1; i--) {
     var rId = String(rows[i][0] || "").trim();
-    if (rId === logId) {
-      if (!photoUrl && rows[i][5]) {
-        photoUrl = String(rows[i][5]).trim();
+    if (idSet[rId]) {
+      var rPhoto = String(rows[i][5] || "").trim();
+      if (rPhoto) {
+        targetPhotoUrls.push(rPhoto);
       }
       sheetLog.deleteRow(i + 1);
-      deleted = true;
-      break;
+      deletedCount++;
     }
   }
 
-  if (photoUrl) {
-    deleteDrivePhotoByUrl(photoUrl);
+  // Hapus semua file foto unik terkait di Google Drive
+  var deletedPhotos = 0;
+  var seenPhotos = {};
+  for (var p = 0; p < targetPhotoUrls.length; p++) {
+    var pUrl = targetPhotoUrls[p];
+    if (pUrl && !seenPhotos[pUrl]) {
+      seenPhotos[pUrl] = true;
+      if (deleteDrivePhotoByUrl(pUrl)) {
+        deletedPhotos++;
+      }
+    }
   }
 
   return {
     status: "success",
-    message: deleted ? "Catatan log dan file foto kamera di Drive berhasil dihapus!" : "Log diproses untuk dibersihkan."
+    message: deletedCount > 0
+      ? (deletedCount + " rekaman log dan file foto di Drive berhasil dihapus!")
+      : "Log diproses untuk dibersihkan."
   };
 }
 

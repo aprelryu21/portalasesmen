@@ -28,6 +28,7 @@ import {
   updateApplicantStatusLocally,
   deleteApplicantLocally,
   deleteLoginLogLocally,
+  deleteBulkLoginLogsLocally,
   clearAllLoginLogsLocally,
 } from './utils/storage';
 import { LandingPage } from './components/auth/LandingPage';
@@ -84,6 +85,7 @@ import {
   gasApprovePendaftarBaru,
   gasRejectPendaftarBaru,
   gasDeleteLoginLog,
+  gasDeleteBulkLoginLogs,
   gasClearAllLoginLogs,
   SpreadsheetCapacity,
   DriveDatabaseInfo,
@@ -956,6 +958,32 @@ export default function App() {
       }));
 
       return { success: true, message: 'Catatan log & foto berhasil dihapus!' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat menghapus log';
+      return { success: false, message: msg };
+    }
+  };
+
+  const handleDeleteBulkLoginLogs = async (logIds: string[], photoUrls?: string[]): Promise<{ success: boolean; message?: string }> => {
+    try {
+      if (activeGasUrl && activeGasUrl.trim().startsWith('http')) {
+        const gasRes = await gasDeleteBulkLoginLogs(activeGasUrl, {
+          ids: logIds,
+          photoUrls,
+        });
+        if (gasRes.status === 'error') {
+          return { success: false, message: gasRes.message || 'Gagal menghapus log terpilih dari spreadsheet.' };
+        }
+      }
+
+      deleteBulkLoginLogsLocally(logIds);
+      const idSet = new Set(logIds);
+      setState((prev) => ({
+        ...prev,
+        loginLogs: (prev.loginLogs || []).filter((l) => !idSet.has(l.id)),
+      }));
+
+      return { success: true, message: `${logIds.length} Catatan log & foto berhasil dihapus!` };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat menghapus log';
       return { success: false, message: msg };
@@ -2069,6 +2097,7 @@ export default function App() {
             onApproveApplicant={handleApproveApplicant}
             onRejectApplicant={handleRejectApplicant}
             onDeleteLoginLog={handleDeleteLoginLog}
+            onDeleteBulkLoginLogs={handleDeleteBulkLoginLogs}
             onClearAllLoginLogs={handleClearAllLoginLogs}
           />
         ) : (
