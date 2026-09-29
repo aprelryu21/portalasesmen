@@ -523,7 +523,7 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
     );
   };
 
-  // Komponen Tanda Tangan Ganda: Kiri Mengetahui Kepala Sekolah, Kanan Guru Pengawas Ruang (Nama & NIP 1 Baris)
+  // Komponen Tanda Tangan Ganda: Kiri Mengetahui Kepala Sekolah, Kanan Guru Pengawas Ruang (Nama dan NIP Beda Baris)
   const renderDualSignatureBlock = (ptClass = 'pt-3') => {
     return (
       <div
@@ -534,37 +534,41 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
         }}
       >
         {/* Kiri: Mengetahui, Kepala Sekolah */}
-        <div className="w-[68mm] text-center" style={{ fontSize: '10.5pt', lineHeight: 1.25 }}>
+        <div className="w-[72mm] text-center" style={{ fontSize: '10.5pt', lineHeight: 1.25 }}>
           <p className="font-semibold">Mengetahui,</p>
           <p className="font-semibold">
             {school?.headTitle || 'Kepala'} {school?.name || ''}
           </p>
           {school?.district && <p className="font-semibold">Kecamatan {school.district}</p>}
-          <div className="h-[16mm] flex items-center justify-center my-1 relative">
+          <div className="h-[15mm] flex items-center justify-center my-1 relative">
             {school?.principalSignatureUrl ? (
               <img
                 src={school.principalSignatureUrl}
                 alt="Tanda Tangan Kepala Sekolah"
-                className="h-[15mm] object-contain mx-auto"
+                className="h-[14mm] object-contain mx-auto"
               />
             ) : null}
           </div>
-          <p className="font-bold text-[9.5pt] whitespace-nowrap">
-            <span className="underline uppercase">{school?.principalName || 'NAMA KEPALA SEKOLAH'}</span>
-            <span className="font-mono font-normal ml-2">NIP. {school?.principalNip || '-'}</span>
+          <p className="font-bold text-[10pt] underline uppercase">
+            {school?.principalName || 'NAMA KEPALA SEKOLAH'}
+          </p>
+          <p className="font-mono text-[9.5pt]">
+            NIP. {school?.principalNip || '-'}
           </p>
         </div>
 
-        {/* Kanan: Guru Pengawas Ruang (Nama dan NIP 1 Baris seperti Kepala Sekolah) */}
-        <div className="w-[68mm] text-center" style={{ fontSize: '10.5pt', lineHeight: 1.25 }}>
+        {/* Kanan: Guru Pengawas Ruang */}
+        <div className="w-[72mm] text-center" style={{ fontSize: '10.5pt', lineHeight: 1.25 }}>
           <p>
             {titimangsaLocation}, {cleanSignatureDate}
           </p>
           <p className="font-semibold">Guru Pengawas Ruang,</p>
-          <div className="h-[16mm] flex items-center justify-center my-1 relative" />
-          <p className="font-bold text-[9.5pt] whitespace-nowrap">
-            <span className="underline">( ......................................... )</span>
-            <span className="font-mono font-normal ml-2">NIP. .....................................</span>
+          <div className="h-[15mm] flex items-center justify-center my-1 relative" />
+          <p className="font-bold text-[10pt] underline">
+            ( ......................................... )
+          </p>
+          <p className="font-mono text-[9.5pt]">
+            NIP. .....................................
           </p>
         </div>
       </div>
@@ -1351,7 +1355,8 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
 
   // ========================================================
   // 9. RENDER DAFTAR HADIR PESERTA (Lembar per Kelas 1 s.d 6, Kolom TTD Siswa Tanpa Nomor)
-  // Tanda Tangan Ganda: Nama & NIP 1 Baris, Halaman Terisolasi
+  // Dilengkapi Paginasi Otomatis (Maks 16 Siswa per Lembar) agar Tidak Pernah Bertumpuk
+  // Tanda Tangan Ganda: Nama & NIP Beda Baris, Halaman Terisolasi
   // ========================================================
   const renderParticipantAttendancePages = (keyPrefix: string, classFilter = 'ALL') => {
     const targetClasses =
@@ -1362,8 +1367,9 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
     const daysCount = examScheduleDays.length || 5;
     const dayWidthPercent = 58 / daysCount;
     const isScreen = keyPrefix.includes('screen');
+    const STUDENTS_PER_PAGE = 16;
 
-    const content = targetClasses.map((className, classIdx) => {
+    const content = targetClasses.flatMap((className, classIdx) => {
       const classStudents = getStudentsForClass(className);
       // Jika belum ada data siswa untuk kelas ini, sediakan 10 baris kosong tertata
       const displayStudents =
@@ -1374,110 +1380,150 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               name: '-',
               nisn: '',
               className,
-              gender: 'L',
+              gender: 'L' as const,
             }));
 
-      return (
-        <div
-          key={`${keyPrefix}_${className}_${classIdx}`}
-          className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
-          style={{
-            ...basePageStyle,
-            lineHeight: 1.5,
-          }}
-        >
-          <div>
-            {/* Kop Resmi Sekolah dari Database */}
-            {renderOfficialSchoolKop()}
+      // Paginasi: pecah menjadi beberapa lembar jika siswa lebih dari 16 orang
+      const studentChunks: (typeof displayStudents)[] = [];
+      if (displayStudents.length <= STUDENTS_PER_PAGE) {
+        studentChunks.push(displayStudents);
+      } else {
+        for (let i = 0; i < displayStudents.length; i += STUDENTS_PER_PAGE) {
+          studentChunks.push(displayStudents.slice(i, i + STUDENTS_PER_PAGE));
+        }
+      }
 
-            {/* Judul Dokumen */}
-            <div className="text-center my-2.5 space-y-0.5">
-              <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
-                DAFTAR HADIR PESERTA ASESMEN
-              </h1>
-              <h2 className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
-                {exam?.name || 'ASESMEN SUMATIF'} {exam?.semester ? exam.semester.toUpperCase() : ''}
-              </h2>
-              <p className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
-                TAHUN PELAJARAN {exam?.academicYear || '2025 / 2026'}
-              </p>
-            </div>
+      const totalClassPages = studentChunks.length;
 
-            {/* Baris Identitas Kelas & Ruang */}
-            <div className="flex justify-between items-center text-[10.5pt] font-bold border-b border-black pb-1 mb-3">
-              <span>ROMBEL : {className}</span>
-              <span>RUANG : 01</span>
-              <span>SESI : 1 (07.30 - 09.30)</span>
-            </div>
+      return studentChunks.map((chunk, pageIdx) => {
+        const pageNumber = pageIdx + 1;
+        const isLastPage = pageIdx === totalClassPages - 1;
+        const startNumber = pageIdx * STUDENTS_PER_PAGE + 1;
 
-            {/* Tabel Presensi Siswa per Kelas (admin-table-wrap pr-[3px] agar seluruh garis kanan presisi) */}
-            <div className="my-2 w-full admin-table-wrap pr-[3px] box-border">
-              <table
-                className="admin-table-safe w-full text-center border-collapse border border-black table-fixed box-border"
-                style={{ fontSize: '9.5pt', lineHeight: 1.4 }}
-              >
-                <colgroup>
-                  <col style={{ width: '7%' }} />
-                  <col style={{ width: '35%' }} />
-                  {examScheduleDays.map((_, i) => (
-                    <col key={i} style={{ width: `${dayWidthPercent}%` }} />
-                  ))}
-                </colgroup>
-                <thead>
-                  <tr className="bg-[#E8EDE5] border-b border-black font-bold">
-                    <th className="p-1.5 border-r border-black align-middle text-center">NO</th>
-                    <th className="p-1.5 border-r border-black align-middle text-center">NAMA PESERTA</th>
-                    {examScheduleDays.map((d, i) => (
-                      <th
-                        key={i}
-                        className="p-1 border-r border-black align-middle text-center uppercase leading-tight"
-                        style={{ fontSize: '8.5pt' }}
-                      >
-                        <div>{d.dayName}</div>
-                        <div className="text-[7.5pt] font-normal">{d.dateShort}</div>
-                      </th>
+        return (
+          <div
+            key={`${keyPrefix}_${className}_${classIdx}_p${pageNumber}`}
+            className="a4-admin-page bg-white text-black flex flex-col justify-between no-scrollbar"
+            style={{
+              ...basePageStyle,
+              lineHeight: 1.5,
+            }}
+          >
+            <div>
+              {/* Kop Resmi Sekolah dari Database */}
+              {renderOfficialSchoolKop()}
+
+              {/* Judul Dokumen */}
+              <div className="text-center my-2.5 space-y-0.5">
+                <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: '13pt', lineHeight: 1.3 }}>
+                  DAFTAR HADIR PESERTA ASESMEN
+                  {totalClassPages > 1 && pageNumber > 1 ? ' (LANJUTAN)' : ''}
+                </h1>
+                <h2 className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
+                  {exam?.name || 'ASESMEN SUMATIF'} {exam?.semester ? exam.semester.toUpperCase() : ''}
+                </h2>
+                <p className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt', lineHeight: 1.3 }}>
+                  TAHUN PELAJARAN {exam?.academicYear || '2025 / 2026'}
+                </p>
+              </div>
+
+              {/* Baris Identitas Kelas & Ruang */}
+              <div className="flex justify-between items-center text-[10.5pt] font-bold border-b border-black pb-1 mb-3">
+                <span>ROMBEL : {className}</span>
+                <span>RUANG : 01</span>
+                <span>SESI : 1 (07.30 - 09.30)</span>
+                {totalClassPages > 1 && (
+                  <span className="text-[9.5pt] font-bold text-neutral-800 uppercase">
+                    (Lembar {pageNumber} dari {totalClassPages})
+                  </span>
+                )}
+              </div>
+
+              {/* Tabel Presensi Siswa per Kelas (admin-table-wrap pr-[3px] agar seluruh garis kanan presisi) */}
+              <div className="my-2 w-full admin-table-wrap pr-[3px] box-border">
+                <table
+                  className="admin-table-safe w-full text-center border-collapse border border-black table-fixed box-border"
+                  style={{ fontSize: '9.5pt', lineHeight: 1.4 }}
+                >
+                  <colgroup>
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '35%' }} />
+                    {examScheduleDays.map((_, i) => (
+                      <col key={i} style={{ width: `${dayWidthPercent}%` }} />
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayStudents.map((s, idx) => (
-                    <tr key={(s as any).id || idx} className="border-b border-black">
-                      <td className="p-1.5 border-r border-black text-center">{idx + 1}</td>
-                      <td className="p-1.5 border-r border-black text-left">
-                        <div className="font-bold uppercase text-[9pt] leading-snug">
-                          {s.name}
-                        </div>
-                        {s.nisn && (
-                          <div className="text-[7.5pt] font-mono font-normal text-neutral-600">
-                            NISN: {s.nisn}
-                          </div>
-                        )}
-                      </td>
-                      {examScheduleDays.map((_, dayIdx) => (
-                        <td
-                          key={dayIdx}
-                          className="p-1 border-r border-black align-middle"
+                  </colgroup>
+                  <thead>
+                    <tr className="bg-[#E8EDE5] border-b border-black font-bold">
+                      <th className="p-1.5 border-r border-black align-middle text-center">NO</th>
+                      <th className="p-1.5 border-r border-black align-middle text-center">NAMA PESERTA</th>
+                      {examScheduleDays.map((d, i) => (
+                        <th
+                          key={i}
+                          className="p-1 border-r border-black align-middle text-center uppercase leading-tight"
+                          style={{ fontSize: '8.5pt' }}
                         >
-                          <div
-                            className={`text-[7.5pt] font-mono text-neutral-300 ${
-                              (idx + 1) % 2 === 1 ? 'text-left pl-1' : 'text-right pr-1'
-                            }`}
-                          >
-                            ........
-                          </div>
-                        </td>
+                          <div>{d.dayName}</div>
+                          <div className="text-[7.5pt] font-normal">{d.dateShort}</div>
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </thead>
+                  <tbody>
+                    {chunk.map((s, idx) => {
+                      const studentNo = startNumber + idx;
+                      return (
+                        <tr key={(s as any).id || `${className}_${studentNo}`} className="border-b border-black">
+                          <td className="p-1.5 border-r border-black text-center">{studentNo}</td>
+                          <td className="p-1.5 border-r border-black text-left">
+                            <div className="font-bold uppercase text-[9pt] leading-snug">
+                              {s.name}
+                            </div>
+                            {s.nisn && (
+                              <div className="text-[7.5pt] font-mono font-normal text-neutral-600">
+                                NISN: {s.nisn}
+                              </div>
+                            )}
+                          </td>
+                          {examScheduleDays.map((_, dayIdx) => (
+                            <td
+                              key={dayIdx}
+                              className="p-1 border-r border-black align-middle"
+                            >
+                              <div
+                                className={`text-[7.5pt] font-mono text-neutral-300 ${
+                                  studentNo % 2 === 1 ? 'text-left pl-1' : 'text-right pr-1'
+                                }`}
+                              >
+                                ........
+                              </div>
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-          {/* Tanda Tangan Ganda: Kiri Mengetahui Kepala Sekolah, Kanan Guru Pengawas Ruang (Nama & NIP 1 Baris) */}
-          {renderDualSignatureBlock('pt-3')}
-        </div>
-      );
+              {/* Teks Penanda Halaman Bersambung jika Bukan Lembar Terakhir */}
+              {!isLastPage && (
+                <div className="text-right text-[9pt] italic font-semibold text-neutral-500 pt-2">
+                  * Bersambung ke Lembar {pageNumber + 1}
+                </div>
+              )}
+            </div>
+
+            {/* Tanda Tangan Ganda: Hanya Tampil di Lembar Terakhir Rombel / Kelas */}
+            {isLastPage ? (
+              renderDualSignatureBlock('pt-3')
+            ) : (
+              <div className="pt-4 text-center text-[9pt] text-neutral-400 font-medium">
+                — Lembar {pageNumber} dari {totalClassPages} —
+              </div>
+            )}
+          </div>
+        );
+      });
     });
 
     if (!isScreen) {
@@ -1927,7 +1973,6 @@ export const ExamAdminPrint: React.FC<ExamAdminPrintProps> = ({
               width: 100% !important;
               min-height: 0 !important;
               height: auto !important;
-              max-height: 236mm !important;
               margin: 0 !important;
               page-break-after: always !important;
               break-after: page !important;
