@@ -1875,7 +1875,7 @@ export default function App() {
                       ? 'Panel Administrator Sistem'
                       : state.school?.name
                       ? `${state.school.name} • Administrasi & Generator Kartu Asesmen`
-                      : 'Aplikasi Administrasi & Generator Kartu Asesmen Sekolah'}
+                      : 'Sistem Administrasi & Generator Kartu Asesmen Sekolah'}
                   </span>
                 </div>
               </div>
