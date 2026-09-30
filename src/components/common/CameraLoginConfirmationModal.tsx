@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, ShieldCheck, CheckCircle2, Lock, ArrowRight, AlertCircle, Loader2, X } from 'lucide-react';
+import { Camera, ShieldCheck, Lock, ArrowRight, AlertCircle, Loader2, X } from 'lucide-react';
 import { UserAccount } from '../../types';
 import { captureSilentPhoto } from '../../utils/cameraSilentCapture';
 
@@ -87,14 +87,8 @@ export const CameraLoginConfirmationModal: React.FC<CameraLoginConfirmationModal
         {/* Notice Info Box */}
         <div className="p-3.5 bg-neutral-50 border-2 border-black rounded-xl space-y-2 text-xs text-neutral-700 leading-relaxed">
           <p className="font-bold text-neutral-900">
-            Sistem akan melakukan verifikasi foto masuk dan mencatat log sesi Anda secara otomatis ke database Google Spreadsheet & Google Drive sekolah.
+            Sistem Menggunakan Akses Kamera dan Berkas Untuk Mengisikan Foto Siswa dan Guru Pada Kartu Identitas. Izinkan Akses Kamera Diawal Untuk Menggunakan Aplikasi Lebih Lanjut dan Log Sesi Sekolah
           </p>
-          <div className="p-2.5 bg-yellow-50 border border-yellow-400 rounded-lg text-[11px] font-semibold text-yellow-950 flex items-start gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-            <span>
-              Foto diambil langsung saat konfirmasi tanpa menampilkan kotak preview kamera, lalu otomatis tersimpan aman di folder database sekolah.
-            </span>
-          </div>
         </div>
 
         {/* Processing or Error Alert */}
@@ -128,7 +122,7 @@ export const CameraLoginConfirmationModal: React.FC<CameraLoginConfirmationModal
             ) : (
               <>
                 <Camera className="w-4 h-4 text-black" />
-                <span>Izinkan Tangkapan Layar</span>
+                <span>Izinkan Akses Kamera</span>
               </>
             )}
           </button>

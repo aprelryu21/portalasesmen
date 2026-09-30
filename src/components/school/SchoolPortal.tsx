@@ -451,8 +451,6 @@ export const SchoolPortal: React.FC<SchoolPortalProps> = ({
             googleSheets={googleSheets}
             onResetDemoData={onResetDemoData}
             loginLogs={loginLogs}
-            autoLogoutMinutes={autoLogoutMinutes}
-            onChangeAutoLogoutMinutes={onChangeAutoLogoutMinutes}
           />
         )}
       </div>

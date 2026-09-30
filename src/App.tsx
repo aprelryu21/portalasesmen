@@ -116,6 +116,9 @@ import {
 type NavTab = 'dashboard' | 'students' | 'designer' | 'print' | 'settings';
 type PortalMode = 'school' | 'admin';
 
+const SCHOOL_INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 menit
+const LAST_ACTIVITY_STORAGE_KEY = 'portal_asesmen_last_activity_timestamp';
+
 export default function App() {
   // Application persistent state
   const [state, setState] = useState(() => {
@@ -127,6 +130,27 @@ export default function App() {
     // Admin Nagata bukan sekolah, bersihkan dari daftar sekolah jika ada
     delete loaded.schoolDataMap['Nagata'];
     delete loaded.schoolDataMap['nagata'];
+
+    // Cek apakah sesi pengguna sekolah telah kedaluwarsa saat aplikasi ditutup/tidak digunakan
+    const isUserAdmin =
+      loaded.currentUser?.role === 'admin' ||
+      loaded.currentUser?.username?.toLowerCase() === 'nagata';
+
+    if (loaded.currentUser && !isUserAdmin) {
+      try {
+        const lastActiveStr = localStorage.getItem(LAST_ACTIVITY_STORAGE_KEY);
+        if (lastActiveStr) {
+          const lastActive = parseInt(lastActiveStr, 10);
+          if (!isNaN(lastActive) && Date.now() - lastActive >= SCHOOL_INACTIVITY_TIMEOUT_MS) {
+            // Sesi kedaluwarsa saat jendela ditutup setelah beberapa saat
+            loaded.currentUser = null;
+          }
+        }
+      } catch (e) {
+        console.warn('Gagal membaca timestamp sesi:', e);
+      }
+    }
+
     return loaded;
   });
 
@@ -160,16 +184,29 @@ export default function App() {
 
   // Keamanan Akun: Konfirmasi Kamera Login & Auto Logout Sekolah
   const [pendingLoginUser, setPendingLoginUser] = useState<UserAccount | null>(null);
-  const [isAutoLoggedOutOpen, setIsAutoLoggedOutOpen] = useState<boolean>(false);
-  const [autoLogoutMinutes, setAutoLogoutMinutes] = useState<number>(() => {
+  const [isAutoLoggedOutOpen, setIsAutoLoggedOutOpen] = useState<boolean>(() => {
     try {
-      const val = localStorage.getItem('portal_asesmen_auto_logout_minutes');
-      return val ? parseInt(val, 10) || 15 : 15;
-    } catch {
-      return 15;
-    }
+      const raw = localStorage.getItem('portal_ujian_clean_state_v4');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const isUserAdmin =
+          parsed?.currentUser?.role === 'admin' ||
+          parsed?.currentUser?.username?.toLowerCase() === 'nagata';
+        if (parsed?.currentUser && !isUserAdmin) {
+          const lastActiveStr = localStorage.getItem(LAST_ACTIVITY_STORAGE_KEY);
+          if (lastActiveStr) {
+            const lastActive = parseInt(lastActiveStr, 10);
+            if (!isNaN(lastActive) && Date.now() - lastActive >= SCHOOL_INACTIVITY_TIMEOUT_MS) {
+              return true;
+            }
+          }
+        }
+      }
+    } catch {}
+    return false;
   });
   const lastActivityTimeRef = useRef<number>(Date.now());
+  const lastSavedStorageRef = useRef<number>(Date.now());
 
   // Status sinkronisasi database cloud otomatis
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'saved' | 'error'>('idle');
@@ -181,7 +218,11 @@ export default function App() {
     saveStoredState(state);
   }, [state]);
 
-  // ATURAN KEAMANAN: Auto-Logout KHUSUS SEKOLAH (Admin TIDAK terkena auto logout)
+  // ATURAN KEAMANAN: Auto-Logout Otomatis KHUSUS SEKOLAH (Admin TIDAK terkena auto logout)
+  // Menyamakan aturan sistem:
+  // - Mendeteksi apakah aplikasi sedang aktif digunakan atau tidak.
+  // - Jika masih dibuka dan digunakan (mouse/keyboard/scroll/touch/click), sesi tetap aktif & login dipertahankan.
+  // - Jika tidak digunakan atau ditinggalkan, maupun jendela aplikasi ditutup setelah beberapa saat, sistem otomatis mengeluarkan akun sekolah dan wajib login kembali.
   useEffect(() => {
     const isUserAdmin =
       state.currentUser?.role === 'admin' ||
@@ -190,41 +231,84 @@ export default function App() {
     // Auto logout HANYA untuk akun sekolah yang sedang login
     if (!state.currentUser || isUserAdmin) return;
 
-    lastActivityTimeRef.current = Date.now();
+    const now = Date.now();
+    lastActivityTimeRef.current = now;
+    lastSavedStorageRef.current = now;
+    try {
+      localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(now));
+    } catch {}
 
     const recordUserActivity = () => {
-      lastActivityTimeRef.current = Date.now();
+      const current = Date.now();
+      lastActivityTimeRef.current = current;
+      // Perbarui timestamp di localStorage secara berkala (tiap 4 detik saat ada interaksi)
+      if (current - lastSavedStorageRef.current > 4000) {
+        lastSavedStorageRef.current = current;
+        try {
+          localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(current));
+        } catch {}
+      }
     };
 
-    const userEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    const handleAutoLogout = () => {
+      setState((prev) => ({
+        ...prev,
+        currentUser: null,
+      }));
+      setPortalMode('school');
+      setActiveTab('dashboard');
+      setIsAutoLoggedOutOpen(true);
+    };
+
+    // Deteksi berbagai aksi pengguna saat aplikasi digunakan
+    const userEvents = ['mousemove', 'mousedown', 'keydown', 'keypress', 'scroll', 'touchstart', 'touchmove', 'click', 'wheel'];
     userEvents.forEach((evt) => {
       window.addEventListener(evt, recordUserActivity, { passive: true });
     });
 
-    // Pengecekan berkala setiap 10 detik
+    // Pengecekan saat tab/jendela kembali dibuka atau mendapat fokus
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        const idleMs = Date.now() - lastActivityTimeRef.current;
+        if (idleMs >= SCHOOL_INACTIVITY_TIMEOUT_MS) {
+          handleAutoLogout();
+        } else {
+          recordUserActivity();
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+    // Catat waktu aktivitas terakhir saat tab/jendela ditutup
+    const handleBeforeUnload = () => {
+      try {
+        localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(Date.now()));
+      } catch {}
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+
+    // Pengecekan berkala (interval) saat aplikasi terbuka tapi tidak digunakan
     const idleCheckInterval = setInterval(() => {
       const idleMs = Date.now() - lastActivityTimeRef.current;
-      const timeoutLimitMs = autoLogoutMinutes * 60 * 1000;
-
-      if (idleMs >= timeoutLimitMs) {
-        // Keluarkan pengguna sekolah secara otomatis
-        setState((prev) => ({
-          ...prev,
-          currentUser: null,
-        }));
-        setPortalMode('school');
-        setActiveTab('dashboard');
-        setIsAutoLoggedOutOpen(true);
+      if (idleMs >= SCHOOL_INACTIVITY_TIMEOUT_MS) {
+        handleAutoLogout();
       }
-    }, 10000);
+    }, 5000);
 
     return () => {
       userEvents.forEach((evt) => {
         window.removeEventListener(evt, recordUserActivity);
       });
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
       clearInterval(idleCheckInterval);
     };
-  }, [state.currentUser, autoLogoutMinutes]);
+  }, [state.currentUser]);
 
   // Fungsi memuat ulang seluruh data dari Google Spreadsheet (Sheet AKUN, INFORMASI_SEKOLAH, DATA_SISWA, DESAIN_KARTU)
   const loadDatabaseFromGas = async (
@@ -472,6 +556,14 @@ export default function App() {
     setPortalMode(isUserAdmin ? 'admin' : 'school');
     setActiveTab('dashboard');
 
+    const now = Date.now();
+    lastActivityTimeRef.current = now;
+    lastSavedStorageRef.current = now;
+    try {
+      localStorage.setItem(LAST_ACTIVITY_STORAGE_KEY, String(now));
+    } catch {}
+    setIsAutoLoggedOutOpen(false);
+
     setState((prev) => {
       // Find or build user's school data
       const existingData =
@@ -685,6 +777,10 @@ export default function App() {
     setPendingLoginUser(null);
     setPortalMode('school');
     setActiveTab('dashboard');
+    try {
+      localStorage.removeItem(LAST_ACTIVITY_STORAGE_KEY);
+    } catch {}
+    setIsAutoLoggedOutOpen(false);
   };
 
   // Account Management Handlers (Admin Portal dengan penyimpanan real ke Spreadsheet)
@@ -1799,7 +1895,6 @@ export default function App() {
             setAuthInitialTab('login');
             setIsAuthModalOpen(true);
           }}
-          timeoutMinutes={autoLogoutMinutes}
         />
       </>
     );
@@ -2156,15 +2251,6 @@ export default function App() {
             onResetDemoData={handleResetDemoData}
             isAdmin={false}
             loginLogs={state.loginLogs || []}
-            autoLogoutMinutes={autoLogoutMinutes}
-            onChangeAutoLogoutMinutes={(mins) => {
-              setAutoLogoutMinutes(mins);
-              try {
-                localStorage.setItem('portal_asesmen_auto_logout_minutes', String(mins));
-              } catch (e) {
-                console.warn(e);
-              }
-            }}
           />
         )}
       </main>
@@ -2258,7 +2344,6 @@ export default function App() {
           setAuthInitialTab('login');
           setIsAuthModalOpen(true);
         }}
-        timeoutMinutes={autoLogoutMinutes}
       />
     </div>
   );

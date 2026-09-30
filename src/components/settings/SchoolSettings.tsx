@@ -23,7 +23,6 @@ import {
   Globe,
   Camera,
   Laptop,
-  ShieldAlert,
 } from 'lucide-react';
 import { formatLoginTime } from '../../utils/browserDetection';
 
@@ -642,39 +641,6 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
           </div>
         </div>
 
-        {/* Aturan Auto Logout Informasi Box */}
-        <div className="p-4 bg-yellow-50 border-2 border-black rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0" />
-              <span className="text-xs font-black uppercase text-neutral-900">
-                Aturan Auto Logout Otomatis ({autoLogoutMinutes} Menit)
-              </span>
-            </div>
-            <p className="text-[11px] text-neutral-600 leading-relaxed max-w-xl">
-              Khusus akun sekolah, aplikasi akan keluar otomatis jika tidak ada pergerakan mouse/keyboard selama <strong>{autoLogoutMinutes} menit</strong> untuk melindungi kerahasiaan data siswa dan ujian.
-            </p>
-          </div>
-          {onChangeAutoLogoutMinutes && (
-            <div className="flex items-center gap-1.5 shrink-0 bg-white p-1 border-2 border-black rounded-xl">
-              {[5, 10, 15, 30].map((mins) => (
-                <button
-                  key={mins}
-                  type="button"
-                  onClick={() => onChangeAutoLogoutMinutes(mins)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black cursor-pointer transition-colors ${
-                    autoLogoutMinutes === mins
-                      ? 'bg-yellow-300 text-black border border-black shadow-[1px_1px_0px_#000]'
-                      : 'text-neutral-700 hover:bg-neutral-100'
-                  }`}
-                >
-                  {mins}m
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Tabel Log Masuk Sekolah */}
         <div className="space-y-2">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
@@ -723,7 +689,7 @@ export const SchoolSettings: React.FC<SchoolSettingsProps> = ({
                         <th className="py-2.5 px-3 w-12 text-center">No</th>
                         <th className="py-2.5 px-3">Waktu Login</th>
                         <th className="py-2.5 px-3">Browser yang Digunakan</th>
-                        <th className="py-2.5 px-3 text-center w-36">POTRET DIRI</th>
+                        <th className="py-2.5 px-3 text-center w-36">LOG MASUK</th>
                         <th className="py-2.5 px-3 text-center w-24">STATUS</th>
                       </tr>
                     </thead>

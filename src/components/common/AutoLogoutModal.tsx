@@ -32,7 +32,7 @@ export const AutoLogoutModal: React.FC<AutoLogoutModalProps> = ({
               Sesi Berakhir Otomatis (Auto Logout)
             </h3>
             <p className="text-[11px] font-bold text-neutral-600 mt-0.5">
-              Tidak ada aktivitas selama {timeoutMinutes} menit
+              Aplikasi tidak digunakan atau dibuka dalam beberapa waktu
             </p>
           </div>
         </div>
